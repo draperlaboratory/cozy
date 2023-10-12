@@ -1,0 +1,336 @@
+:py:mod:`cozy.analysis`
+=======================
+
+.. py:module:: cozy.analysis
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.analysis.StateTag
+   cozy.analysis.StateDiff
+   cozy.analysis.ConcretePairInput
+   cozy.analysis.ConcreteSingletonInput
+   cozy.analysis.SingletonState
+   cozy.analysis.PairComparison
+   cozy.analysis.ComparisonResults
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.analysis.invalid_stack_addrs
+   cozy.analysis.invalid_stack_overlap
+   cozy.analysis.hexify
+   cozy.analysis.concretize
+   cozy.analysis.get_virtual_prints
+   cozy.analysis.analyze_errored
+   cozy.analysis.report_errored_states
+   cozy.analysis.compare_states
+
+
+
+.. py:class:: StateTag(*args, **kwds)
+
+
+   Bases: :py:obj:`enum.Enum`
+
+   Create a collection of name/value pairs.
+
+   Example enumeration:
+
+   >>> class Color(Enum):
+   ...     RED = 1
+   ...     BLUE = 2
+   ...     GREEN = 3
+
+   Access them by:
+
+   - attribute access::
+
+   >>> Color.RED
+   <Color.RED: 1>
+
+   - value lookup:
+
+   >>> Color(1)
+   <Color.RED: 1>
+
+   - name lookup:
+
+   >>> Color['RED']
+   <Color.RED: 1>
+
+   Enumerations can be iterated over, and know how many members they have:
+
+   >>> len(Color)
+   3
+
+   >>> list(Color)
+   [<Color.RED: 1>, <Color.BLUE: 2>, <Color.GREEN: 3>]
+
+   Methods can be added to enumerations, and members can have their own
+   attributes -- see the documentation for details.
+
+   .. py:attribute:: TERMINATED_STATE
+      :value: 0
+
+      
+
+   .. py:attribute:: ERROR_STATE
+      :value: 1
+
+      
+
+
+.. py:function:: invalid_stack_addrs(st: angr.SimState) -> range
+
+
+.. py:function:: invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range, stack_change: int)
+
+
+.. py:class:: StateDiff(use_memoized_binary_search=True)
+
+
+   StateDiff encapsulates the memoized state used by the difference method. This class is used internally by compare_states and is typically not for external use.
+
+   .. py:method:: difference(sl: angr.SimState, sr: angr.SimState, ignore_addrs: collections.abc.Iterable[range] | None = None, compute_mem_diff=True, compute_reg_diff=True) -> tuple[dict[int, tuple[claripy.ast.Base, claripy.ast.Base]], dict[str, tuple[claripy.ast.Base, claripy.ast.Base]]] | None
+
+      Compares two states to find differences in memory. This function will return None if the two states have non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are different between the two. This function is based off of angr.analyses.congruency_check.CongruencyCheck().compare_states, but has been customized for our purposes. Note that this function may use memoization to enhance performance.
+
+      :param SimState sl: The first state to compare
+      :param SimState sr: The second state to compare
+      :param collections.abc.Iterable[range] | None ignore_addrs: Memory addresses to ignore when doing the memory diffing. This representation is more efficient than a set of integers since the ranges involved can be quite large.
+      :param bool compute_mem_diff: If this flag is True, then we will diff the memory. If this is false, then the first element of the return tuple will be None.
+      :param compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the second element of the return tuple will be None.
+      :return: None if the two states are not compatible, otherwise returns a tuple containing the memory and register differences.
+      :rtype: tuple[dict[int, tuple[claripy.ast.Base, claripy.ast.Base]], dict[str, tuple[claripy.ast.Base, claripy.ast.Base]]] | None
+
+
+
+.. py:function:: hexify(val0)
+
+   Recursively transforms all integers in a Python datastructure (that is mappable with functools_ext.fmap) to hex strings.
+
+   :param val0: The datastructure to traverse.
+   :return: A deep copy of the datastructure, with all integers converted to hex strings.
+
+
+.. py:function:: concretize(solver, state_bundle, n=1)
+
+
+.. py:function:: get_virtual_prints(st)
+
+
+.. py:class:: ConcretePairInput(args, mem_diff: dict[int, tuple[int, int]], reg_diff: dict[str, tuple[int, int]], left_vprints: list[tuple[cozy.directive.VirtualPrint, any]], right_vprints: list[tuple[cozy.directive.VirtualPrint, any]])
+
+
+   Stores information about the concretization of a compatible state pair.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[int, tuple[int, int]] mem_diff: Concretized version of memory difference. Each key is a memory address, and each value is a concretized version of the data stored at that location for the prepatched, postpatched runs.
+   :ivar dict[str, tuple[int, int]] reg_diff: Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.
+   :ivar list[tuple[directive.VirtualPrint, any]] left_vprints: Concretized versions of virtual prints made by the prepatched state.
+   :ivar list[tuple[directive.VirtualPrint, any]] right_vprints: Concretized versions of virtual prints made by the postpatched state.
+
+
+.. py:class:: ConcreteSingletonInput(args, vprints: list[tuple[cozy.directive.VirtualPrint, any]])
+
+
+   Stores information about the concretization of a SingletonState.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar list[tuple[directive.VirtualPrint, any]] vprints: Concretized virtual prints outputted by the singleton state.
+
+
+.. py:class:: SingletonState(state: angr.SimState, std_out: bytes | None, std_err: bytes | None, state_id: int, state_tag: StateTag, error_info: str | None = None)
+
+
+   Stores information pertaining specifically to a single SimState.
+
+   :ivar SimState state: The state we are storing information about.
+   :ivar bytes | None std_out: The data that has been written to stdout when the program is in this state. This may be None if we are ignoring stdout.
+   :ivar bytes | None std_err: The data that has been written to stderr when the program is in this state. This may be None if we are ignoring stderr.
+   :ivar int state_id: The index of this particular state in the corresponding list in TerminatedResult. Note that errored states have separate state_ids from deadended states. Therefore a particular input state here is uniquely identified by the pair (state_id, state_tag), not just state_id by itself.
+   :ivar StateTag state_tag: Determines whether this state was an errored state or a deadended state.
+   :ivar str | None error_info: Human readable string giving the error message, only used when state is an errored state.
+
+   .. py:method:: concrete_examples(args: any, num_examples=3) -> list[ConcreteSingletonInput]
+
+      Concretizes the arguments used to put the program in this singleton state.
+
+      :param any args: The input arguments to concretize. This argument may be a Python datastructure, the concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
+      :param int num_examples: The maximum number of concrete examples to generate for this singleton state.
+      :return: A list of concrete inputs that satisfies the constraints attached to the state.
+      :rtype: list[ConcreteSingletonInput]
+
+
+
+.. py:class:: PairComparison(state_left: SingletonState, state_right: SingletonState, mem_diff: dict[int, tuple[claripy.ast.Base, claripy.ast.Base]], reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]], mem_diff_ip: dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]])
+
+
+   Stores information about comparing two compatible states.
+
+   :ivar SingletonState state_left: Information pertaining specifically to the pre-patched state being compared.
+   :ivar SingletonState state_right: Information pertaining specificially to the post-patched state being compared.
+   :ivar dict[int, tuple[claripy.ast.Base, claripy.ast.Base]] mem_diff: Maps memory addresses to pairs of claripy ASTs, where the left element of the tuple is the data in memory for state_left, and the right element of the tuple is what was found in memory for state_right. Only memory locations that are different are saved in this dict.
+   :ivar dict[str, tuple[claripy.ast.Base, claripy.ast.Base]] reg_diff: Similar to mem_diff, except that the dict is keyed by register names. Note that some registers may be subparts of another. For example in x64, EAX is a subregister of RAX.
+   :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value determined the write address.
+
+   .. py:method:: equal() -> bool
+
+      Determines if the two compatible states are observationally equal. That is, they contain the same memory contents, registers, stdout, and stderr after execution.
+
+      :return: True if the two compatible states are observationally equal, and False otherwise.
+      :rtype: bool
+
+
+   .. py:method:: concrete_examples(args: any, num_examples=3) -> list[ConcretePairInput]
+
+      Concretizes the arguments used to put the program in these states by jointly using the constraints attached to the compatible states.
+
+      :param any args: The input arguments to concretize. This argument may be a Python datastructure, the concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
+      :param int num_examples: The maximum number of concrete examples to generate for this particular pair.
+      :return: A list of concrete inputs that satisfy both constraints attached to the states.
+      :rtype: list[ConcretePairInput]
+
+
+
+.. py:class:: ComparisonResults
+
+
+   This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible state in the other execution tree. In most scenarios there will be no orphaned states.
+
+   :ivar dict[tuple[SimState, SimState], PairComparison] pairs: pairs stores a dictionary that maps a pair of (pre_patch_state, post_patch_state) compatible states to their comparison information
+   :ivar dict[SimState, SingletonState] orphans_left_lookup: maps pre-patched orphaned states to singleton state information
+   :ivar dict[SimState, SingletonState] orphans_right_lookup: maps post-patched orphaned states to singleton state information
+
+   .. py:method:: add_pair(pair_comp: PairComparison)
+
+      Adds a result of comparing two states to the result object.
+
+      :param pair_comp: The comparison to add
+      :return: None
+
+
+   .. py:method:: add_orphan_left(orph_state: SingletonState)
+
+      Adds a pre-patched orphan to the result object.
+
+      :param orph_state: The orphaned state to add
+      :return: None
+
+
+   .. py:method:: add_orphan_right(orph_state: SingletonState)
+
+      Adds a post-patched orphan to the result object.
+
+      :param orph_state: The orphaned state to add
+      :return: None
+
+
+   .. py:method:: get_comparison(state_left: angr.SimState, state_right: angr.SimState) -> PairComparison
+
+      Retrieves a PairComparison given two compatible input states.
+
+      :param SimState state_left: The pre-patched state
+      :param SimState state_right: The post-patched state
+      :return: The PairComparison object corresponding to this compatible state pair.
+      :rtype: PairComparison
+
+
+   .. py:method:: get_orphan_left(state: angr.SimState) -> SingletonState
+
+      Gets the SingletonState for the input pre-patched orphan state.
+
+      :param SimState state: A pre-patched orphan state
+      :return: Information about the execution of the pre-patched orphan
+      :rtype: SingletonState
+
+
+   .. py:method:: get_orphan_right(state: angr.SimState) -> SingletonState
+
+      Gets the SingletonState for the input post-patched orphan state.
+
+      :param SimState state: A post-patched orphan state
+      :return: Information about the execution of the post-patched orphan
+      :rtype: SingletonState
+
+
+   .. py:method:: orphans_left() -> collections.abc.Iterator[SingletonState]
+
+      Iterates over pre-patched orphans
+
+      :return: An iterator over pre-patched orphans
+      :rtype: Iterator[SingletonState]
+
+
+   .. py:method:: orphans_right() -> collections.abc.Iterator[SingletonState]
+
+      Iterates over post-patched orphans
+
+      :return: An iterator over post-patched orphans
+      :rtype: Iterator[SingletonState]
+
+
+   .. py:method:: is_compatible(state_left: angr.SimState, state_right: angr.SimState) -> bool
+
+      Returns True when the two input states are compatible based on the pairs stored in this object, and False otherwise.
+
+      :param SimState state_left: The pre-patched state
+      :param SimState state_right: The post-patched state
+      :return: True if the input states are compatible, and False otherwise
+      :rtype: bool
+
+
+   .. py:method:: __iter__() -> collections.abc.Iterator[PairComparison]
+
+      Iterates over compatible pairs stored in the comparison.
+
+      :return: An iterator over compatible pairs.
+      :rtype: Iterator[PairComparison]
+
+
+   .. py:method:: report(args: any, num_examples=3, concrete_arg_mapper=None) -> str
+
+      Generates a human readable report of the result object, saved as a string. This string is suitable for printing.
+
+      :param any args: The symbolic/concolic arguments used during exeuction, here these args are concretized so that we can give examples of concrete input.
+      :param int num_examples: The number of concrete examples to show the user.
+      :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+      :return: A human readable summary of the comparison.
+      :rtype: str
+
+
+
+.. py:function:: analyze_errored(result: cozy.project.TerminatedResult) -> list[SingletonState]
+
+
+.. py:function:: report_errored_states(errored: list[SingletonState], args, concrete_arg_mapper=None, num_examples=5) -> str
+
+
+.. py:function:: compare_states(pre_patched: cozy.project.TerminatedResult, post_patched: cozy.project.TerminatedResult, prog_addrs: list[range], ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False, compare_std_err=False, use_memoized_binary_search=True) -> ComparisonResults
+
+   Compares a bundle of pre-patched states with a bundle of post-patched states.
+
+   :param project.TerminatedResult pre_patched: The pre-patched state bundle
+   :param project.TerminatedResult post_patched: The post-patched state bundle
+   :param list[range] prog_addrs: A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.
+   :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
+   :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
+   :param bool compare_registers: If True, then the analysis will compare registers used by the program.
+   :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.
+   :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
+   :param bool use_memoized_binary_search: If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.
+   :return: The results from the comparison. To further analyze the results, see the fields stored in the output object.
+   :rtype: ComparisonResults
+
+

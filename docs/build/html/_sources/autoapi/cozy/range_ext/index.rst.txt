@@ -1,0 +1,26 @@
+:py:mod:`cozy.range_ext`
+========================
+
+.. py:module:: cozy.range_ext
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.range_ext.remove_range_list
+   cozy.range_ext.intersect_range
+
+
+
+.. py:function:: remove_range_list(input_set: set[int], range_list: collections.abc.Iterable[range])
+
+
+.. py:function:: intersect_range(range_a: range, range_b: range)
+
+

@@ -1,0 +1,50 @@
+:py:mod:`cozy.execution_graph`
+==============================
+
+.. py:module:: cozy.execution_graph
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.execution_graph.ExecutionGraph
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.execution_graph.serialize_diff
+   cozy.execution_graph.compare_and_dump
+
+
+
+.. py:function:: serialize_diff(diff)
+
+
+.. py:function:: compare_and_dump(proj_a, proj_b, rslt_a, rslt_b, file_name_a, file_name_b, concrete_arg_mapper=None, compare_memory=True, compare_registers=True, args=[], num_examples=0)
+
+
+.. py:class:: ExecutionGraph(proj, result)
+
+
+   .. py:method:: get_bbl_pp(b)
+
+
+   .. py:method:: reconstruct_bbl_addr_graph()
+
+
+   .. py:method:: reconstruct_bbl_pp_graph()
+
+
+   .. py:method:: dump_bbp_pp_cytoscape(name)
+
+
+

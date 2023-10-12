@@ -1,0 +1,94 @@
+:py:mod:`cozy.project`
+======================
+
+.. py:module:: cozy.project
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.project.RunResult
+   cozy.project.TerminatedResult
+   cozy.project.AssertFailed
+   cozy.project.Session
+   cozy.project.Project
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.project.on_mem_write
+
+
+
+.. py:class:: RunResult(assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]])
+
+
+
+.. py:class:: TerminatedResult(deadended: list[angr.SimState], errored: list[angr.sim_manager.ErrorRecord], assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]])
+
+
+   Bases: :py:obj:`RunResult`
+
+
+.. py:class:: AssertFailed(assert_failed, assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]])
+
+
+   Bases: :py:obj:`RunResult`
+
+
+.. py:function:: on_mem_write(state)
+
+
+.. py:class:: Session(proj, start_fun=None)
+
+
+   .. py:method:: store_fs(filename, simfile)
+
+
+   .. py:method:: malloc(num_bytes)
+
+
+   .. py:method:: store(addr, data)
+
+
+   .. py:method:: add_directives(*args)
+
+
+   .. py:method:: add_constraints(*args)
+
+
+   .. py:method:: save_states(states)
+
+
+   .. py:method:: save_constraints(states)
+
+
+   .. py:method:: run(*args, cache_intermediate_states=False, cache_constraints=True) -> AssertFailed | TerminatedResult
+
+
+
+.. py:class:: Project(binary_path, fun_prototypes=None)
+
+
+   .. py:method:: object_ranges(obj_filter=lambda x: True)
+
+
+   .. py:method:: find_symbol_addr(fun_name)
+
+
+   .. py:method:: add_prototype(fun, fun_prototype)
+
+
+   .. py:method:: session(start_fun=None)
+
+
+

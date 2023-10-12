@@ -1,0 +1,51 @@
+:py:mod:`cozy.directive`
+========================
+
+.. py:module:: cozy.directive
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.directive.Directive
+   cozy.directive.Assert
+   cozy.directive.Assume
+   cozy.directive.VirtualPrint
+   cozy.directive.ErrorDirective
+
+
+
+
+.. py:class:: Directive
+
+
+
+.. py:class:: Assert(project, fun_name, offset, condition_fun, info_str=None)
+
+
+   Bases: :py:obj:`Directive`
+
+
+.. py:class:: Assume(project, fun_name, offset, condition_fun, info_str=None)
+
+
+   Bases: :py:obj:`Directive`
+
+
+.. py:class:: VirtualPrint(project, fun_name, offset, log_fun, concrete_mapper=None, info_str='Unknown Virtual Print: ')
+
+
+   Bases: :py:obj:`Directive`
+
+
+.. py:class:: ErrorDirective(project, fun_name, offset, info_str=None)
+
+
+   Bases: :py:obj:`Directive`
+
+

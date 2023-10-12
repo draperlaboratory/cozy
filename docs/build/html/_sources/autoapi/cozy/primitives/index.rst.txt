@@ -1,0 +1,47 @@
+:py:mod:`cozy.primitives`
+=========================
+
+.. py:module:: cozy.primitives
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.primitives.sym_ptr
+   cozy.primitives.sym_ptr_constraints
+   cozy.primitives.from_twos_comp
+   cozy.primitives.to_twos_comp
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.primitives.name_ctr
+
+
+.. py:data:: name_ctr
+   :value: 0
+
+   
+
+.. py:function:: sym_ptr(name=None)
+
+
+.. py:function:: sym_ptr_constraints(symbolic_ptr, concrete_addr, can_be_null=True)
+
+
+.. py:function:: from_twos_comp(val, num_bits)
+
+
+.. py:function:: to_twos_comp(val, num_bits)
+
+

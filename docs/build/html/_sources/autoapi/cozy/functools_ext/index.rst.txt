@@ -1,0 +1,34 @@
+:py:mod:`cozy.functools_ext`
+============================
+
+.. py:module:: cozy.functools_ext
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.functools_ext.preorder_mapfold
+   cozy.functools_ext.preorder_fold
+   cozy.functools_ext.fmap
+   cozy.functools_ext.compose
+
+
+
+.. py:function:: preorder_mapfold(val0, f, accum0)
+
+
+.. py:function:: preorder_fold(val0, f, accum0)
+
+
+.. py:function:: fmap(val0, f)
+
+
+.. py:function:: compose(f, g)
+
+
