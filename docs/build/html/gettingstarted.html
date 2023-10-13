@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Getting Started &#8212; cozy 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h1>
+<p>On this page we will cover the architecture of cozy and how you can use
+it to compare two binary programs. cozy is based on the angr symbolic
+execution framework, so we support the same architectures as angr. We
+will be following the null_deref example, which can be found in the
+examples and test_programs folder in the cozy repository. The null_deref
+source code is a very simple C program which writes the integer 42 to
+some location in memory:</p>
+<p><strong>Prepatched null_deref (first program being compared)</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#include &lt;stdio.h&gt;</span>
+
+<span class="n">void</span> <span class="n">my_fun</span><span class="p">(</span><span class="nb">int</span> <span class="o">*</span><span class="n">num</span><span class="p">)</span> <span class="p">{</span>
+    <span class="o">*</span><span class="n">num</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nb">int</span> <span class="n">main</span><span class="p">(</span><span class="nb">int</span> <span class="n">argc</span><span class="p">,</span> <span class="n">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+    <span class="nb">int</span> <span class="n">my_num</span><span class="p">;</span>
+    <span class="n">my_fun</span><span class="p">(</span><span class="o">&amp;</span><span class="n">my_num</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s2">&quot;my_num: </span><span class="si">%d</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">my_num</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Postpatched null_deref_patched (second program being compared)</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#include &lt;stdio.h&gt;</span>
+
+<span class="n">void</span> <span class="n">my_fun</span><span class="p">(</span><span class="nb">int</span> <span class="o">*</span><span class="n">num</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">num</span> <span class="o">!=</span> <span class="n">NULL</span><span class="p">)</span> <span class="p">{</span>
+        <span class="o">*</span><span class="n">num</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nb">int</span> <span class="n">main</span><span class="p">(</span><span class="nb">int</span> <span class="n">argc</span><span class="p">,</span> <span class="n">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+    <span class="nb">int</span> <span class="n">my_num</span><span class="p">;</span>
+    <span class="n">my_fun</span><span class="p">(</span><span class="o">&amp;</span><span class="n">my_num</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s2">&quot;my_num: </span><span class="si">%d</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">my_num</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Let’s assume that we are compiling for x64 architecture. In this case we
+are interested in comparing my_fun between the two programs. Much like angr,
+cozy can be used interactively through a Python REPL or through a Python script.</p>
+<section id="how-cozy-makes-comparisons">
+<h2>How cozy makes comparisons<a class="headerlink" href="#how-cozy-makes-comparisons" title="Link to this heading">¶</a></h2>
+<p>To make comparisons between two programs with different function
+implementations, cozy uses symbolic execution. Both programs are fed
+the same symbolic input, and cozy runs symbolic execuction until all states
+terminate. At the end of execution, we have a list of deadended (terminated)
+states from the prepatched program, and a list of deadended states from the
+postpatched program. Each of these states have constraints associated with
+them that were collected as the program stepped through symbolic execution.</p>
+<p>Suppose that we take some state A from the prepatched run, and some state
+B from the postpatched run. We say that A and B are <em>compatible</em> if the
+constraints associated with the A and B are jointly satisfiable. In
+pseudocode syntax, this roughly means that the following is True:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">is_sat</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">constraints</span> <span class="o">&amp;</span> <span class="n">B</span><span class="o">.</span><span class="n">constraints</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Recall that the input to our functions are symbolic variables, so the
+set of constraints is in terms of these symbolic variables. We can think
+of the constraints as creating a predicate that exactly determines the
+subset of the input that leads to a specific state. Taking the conjunction
+of the constrains is therefore equivalent to creating a predicate
+that restricts the set of input values to the intersection of the input
+set for state A and state B. If this predicate is satisfiable, then
+this intersection of sets is nonempty, which means that there is at
+least one concrete input that will cause the program to end in state A
+in the prepatched program and state B in the postpatched program.</p>
+<p>Therefore the naive approach is to compare all pairs of deadended states
+from the prepatched and postpatched and check for satisfiability. cozy
+makes an optimization by checking ancestor (ie, nonterminal) states
+and checking for compatibility. cozy is also capable of generating
+concrete examples, which is very useful for generating test cases and
+walking through program execution.</p>
+</section>
+<section id="example-walkthrough">
+<h2>Example Walkthrough<a class="headerlink" href="#example-walkthrough" title="Link to this heading">¶</a></h2>
+<p>Let’s open a Python REPL and import the required libraries:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cozy</span>
+<span class="kn">from</span> <span class="nn">cozy.project</span> <span class="kn">import</span> <span class="n">Project</span>
+<span class="kn">from</span> <span class="nn">cozy.directive</span> <span class="kn">import</span> <span class="n">Assume</span><span class="p">,</span> <span class="n">Assert</span>
+<span class="kn">import</span> <span class="nn">claripy</span>
+</pre></div>
+</div>
+<p>Let’s begin by creating cozy projects for the two programs given
+previously. A Project is a cozy class that encapsulates a single
+program:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">proj_prepatched</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s2">&quot;null_deref&quot;</span><span class="p">)</span>
+<span class="n">proj_postpatched</span> <span class="o">=</span> <span class="n">Project</span><span class="p">(</span><span class="s2">&quot;null_deref_patched&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To execute the my_fun function, angr needs to know the function signature
+of the functions. This information is typically not retained in the binary,
+so we need to determine that with some other method. In this case we have
+the source code, so we can add the function signature quite easily:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">proj_prepatched</span><span class="o">.</span><span class="n">add_prototype</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span> <span class="s2">&quot;void f(int *a)&quot;</span><span class="p">)</span>
+<span class="n">proj_postpatched</span><span class="o">.</span><span class="n">add_prototype</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span> <span class="s2">&quot;void f(int *a)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We now need to create sessions from each project. A session is created
+from a specific project, and represents a single execution run. Here we pass
+“my_fun” to the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Project.session" title="cozy.project.Project.session"><code class="xref py py-meth docutils literal notranslate"><span class="pre">session()</span></code></a> method, which indicates that we are going to be running
+the “my_fun” function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sess_prepatched</span> <span class="o">=</span> <span class="n">proj_prepatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">)</span>
+<span class="n">sess_postpatched</span> <span class="o">=</span> <span class="n">proj_postpatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Since we will only be comparing the my_fun function, we need to create
+the symbolic value to pass to the functions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">arg0</span> <span class="o">=</span> <span class="n">claripy</span><span class="o">.</span><span class="n">BVS</span><span class="p">(</span><span class="s2">&quot;num_arg&quot;</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We will now constrain arg0 to be either NULL or be equal to a valid memory
+address in our two sessions. Currently angr has limited support for symbolic
+memory addressing, so we will malloc space for our integers then constrain
+arg0 accordingly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">addr_prepatched</span> <span class="o">=</span> <span class="n">sess_prepatched</span><span class="o">.</span><span class="n">malloc</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">sess_prepatched</span><span class="o">.</span><span class="n">add_constraints</span><span class="p">((</span><span class="n">arg0</span> <span class="o">==</span> <span class="mh">0x0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">arg0</span> <span class="o">==</span> <span class="n">addr_prepatched</span><span class="p">))</span>
+<span class="n">addr_postpatched</span> <span class="o">=</span> <span class="n">sess_postpatched</span><span class="o">.</span><span class="n">malloc</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">sess_postpatched</span><span class="o">.</span><span class="n">add_constraints</span><span class="p">((</span><span class="n">arg0</span> <span class="o">==</span> <span class="mh">0x0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">arg0</span> <span class="o">==</span> <span class="n">addr_postpatched</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>So before any execution we have constrained arg0 to be NULL (0x0) or be
+a concrete address returned by <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.malloc" title="cozy.project.Session.malloc"><code class="xref py py-meth docutils literal notranslate"><span class="pre">malloc()</span></code></a>.</p>
+</section>
+<section id="directives-assumes-and-asserts">
+<h2>Directives - Assumes and Asserts<a class="headerlink" href="#directives-assumes-and-asserts" title="Link to this heading">¶</a></h2>
+<p>cozy provides support for <em>directives</em>, which are attached to specific
+program instructions. Two basic directives that you should know about
+are <a class="reference internal" href="autoapi/cozy/directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.directive.Assume</span></code></a> and <a class="reference internal" href="autoapi/cozy/directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.directive.Assert</span></code></a>.
+Assume and assert function by pausing execution once a specific instruction
+is reached and add constraints to the SMT solver. Assumes are used for
+adding preconditions, and are often set to be triggered at the start of
+functions. Asserts are triggered if there exists an input that will cause
+the assert to be evaluated to true. Note that directives do not change the
+code being executed: they work more or less in the same way as debug
+breakpoints.</p>
+<p>To demonstrate that a null dereference can occur in the prepatched binary
+and not in the postpatched binary, let’s add asserts to specific addresses.
+Running the binaries through a tool like Ghidra reveals that the NULL
+dereference occurs at an offset of 0x10 from the start of my_fun in the
+prepatched binary. At this point the address being dereferenced is stored
+in the RAX register. Let’s create a directive that encodes these observations:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mem_write_okay_prepatched</span> <span class="o">=</span> <span class="n">Assert</span><span class="p">(</span>
+        <span class="n">project</span><span class="o">=</span><span class="n">proj_prepatched</span><span class="p">,</span>
+        <span class="n">fun_name</span><span class="o">=</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span>
+        <span class="n">offset</span><span class="o">=</span><span class="mh">0x10</span><span class="p">,</span>
+        <span class="n">condition_fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">st</span><span class="p">:</span> <span class="n">st</span><span class="o">.</span><span class="n">regs</span><span class="o">.</span><span class="n">rax</span> <span class="o">!=</span> <span class="mh">0x0</span><span class="p">,</span>
+        <span class="n">info_str</span><span class="o">=</span><span class="s2">&quot;Dereferencing null pointer&quot;</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>When execution reaches my_fun+0x10, the evaluation will be halted and
+cozy will pass the state to the condition_fun and will check to see
+if it is possible to find an input value that will trigger the condition.
+Let’s add the directive to the prepatch session:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sess_prepatched</span><span class="o">.</span><span class="n">add_directives</span><span class="p">(</span><span class="n">mem_write_okay_prepatched</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Let’s invoke the prepatched my_fun with arg0 as the symbolic input via the
+<a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sess_prepatched</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In the console we see the following message, indicating that the assert was
+triggered:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Checking</span> <span class="n">Assert</span><span class="o">...</span>
+<span class="n">Assert</span> <span class="k">for</span> <span class="n">address</span> <span class="mh">0x401179</span> <span class="n">was</span> <span class="n">triggered</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">Bool</span> <span class="n">num_arg_102_64</span> <span class="o">!=</span> <span class="mh">0x0</span><span class="o">&gt;</span>
+<span class="n">Dereferencing</span> <span class="n">null</span> <span class="n">pointer</span>
+<span class="o">&lt;</span><span class="n">cozy</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">AssertFailed</span> <span class="nb">object</span> <span class="n">at</span> <span class="mh">0x7effa73faa50</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>Additionally we note that the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method
+returned a <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.AssertFailed" title="cozy.project.AssertFailed"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.AssertFailed</span></code></a> object.</p>
+<p>Now let’s make another assert for the postpatched session and verify
+that no NULL dereference occurs in the postpatch:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mem_write_okay_postpatched</span> <span class="o">=</span> <span class="n">Assert</span><span class="p">(</span>
+        <span class="n">project</span><span class="o">=</span><span class="n">proj_postpatched</span><span class="p">,</span>
+        <span class="n">fun_name</span><span class="o">=</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span>
+        <span class="n">offset</span><span class="o">=</span><span class="mh">0x17</span><span class="p">,</span>
+        <span class="n">condition_fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">st</span><span class="p">:</span> <span class="n">st</span><span class="o">.</span><span class="n">regs</span><span class="o">.</span><span class="n">rax</span> <span class="o">!=</span> <span class="n">NULL_PTR</span><span class="p">,</span>
+        <span class="n">info_str</span><span class="o">=</span><span class="s2">&quot;Dereferencing null pointer&quot;</span>
+    <span class="p">)</span>
+<span class="n">sess_postpatched</span><span class="o">.</span><span class="n">add_directives</span><span class="p">(</span><span class="n">mem_write_okay_postpatched</span><span class="p">)</span>
+<span class="n">sess_postpatched</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>In the console we see the following message, indicating that no asserts were
+triggered:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>No asserts triggered!
+&lt;cozy.project.TerminatedResult object at 0x7effa723c410&gt;
+</pre></div>
+</div>
+<p>Additionally we get a <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.TerminatedResult</span></code></a>
+object from the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/gettingstarted.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
