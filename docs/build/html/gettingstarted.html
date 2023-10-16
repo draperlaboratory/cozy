@@ -14,6 +14,8 @@
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="autoapi/index.html" />
+    <link rel="prev" title="Welcome to cozy’s documentation!" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -179,13 +181,13 @@ in the RAX register. Let’s create a directive that encodes these observations:
         <span class="n">project</span><span class="o">=</span><span class="n">proj_prepatched</span><span class="p">,</span>
         <span class="n">fun_name</span><span class="o">=</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span>
         <span class="n">offset</span><span class="o">=</span><span class="mh">0x10</span><span class="p">,</span>
-        <span class="n">condition_fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">st</span><span class="p">:</span> <span class="n">st</span><span class="o">.</span><span class="n">regs</span><span class="o">.</span><span class="n">rax</span> <span class="o">!=</span> <span class="mh">0x0</span><span class="p">,</span>
+        <span class="n">condition_fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">state</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">regs</span><span class="o">.</span><span class="n">rax</span> <span class="o">!=</span> <span class="mh">0x0</span><span class="p">,</span>
         <span class="n">info_str</span><span class="o">=</span><span class="s2">&quot;Dereferencing null pointer&quot;</span>
     <span class="p">)</span>
 </pre></div>
 </div>
 <p>When execution reaches my_fun+0x10, the evaluation will be halted and
-cozy will pass the state to the condition_fun and will check to see
+cozy will pass the angr.SimState to the condition_fun and will check to see
 if it is possible to find an input value that will trigger the condition.
 Let’s add the directive to the prepatch session:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sess_prepatched</span><span class="o">.</span><span class="n">add_directives</span><span class="p">(</span><span class="n">mem_write_okay_prepatched</span><span class="p">)</span>
@@ -212,7 +214,7 @@ that no NULL dereference occurs in the postpatch:</p>
         <span class="n">project</span><span class="o">=</span><span class="n">proj_postpatched</span><span class="p">,</span>
         <span class="n">fun_name</span><span class="o">=</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span>
         <span class="n">offset</span><span class="o">=</span><span class="mh">0x17</span><span class="p">,</span>
-        <span class="n">condition_fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">st</span><span class="p">:</span> <span class="n">st</span><span class="o">.</span><span class="n">regs</span><span class="o">.</span><span class="n">rax</span> <span class="o">!=</span> <span class="n">NULL_PTR</span><span class="p">,</span>
+        <span class="n">condition_fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">state</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">regs</span><span class="o">.</span><span class="n">rax</span> <span class="o">!=</span> <span class="mh">0x0</span><span class="p">,</span>
         <span class="n">info_str</span><span class="o">=</span><span class="s2">&quot;Dereferencing null pointer&quot;</span>
     <span class="p">)</span>
 <span class="n">sess_postpatched</span><span class="o">.</span><span class="n">add_directives</span><span class="p">(</span><span class="n">mem_write_okay_postpatched</span><span class="p">)</span>
@@ -227,6 +229,86 @@ triggered:</p>
 </div>
 <p>Additionally we get a <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.TerminatedResult</span></code></a>
 object from the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method.</p>
+</section>
+<section id="making-the-comparisons">
+<h2>Making the Comparisons<a class="headerlink" href="#making-the-comparisons" title="Link to this heading">¶</a></h2>
+<p>To compare two program executions, we need two <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.TerminatedResult</span></code></a> objects.
+In the previous execution of the pre-patched program, we received an <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.AssertFailed" title="cozy.project.AssertFailed"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.AssertFailed</span></code></a> object
+as output, so let’s create fresh sessions and re-run without any directives attached. This time we will make use of
+<code class="xref py py-func docutils literal notranslate"><span class="pre">primitive.sym_ptr_constraints()</span></code> to generate the constrains instead of creating them manually:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sess_prepatched</span> <span class="o">=</span> <span class="n">proj_prepatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">)</span>
+<span class="n">sess_postpatched</span> <span class="o">=</span> <span class="n">proj_postpatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">)</span>
+<span class="n">addr_prepatched</span> <span class="o">=</span> <span class="n">sess_prepatched</span><span class="o">.</span><span class="n">malloc</span><span class="p">(</span><span class="n">cozy</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">INT_SIZE</span><span class="p">)</span>
+<span class="n">sess_prepatched</span><span class="o">.</span><span class="n">add_constraints</span><span class="p">(</span><span class="n">cozy</span><span class="o">.</span><span class="n">primitives</span><span class="o">.</span><span class="n">sym_ptr_constraints</span><span class="p">(</span><span class="n">arg0</span><span class="p">,</span> <span class="n">addr_prepatched</span><span class="p">,</span> <span class="n">can_be_null</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="n">addr_postpatched</span> <span class="o">=</span> <span class="n">sess_postpatched</span><span class="o">.</span><span class="n">malloc</span><span class="p">(</span><span class="n">cozy</span><span class="o">.</span><span class="n">constants</span><span class="o">.</span><span class="n">INT_SIZE</span><span class="p">)</span>
+<span class="n">sess_postpatched</span><span class="o">.</span><span class="n">add_constraints</span><span class="p">(</span><span class="n">cozy</span><span class="o">.</span><span class="n">primitives</span><span class="o">.</span><span class="n">sym_ptr_constraints</span><span class="p">(</span><span class="n">arg0</span><span class="p">,</span> <span class="n">addr_postpatched</span><span class="p">,</span> <span class="n">can_be_null</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Before we run our sessions, we should also save the address ranges occupied by the program instructions. Since
+cozy compares memory, we need to tell it ranges to ignore. Presumably we are not interested in differences in
+memory that are a result of different program instructions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">prog_ranges_prepatched</span> <span class="o">=</span> <span class="n">proj_prepatched</span><span class="o">.</span><span class="n">object_ranges</span><span class="p">()</span>
+<span class="n">prog_ranges_postpatched</span> <span class="o">=</span> <span class="n">proj_postpatched</span><span class="o">.</span><span class="n">object_ranges</span><span class="p">()</span>
+<span class="n">prog_ranges_union</span> <span class="o">=</span> <span class="n">prog_ranges_prepatched</span> <span class="o">+</span> <span class="n">prog_ranges_postpatched</span>
+</pre></div>
+</div>
+<p>Now let’s run both of our new sessions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">prepatched_result</span> <span class="o">=</span> <span class="n">sess_prepatched</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">)</span>
+<span class="n">postpatched_result</span> <span class="o">=</span> <span class="n">sess_postpatched</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can inspect the results object to see how many states we are dealing with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;There are </span><span class="si">{}</span><span class="s2"> deadended states and </span><span class="si">{}</span><span class="s2"> errored states for the pre-patch run.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">prepatched_result</span><span class="o">.</span><span class="n">deadended</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">prepatched_result</span><span class="o">.</span><span class="n">errored</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;There are </span><span class="si">{}</span><span class="s2"> deadended states and </span><span class="si">{}</span><span class="s2"> errored states for the post-patch run.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">postpatched_result</span><span class="o">.</span><span class="n">deadended</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">postpatched_result</span><span class="o">.</span><span class="n">errored</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>This prints the following messages:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">There</span> <span class="n">are</span> <span class="mi">1</span> <span class="n">deadended</span> <span class="n">states</span> <span class="ow">and</span> <span class="mi">0</span> <span class="n">errored</span> <span class="n">states</span> <span class="k">for</span> <span class="n">the</span> <span class="n">pre</span><span class="o">-</span><span class="n">patch</span> <span class="n">run</span><span class="o">.</span>
+<span class="n">There</span> <span class="n">are</span> <span class="mi">2</span> <span class="n">deadended</span> <span class="n">states</span> <span class="ow">and</span> <span class="mi">0</span> <span class="n">errored</span> <span class="n">states</span> <span class="k">for</span> <span class="n">the</span> <span class="n">post</span><span class="o">-</span><span class="n">patch</span> <span class="n">run</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>We can now make a comparison between these two terminated results:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">comparison_results</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">compare_states</span><span class="p">(</span><span class="n">prepatched_result</span><span class="p">,</span> <span class="n">postpatched_result</span><span class="p">,</span> <span class="n">prog_ranges_union</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To view a human readable report, we can now call the <a class="reference internal" href="autoapi/cozy/analysis/index.html#cozy.analysis.ComparisonResults.report" title="cozy.analysis.ComparisonResults.report"><code class="xref py py-meth docutils literal notranslate"><span class="pre">cozy.analysis.ComparisonResults.report()</span></code></a> method, which
+will convert the <a class="reference internal" href="autoapi/cozy/analysis/index.html#cozy.analysis.ComparisonResults" title="cozy.analysis.ComparisonResults"><code class="xref py py-class docutils literal notranslate"><span class="pre">ComparisonResults</span></code></a> to a human readable summary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">arg0</span><span class="p">,)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">comparison_results</span><span class="o">.</span><span class="n">report</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>We now see the human readable report:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">STATE</span> <span class="n">PAIR</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">StateTag</span><span class="o">.</span><span class="n">TERMINATED_STATE</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">StateTag</span><span class="o">.</span><span class="n">TERMINATED_STATE</span><span class="p">)</span> <span class="n">are</span> <span class="n">different</span>
+<span class="n">Memory</span> <span class="n">difference</span> <span class="n">detected</span> <span class="k">for</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">:</span>
+<span class="p">{</span><span class="s1">&#39;0x0&#39;</span><span class="p">:</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">BV8</span> <span class="mi">42</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">BV8</span> <span class="mi">0</span><span class="o">&gt;</span><span class="p">)}</span>
+<span class="n">Instruction</span> <span class="n">pointers</span> <span class="k">for</span> <span class="n">these</span> <span class="n">memory</span> <span class="n">writes</span><span class="p">:</span>
+<span class="p">{</span><span class="s1">&#39;0x0&#39;</span><span class="p">:</span> <span class="p">(</span><span class="nb">frozenset</span><span class="p">({</span><span class="o">&lt;</span><span class="n">BV64</span> <span class="mh">0x401179</span><span class="o">&gt;</span><span class="p">}),</span> <span class="kc">None</span><span class="p">)}</span>
+<span class="n">Register</span> <span class="n">difference</span> <span class="n">detected</span> <span class="k">for</span> <span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">:</span>
+<span class="p">{</span><span class="s1">&#39;eflags&#39;</span><span class="p">:</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">BV64</span> <span class="mh">0x0</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">BV64</span> <span class="mh">0x44</span><span class="o">&gt;</span><span class="p">),</span> <span class="s1">&#39;flags&#39;</span><span class="p">:</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">BV64</span> <span class="mh">0x0</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">BV64</span> <span class="mh">0x44</span><span class="o">&gt;</span><span class="p">),</span> <span class="s1">&#39;rflags&#39;</span><span class="p">:</span> <span class="p">(</span><span class="o">&lt;</span><span class="n">BV64</span> <span class="mh">0x0</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">BV64</span> <span class="mh">0x44</span><span class="o">&gt;</span><span class="p">)}</span>
+<span class="n">Here</span> <span class="n">are</span> <span class="mi">1</span> <span class="n">concrete</span> <span class="nb">input</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">this</span> <span class="n">particular</span> <span class="n">state</span> <span class="n">pair</span><span class="p">:</span>
+<span class="mf">1.</span>
+    <span class="n">Input</span> <span class="n">arguments</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;0x0&#39;</span><span class="p">,)</span>
+    <span class="n">Concrete</span> <span class="n">mem</span> <span class="n">diff</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;0x0&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;0x2a&#39;</span><span class="p">,</span> <span class="s1">&#39;0x0&#39;</span><span class="p">)}</span>
+    <span class="n">Concrete</span> <span class="n">reg</span> <span class="n">diff</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;eflags&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;0x0&#39;</span><span class="p">,</span> <span class="s1">&#39;0x44&#39;</span><span class="p">),</span> <span class="s1">&#39;flags&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;0x0&#39;</span><span class="p">,</span> <span class="s1">&#39;0x44&#39;</span><span class="p">),</span> <span class="s1">&#39;rflags&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;0x0&#39;</span><span class="p">,</span> <span class="s1">&#39;0x44&#39;</span><span class="p">)}</span>
+<span class="n">There</span> <span class="n">are</span> <span class="n">no</span> <span class="n">prepatched</span> <span class="n">orphans</span>
+<span class="n">There</span> <span class="n">are</span> <span class="n">no</span> <span class="n">postpatched</span> <span class="n">orphans</span>
+</pre></div>
+</div>
+<p>We can see cozy found a diff between the 0th deadended (terminated) state in the prepatch and the 0th deadended state
+in the postpatched. Together these two states form a state pair, which is displayed in the first line of the report.</p>
+<p>The next lines tells the memory addresses that are different. Each byte that is different in memory is mapped to
+a tuple containing the symbolic byte at that memory address as a (prepatched, postpatched) tuple.</p>
+<p>The next lines tells the instruction pointer the program was at when it wrote to that specific memory address.
+Here we see that the program was at the instruction 0x401179 when it wrote to address 0x0, and the postpatched
+program never wrote to that address (hence the None).</p>
+<p>The next lines gives the symbolic register difference between the states. As we can see, the flags registers
+are different due to the presence of a branch in the postpatched program. As with the memory, each register
+maps to a (prepatched, postpatched) tuple which gives the symbolic contents of the registers.</p>
+<p>The next lines gives concretized input that will cause the prepatched program to end in the 0th state and
+the postpatched program in its 0th state. The input argument is concretized to 0x0 (aka NULL). Additionally since
+the memory contents and register contents may be symbolic, we provide a concretized version of those as well.</p>
+<p>The next lines describe any orphaned states - typically there will be none. An orphaned state is a state in which
+there are no compatible pair states.</p>
 </section>
 </section>
 
@@ -248,7 +330,14 @@ object from the <a class="reference internal" href="autoapi/cozy/project/index.h
 
 <h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#how-cozy-makes-comparisons">How cozy makes comparisons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-walkthrough">Example Walkthrough</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#directives-assumes-and-asserts">Directives - Assumes and Asserts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#making-the-comparisons">Making the Comparisons</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
 </ul>
 
@@ -256,6 +345,8 @@ object from the <a class="reference internal" href="autoapi/cozy/project/index.h
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to cozy’s documentation!</a></li>
+      <li>Next: <a href="autoapi/index.html" title="next chapter">API Reference</a></li>
   </ul></li>
 </ul>
 </div>

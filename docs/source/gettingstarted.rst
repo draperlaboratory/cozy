@@ -160,12 +160,12 @@ in the RAX register. Let's create a directive that encodes these observations::
             project=proj_prepatched,
             fun_name="my_fun",
             offset=0x10,
-            condition_fun=lambda st: st.regs.rax != 0x0,
+            condition_fun=lambda state: state.regs.rax != 0x0,
             info_str="Dereferencing null pointer"
         )
 
 When execution reaches my_fun+0x10, the evaluation will be halted and
-cozy will pass the state to the condition_fun and will check to see
+cozy will pass the angr.SimState to the condition_fun and will check to see
 if it is possible to find an input value that will trigger the condition.
 Let's add the directive to the prepatch session::
 
@@ -194,7 +194,7 @@ that no NULL dereference occurs in the postpatch::
             project=proj_postpatched,
             fun_name="my_fun",
             offset=0x17,
-            condition_fun=lambda st: st.regs.rax != NULL_PTR,
+            condition_fun=lambda state: state.regs.rax != 0x0,
             info_str="Dereferencing null pointer"
         )
     sess_postpatched.add_directives(mem_write_okay_postpatched)
@@ -208,3 +208,90 @@ triggered::
 
 Additionally we get a :py:class:`cozy.project.TerminatedResult`
 object from the :py:meth:`~cozy.project.Session.run` method.
+
+======================
+Making the Comparisons
+======================
+
+To compare two program executions, we need two :py:class:`cozy.project.TerminatedResult` objects.
+In the previous execution of the pre-patched program, we received an :py:class:`cozy.project.AssertFailed` object
+as output, so let's create fresh sessions and re-run without any directives attached. This time we will make use of
+:py:func:`primitive.sym_ptr_constraints` to generate the constrains instead of creating them manually::
+
+    sess_prepatched = proj_prepatched.session("my_fun")
+    sess_postpatched = proj_postpatched.session("my_fun")
+    addr_prepatched = sess_prepatched.malloc(cozy.constants.INT_SIZE)
+    sess_prepatched.add_constraints(cozy.primitives.sym_ptr_constraints(arg0, addr_prepatched, can_be_null=True))
+    addr_postpatched = sess_postpatched.malloc(cozy.constants.INT_SIZE)
+    sess_postpatched.add_constraints(cozy.primitives.sym_ptr_constraints(arg0, addr_postpatched, can_be_null=True))
+
+Before we run our sessions, we should also save the address ranges occupied by the program instructions. Since
+cozy compares memory, we need to tell it ranges to ignore. Presumably we are not interested in differences in
+memory that are a result of different program instructions::
+
+    prog_ranges_prepatched = proj_prepatched.object_ranges()
+    prog_ranges_postpatched = proj_postpatched.object_ranges()
+    prog_ranges_union = prog_ranges_prepatched + prog_ranges_postpatched
+
+Now let's run both of our new sessions::
+
+    prepatched_result = sess_prepatched.run(arg0)
+    postpatched_result = sess_postpatched.run(arg0)
+
+We can inspect the results object to see how many states we are dealing with::
+
+    print("There are {} deadended states and {} errored states for the pre-patch run.".format(len(prepatched_result.deadended), len(prepatched_result.errored)))
+    print("There are {} deadended states and {} errored states for the post-patch run.".format(len(postpatched_result.deadended), len(postpatched_result.errored)))
+
+This prints the following messages::
+
+    There are 1 deadended states and 0 errored states for the pre-patch run.
+    There are 2 deadended states and 0 errored states for the post-patch run.
+
+We can now make a comparison between these two terminated results::
+
+    comparison_results = cozy.analysis.compare_states(prepatched_result, postpatched_result, prog_ranges_union)
+
+To view a human readable report, we can now call the :py:meth:`cozy.analysis.ComparisonResults.report` method, which
+will convert the :py:class:`~cozy.analysis.ComparisonResults` to a human readable summary::
+
+    args = (arg0,)
+    print(comparison_results.report(args))
+
+We now see the human readable report::
+
+    STATE PAIR (0, StateTag.TERMINATED_STATE), (0, StateTag.TERMINATED_STATE) are different
+    Memory difference detected for 0,0:
+    {'0x0': (<BV8 42>, <BV8 0>)}
+    Instruction pointers for these memory writes:
+    {'0x0': (frozenset({<BV64 0x401179>}), None)}
+    Register difference detected for 0,0:
+    {'eflags': (<BV64 0x0>, <BV64 0x44>), 'flags': (<BV64 0x0>, <BV64 0x44>), 'rflags': (<BV64 0x0>, <BV64 0x44>)}
+    Here are 1 concrete input(s) for this particular state pair:
+    1.
+        Input arguments: ('0x0',)
+        Concrete mem diff: {'0x0': ('0x2a', '0x0')}
+        Concrete reg diff: {'eflags': ('0x0', '0x44'), 'flags': ('0x0', '0x44'), 'rflags': ('0x0', '0x44')}
+    There are no prepatched orphans
+    There are no postpatched orphans
+
+We can see cozy found a diff between the 0th deadended (terminated) state in the prepatch and the 0th deadended state
+in the postpatched. Together these two states form a state pair, which is displayed in the first line of the report.
+
+The next lines tells the memory addresses that are different. Each byte that is different in memory is mapped to
+a tuple containing the symbolic byte at that memory address as a (prepatched, postpatched) tuple.
+
+The next lines tells the instruction pointer the program was at when it wrote to that specific memory address.
+Here we see that the program was at the instruction 0x401179 when it wrote to address 0x0, and the postpatched
+program never wrote to that address (hence the None).
+
+The next lines gives the symbolic register difference between the states. As we can see, the flags registers
+are different due to the presence of a branch in the postpatched program. As with the memory, each register
+maps to a (prepatched, postpatched) tuple which gives the symbolic contents of the registers.
+
+The next lines gives concretized input that will cause the prepatched program to end in the 0th state and
+the postpatched program in its 0th state. The input argument is concretized to 0x0 (aka NULL). Additionally since
+the memory contents and register contents may be symbolic, we provide a concretized version of those as well.
+
+The next lines describe any orphaned states - typically there will be none. An orphaned state is a state in which
+there are no compatible pair states.
