@@ -1,3 +1,5 @@
+import archinfo
+
 import cozy.analysis as analysis
 import cozy.claripy_ext as claripy_ext
 import cozy.execution_graph as execution_graph
@@ -7,7 +9,6 @@ from cozy.constants import *
 import cozy.primitives as primitives
 import angr, claripy
 from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
-import cProfile
 
 MAX_NUM_ROWS = 3
 MAX_NUM_VALS = 5
@@ -21,10 +22,10 @@ angr.types.register_types(sensor_row_struct)
 sensor_row_ptr = angr.types.parse_types('typedef struct SensorRow *SensorRowPtr;')
 angr.types.register_types(sensor_row_ptr)
 
-latest_data = primitives.sym_ptr('latest_data_init').annotate(MultiwriteAnnotation())
+latest_data = primitives.sym_ptr(archinfo.ArchAMD64, 'latest_data_init').annotate(MultiwriteAnnotation())
 vals = [[claripy.BVS("val_{}_{}".format(i, j), INT_SIZE * 8) for j in range(MAX_NUM_VALS)] for i in range(MAX_NUM_ROWS)]
 num_vals = [claripy.BVS("num_vals_{}".format(i), INT_SIZE * 8) for i in range(MAX_NUM_ROWS)]
-next_args = [primitives.sym_ptr('next_ptr').annotate(MultiwriteAnnotation()) for i in range(MAX_NUM_ROWS)]
+next_args = [primitives.sym_ptr(archinfo.ArchAMD64, 'next_ptr').annotate(MultiwriteAnnotation()) for i in range(MAX_NUM_ROWS)]
 
 if input("Would you like to constrain the temperatures to be in the range [-459, 1000)? (y/n)") == "y":
     range_constraint = claripy.And(*[claripy_ext.twos_comp_range_constraint(x, -459, 1000) for lst in vals for x in lst])

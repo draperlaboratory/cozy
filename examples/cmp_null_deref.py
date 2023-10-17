@@ -1,3 +1,5 @@
+import archinfo
+
 import cozy.analysis as analysis
 from cozy.project import Project
 from cozy.directive import Assume, Assert
@@ -7,7 +9,7 @@ import cozy.execution_graph as execution_graph
 from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
 
 dump_execution_graphs = input("Would you like to dump the execution graphs for visualization? (y/n)") == "y"
-arg0 = primitives.sym_ptr('int_arg').annotate(MultiwriteAnnotation())
+arg0 = primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg').annotate(MultiwriteAnnotation())
 
 def construct_args(sess):
     concrete_addr = sess.malloc(INT_SIZE)

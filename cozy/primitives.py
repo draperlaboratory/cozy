@@ -1,15 +1,18 @@
+from typing import Type
+
 import claripy
+from archinfo import Arch
 
 from .constants import *
 
 name_ctr = 0
 
-def sym_ptr(name=None):
+def sym_ptr(arch: Type[Arch], name=None):
     global name_ctr
     if name is None:
         name = "symbolic_ptr_{}".format(name_ctr)
         name_ctr += 1
-    return claripy.BVS(name, PTR_SIZE * 8)
+    return claripy.BVS(name, arch.bits)
 
 def sym_ptr_constraints(symbolic_ptr, concrete_addr, can_be_null=True):
     if can_be_null:

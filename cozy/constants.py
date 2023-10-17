@@ -1,3 +1,2 @@
 NULL_PTR = 0x0
 INT_SIZE = 4
-PTR_SIZE = 8
