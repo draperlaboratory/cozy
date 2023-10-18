@@ -12,6 +12,17 @@ source venv/bin/activate
 pip3 install angr sphinx sphinx-autoapi
 ```
 
+Alternatively, if you have `nix` installed and flakes enabled, run
+
+``` 
+nix develop .#testing 
+```
+
+To enter a nix development shell with `cozy` and its dependencies available on
+`$PYTHONPATH`.
+
+## Testing
+
 To run an example comparison, run one of the example scripts. In the root directory, run the following commands:
 
 ```commandline
@@ -19,6 +30,9 @@ source venv/bin/activate
 export PYTHONPATH="${PYTHONPATH}:$PWD"
 python3 examples/cmp_null_deref.py
 ```
+
+Or just `python3 examples/cmp_null_deref.py` if you're in the nix development
+shell.
 
 ### Building Docs
 

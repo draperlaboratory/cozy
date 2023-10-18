@@ -1,5 +1,5 @@
 {
-  description = "A very basic flake";
+  description = "The Cozy Comparitive Symbolic Evaluation Engine";
 
   outputs = { self, nixpkgs }:
   let 

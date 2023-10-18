@@ -8,7 +8,7 @@ version = "0.0.1"
 authors = [
   { name="Caleb Hebling", email="chelbling@draper.com" },
 ]
-description = "A symbolic execution diffing framwork, built on Angr"
+description = "The Cozy Comparitive Symbolic Evaluation Engine"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
