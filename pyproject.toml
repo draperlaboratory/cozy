@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "cozy"
 version = "0.0.1"
 authors = [
-  { name="Caleb Hebling", email="chelbling@draper.com" },
+  { name="Caleb Helbling", email="chelbling@draper.com" },
 ]
 description = "The Cozy Comparitive Symbolic Evaluation Engine"
 readme = "README.md"
