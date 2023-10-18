@@ -21,3 +21,7 @@ dependencies = [
     "networkx >= 3.0",
     "claripy >= 9.2.51"
 ]
+
+[project.urls]
+"Homepage" = "https://github.com/draperlaboratory/cozy"
+"Bug Tracker" = "https://github.com/draperlaboratory/cozy"
