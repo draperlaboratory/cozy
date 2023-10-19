@@ -258,7 +258,10 @@ will convert the :py:class:`~cozy.analysis.ComparisonResults` to a human readabl
     args = (arg0,)
     print(comparison_results.report(args))
 
-We now see the human readable report::
+We now see the human readable report
+
+.. code-block:: text
+    :linenos:
 
     STATE PAIR (0, StateTag.TERMINATED_STATE), (0, StateTag.TERMINATED_STATE) are different
     Memory difference detected for 0,0:
@@ -276,20 +279,20 @@ We now see the human readable report::
     There are no postpatched orphans
 
 We can see cozy found a diff between the 0th deadended (terminated) state in the prepatch and the 0th deadended state
-in the postpatched. Together these two states form a state pair, which is displayed in the first line of the report.
+in the postpatched. Together these two states form a state pair, which is displayed on line 1 of the report.
 
-The next lines tells the memory addresses that are different. Each byte that is different in memory is mapped to
+Line 3 displays the memory addresses that are different. Each byte that is different in memory is mapped to
 a tuple containing the symbolic byte at that memory address as a (prepatched, postpatched) tuple.
 
-The next lines tells the instruction pointer the program was at when it wrote to that specific memory address.
+Line 5 tells the instruction pointer the program was at when it wrote to that specific memory address.
 Here we see that the program was at the instruction 0x401179 when it wrote to address 0x0, and the postpatched
 program never wrote to that address (hence the None).
 
-The next lines gives the symbolic register difference between the states. As we can see, the flags registers
+Line 7 gives the symbolic register difference between the states. As we can see, the flags registers
 are different due to the presence of a branch in the postpatched program. As with the memory, each register
 maps to a (prepatched, postpatched) tuple which gives the symbolic contents of the registers.
 
-The next lines gives concretized input that will cause the prepatched program to end in the 0th state and
+Lines 8-12 gives concretized input that will cause the prepatched program to end in the 0th state and
 the postpatched program in its 0th state. The input argument is concretized to 0x0 (aka NULL). Additionally since
 the memory contents and register contents may be symbolic, we provide a concretized version of those as well.
 

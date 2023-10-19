@@ -17,8 +17,3 @@ Module Contents
 
    
 
-.. py:data:: PTR_SIZE
-   :value: 8
-
-   
-

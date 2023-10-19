@@ -33,7 +33,7 @@ Attributes
 
    
 
-.. py:function:: sym_ptr(name=None)
+.. py:function:: sym_ptr(arch: Type[archinfo.Arch], name=None)
 
 
 .. py:function:: sym_ptr_constraints(symbolic_ptr, concrete_addr, can_be_null=True)
