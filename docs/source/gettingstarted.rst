@@ -51,7 +51,7 @@ How cozy makes comparisons
 
 To make comparisons between two programs with different function
 implementations, cozy uses symbolic execution. Both programs are fed
-the same symbolic input, and cozy runs symbolic execuction until all states
+the same symbolic input, and cozy runs symbolic execution until all states
 terminate. At the end of execution, we have a list of deadended (terminated)
 states from the prepatched program, and a list of deadended states from the
 postpatched program. Each of these states have constraints associated with
@@ -68,7 +68,7 @@ Recall that the input to our functions are symbolic variables, so the
 set of constraints is in terms of these symbolic variables. We can think
 of the constraints as creating a predicate that exactly determines the
 subset of the input that leads to a specific state. Taking the conjunction
-of the constrains is therefore equivalent to creating a predicate
+of the constraints is therefore equivalent to creating a predicate
 that restricts the set of input values to the intersection of the input
 set for state A and state B. If this predicate is satisfiable, then
 this intersection of sets is nonempty, which means that there is at
@@ -79,7 +79,7 @@ Therefore the naive approach is to compare all pairs of deadended states
 from the prepatched and postpatched and check for satisfiability. cozy
 makes an optimization by checking ancestor (ie, nonterminal) states
 and checking for compatibility. cozy is also capable of generating
-concrete examples, which is very useful for generating test cases and
+concrete examples, which is useful for generating test cases and
 walking through program execution.
 
 ===================
@@ -142,7 +142,7 @@ cozy provides support for *directives*, which are attached to specific
 program instructions. Two basic directives that you should know about
 are :py:class:`cozy.directive.Assume` and :py:class:`cozy.directive.Assert`.
 Assume and assert function by pausing execution once a specific instruction
-is reached and add constraints to the SMT solver. Assumes are used for
+is reached and adding constraints to the SMT solver. Assumes are used for
 adding preconditions, and are often set to be triggered at the start of
 functions. Asserts are triggered if there exists an input that will cause
 the assert to be evaluated to true. Note that directives do not change the
@@ -216,7 +216,7 @@ Making the Comparisons
 To compare two program executions, we need two :py:class:`cozy.project.TerminatedResult` objects.
 In the previous execution of the pre-patched program, we received an :py:class:`cozy.project.AssertFailed` object
 as output, so let's create fresh sessions and re-run without any directives attached. This time we will make use of
-:py:func:`primitive.sym_ptr_constraints` to generate the constrains instead of creating them manually::
+:py:func:`primitive.sym_ptr_constraints` to generate the constraints instead of creating them manually::
 
     sess_prepatched = proj_prepatched.session("my_fun")
     sess_postpatched = proj_postpatched.session("my_fun")
