@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from typing import Callable
 
 import claripy
 from angr import SimState
@@ -499,6 +500,25 @@ class ComparisonResults:
         :rtype: Iterator[PairComparison]
         """
         return iter(self.pairs.values())
+
+    def verify(self, verification_assertion: Callable[[PairComparison], claripy.ast.Base]) -> list[PairComparison]:
+        """
+        Determines what compatible state pairs are valid with respect to a verification assertion. Note that the comparison results are verified with respect to the verification_assertion if the returned list is empty (has length 0).
+
+        :param Callable[[PairComparison], claripy.ast.Base] verification_assertion: A function which takes in a compatible pair and returns a claripy expression which must be satisfiable for all inputs while under the joint constraints of the state pair.
+        :return: A list of all compatible pairs for which there was an input that caused the verification assertion to fail.
+        :rtype: list[PairComparison]
+        """
+        failure_list = []
+        for ((state_left, state_right), pair_comp) in self.pairs.items():
+            joint_solver = claripy.Solver()
+            joint_solver.add(state_left.solver.constraints)
+            joint_solver.add(state_right.solver.constraints)
+            joint_solver.simplify()
+            assertion = verification_assertion(pair_comp)
+            if joint_solver.satisfiable(~assertion):
+                failure_list.append(pair_comp)
+        return failure_list
 
     def report(self, args: any, num_examples=3, concrete_arg_mapper=None) -> str:
         """
