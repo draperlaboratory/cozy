@@ -10,8 +10,9 @@ def serialize_diff(diff):
 
 # TODO might want to have a class for proj/rslt/name triples or something
 def compare_and_dump(proj_a, proj_b, rslt_a, rslt_b, file_name_a, file_name_b, 
-                     concrete_arg_mapper=None, compare_memory=True,
-                     compare_registers=True, args=[], num_examples=0):
+                     concrete_arg_mapper=None, compare_memory=True, compare_registers=True,
+                     include_vex=False,
+                     args=[], num_examples=0):
 
     eg_a = ExecutionGraph(proj_a,rslt_a)
     eg_b = ExecutionGraph(proj_b,rslt_b)
@@ -57,7 +58,8 @@ def compare_and_dump(proj_a, proj_b, rslt_a, rslt_b, file_name_a, file_name_b,
                     }
     def stringify_attrs(eg, g):
         for (n, attr) in g.nodes.items():
-            attr['contents'] = eg.get_bbl_pp(attr["contents"]) or "*"
+            if include_vex: attr['vex'] = attr["contents"].vex._pp_str() or "*"
+            attr['contents'] = eg.get_bbl_asm(attr["contents"]) or "*"
             attr['constraints'] = list(map(str, attr["constraints"])) or "*"
             del attr['state']
     stringify_attrs(eg_a, g_a)
@@ -95,7 +97,7 @@ class ExecutionGraph:
                 self.graph.add_edge(source, target)
                 target = source
 
-    def get_bbl_pp(self, b):
+    def get_bbl_asm(self, b):
         try:
             addr = b.addr - 1 if b.thumb else b.addr
             return self.proj.angr_proj.analyses.Disassembly(
@@ -123,7 +125,8 @@ class ExecutionGraph:
     def reconstruct_bbl_pp_graph(self):
         g = self.reconstruct_bbl_addr_graph()
         for n,attr in g.nodes.items():
-            attr['contents'] = self.get_bbl_pp(attr["contents"]) or "*"
+            attr['contents'] = self.get_bbl_asm(attr["contents"]) or "*"
+            attr['vex'] = attr["contents"].vex._pp_str() or "*"
             attr['constraints'] = list(map(str, attr["constraints"])) or "*"
             del attr['state']
         return g
