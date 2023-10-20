@@ -5,8 +5,14 @@ from . import primitives
 
 # Functions that should be included in claripy, but aren't
 
-# Constrained a symbolic integer x to fall in a range [low, high) where low and high are Python integers
-def twos_comp_range_constraint(x, low: int, high: int):
+def twos_comp_range_constraint(x: claripy.ast.bits, low: int, high: int) -> claripy.ast.Bool:
+    """
+    Generates a constraint which bounds the input argument in range [low, high), assuming a two's complement representation.
+
+    :param clairpy.ast.bits x: The bits to constrain. Typically, this is a symbolic bitvector.
+    :param int low: The lower bound on the range. This number may be negative.
+    :param int high: The upper bound on the range.
+    """
     num_bits = x.length
     sign_bit = x[(num_bits - 1):(num_bits - 1)]
     if low >= 0 and high >= 0:
@@ -18,8 +24,15 @@ def twos_comp_range_constraint(x, low: int, high: int):
     else:
         raise ValueError("low was greater than high")
 
-# Simplifies a claripy AST expression, given some knowledge base (kb) of information
-def simplify_kb(expr, kb) -> claripy.ast.Base:
+def simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bits:
+    """
+    Simplifies a claripy AST expression, given some knowledge base (kb) of information
+
+    :param claripy.ast.bits expr: The expression to simplify
+    :param claripy.ast.Bool kb: The knowledge base which is used to simplify the expr. This is typically a series of equalities conjoined together.
+    :return: A simplified version of the input expression, or the original expression if no simplification occurred.
+    :rtype: claripy.ast.bits
+    """
     if not expr.symbolic:
         return expr
     else:

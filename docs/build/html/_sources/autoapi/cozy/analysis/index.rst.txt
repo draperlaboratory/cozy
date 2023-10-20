@@ -102,6 +102,8 @@ Functions
 
    StateDiff encapsulates the memoized state used by the difference method. This class is used internally by compare_states and is typically not for external use.
 
+   :param bool use_memoized_binary_search: When use_memoized_binary_search is enabled, the difference algorithm will begin by comparing ancestors of the left and right states rather than the states themselves. This will improve performance in most cases, but will actually degrade performance when all pairs of states are compatible. This is because early exits from difference occur when ancestor states are incompatible.
+
    .. py:method:: difference(sl: angr.SimState, sr: angr.SimState, ignore_addrs: collections.abc.Iterable[range] | None = None, compute_mem_diff=True, compute_reg_diff=True) -> tuple[dict[int, tuple[claripy.ast.Base, claripy.ast.Base]], dict[str, tuple[claripy.ast.Base, claripy.ast.Base]]] | None
 
       Compares two states to find differences in memory. This function will return None if the two states have non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are different between the two. This function is based off of angr.analyses.congruency_check.CongruencyCheck().compare_states, but has been customized for our purposes. Note that this function may use memoization to enhance performance.
@@ -297,6 +299,15 @@ Functions
 
       :return: An iterator over compatible pairs.
       :rtype: Iterator[PairComparison]
+
+
+   .. py:method:: verify(verification_assertion: collections.abc.Callable[[PairComparison], claripy.ast.Base]) -> list[PairComparison]
+
+      Determines what compatible state pairs are valid with respect to a verification assertion. Note that the comparison results are verified with respect to the verification_assertion if the returned list is empty (has length 0).
+
+      :param Callable[[PairComparison], claripy.ast.Base] verification_assertion: A function which takes in a compatible pair and returns a claripy expression which must be satisfiable for all inputs while under the joint constraints of the state pair.
+      :return: A list of all compatible pairs for which there was a concrete input that caused the verification assertion to fail.
+      :rtype: list[PairComparison]
 
 
    .. py:method:: report(args: any, num_examples=3, concrete_arg_mapper=None) -> str

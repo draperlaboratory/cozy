@@ -40,23 +40,48 @@
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.claripy_ext.twos_comp_range_constraint" title="cozy.claripy_ext.twos_comp_range_constraint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twos_comp_range_constraint</span></code></a>(x, low, high)</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.claripy_ext.twos_comp_range_constraint" title="cozy.claripy_ext.twos_comp_range_constraint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twos_comp_range_constraint</span></code></a>(→ claripy.ast.Bool)</p></td>
+<td><p>Generates a constraint which bounds the input argument in range [low, high), assuming a two's complement representation.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.claripy_ext.simplify_kb" title="cozy.claripy_ext.simplify_kb"><code class="xref py py-obj docutils literal notranslate"><span class="pre">simplify_kb</span></code></a>(→ claripy.ast.Base)</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.claripy_ext.simplify_kb" title="cozy.claripy_ext.simplify_kb"><code class="xref py py-obj docutils literal notranslate"><span class="pre">simplify_kb</span></code></a>(→ claripy.ast.bits)</p></td>
+<td><p>Simplifies a claripy AST expression, given some knowledge base (kb) of information</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.claripy_ext.twos_comp_range_constraint">
-<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">twos_comp_range_constraint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.claripy_ext.twos_comp_range_constraint" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">twos_comp_range_constraint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">low</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">claripy.ast.Bool</span></span></span><a class="headerlink" href="#cozy.claripy_ext.twos_comp_range_constraint" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a constraint which bounds the input argument in range [low, high), assuming a two’s complement representation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>clairpy.ast.bits</em>) – The bits to constrain. Typically, this is a symbolic bitvector.</p></li>
+<li><p><strong>low</strong> (<em>int</em>) – The lower bound on the range. This number may be negative.</p></li>
+<li><p><strong>high</strong> (<em>int</em>) – The upper bound on the range.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.claripy_ext.simplify_kb">
-<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">simplify_kb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kb</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">claripy.ast.Base</span></span></span><a class="headerlink" href="#cozy.claripy_ext.simplify_kb" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">simplify_kb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.Bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">claripy.ast.bits</span></span></span><a class="headerlink" href="#cozy.claripy_ext.simplify_kb" title="Link to this definition">¶</a></dt>
+<dd><p>Simplifies a claripy AST expression, given some knowledge base (kb) of information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>expr</strong> (<em>claripy.ast.bits</em>) – The expression to simplify</p></li>
+<li><p><strong>kb</strong> (<em>claripy.ast.Bool</em>) – The knowledge base which is used to simplify the expr. This is typically a series of equalities conjoined together.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A simplified version of the input expression, or the original expression if no simplification occurred.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>claripy.ast.bits</p>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 </section>

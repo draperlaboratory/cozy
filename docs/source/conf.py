@@ -21,6 +21,7 @@ autoapi_dirs = ['../../cozy']
 templates_path = ['_templates']
 exclude_patterns = []
 
+autoapi_python_class_content = 'both'
 
 
 # -- Options for HTML output -------------------------------------------------
