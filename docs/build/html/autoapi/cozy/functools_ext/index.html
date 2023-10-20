@@ -40,39 +40,145 @@
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.functools_ext.preorder_mapfold" title="cozy.functools_ext.preorder_mapfold"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preorder_mapfold</span></code></a>(val0, f, accum0)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.functools_ext.preorder_mapfold" title="cozy.functools_ext.preorder_mapfold"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preorder_mapfold</span></code></a>(→ tuple[any, T])</p></td>
+<td><p>Simultaneously maps and folds over a nested Python datastructure in preorder traversal order. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.functools_ext.preorder_fold" title="cozy.functools_ext.preorder_fold"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preorder_fold</span></code></a>(→ U)</p></td>
+<td><p>Folds over a Python datastructure in preorder traversal. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.functools_ext.fmap" title="cozy.functools_ext.fmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fmap</span></code></a>(→ any)</p></td>
+<td><p>Maps a Python datastructure. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.functools_ext.compose" title="cozy.functools_ext.compose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compose</span></code></a>(→ collections.abc.Callable[[Ellipsis], C])</p></td>
+<td><p>Composes two functions, <cite>f</cite> and <cite>g</cite>, to create a new function h(*a, **kw) = f(g(*a, **kw))</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="attributes">
+<h3>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.functools_ext.T" title="cozy.functools_ext.T"><code class="xref py py-obj docutils literal notranslate"><span class="pre">T</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.functools_ext.preorder_fold" title="cozy.functools_ext.preorder_fold"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preorder_fold</span></code></a>(val0, f, accum0)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.functools_ext.U" title="cozy.functools_ext.U"><code class="xref py py-obj docutils literal notranslate"><span class="pre">U</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.functools_ext.fmap" title="cozy.functools_ext.fmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fmap</span></code></a>(val0, f)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.functools_ext.V" title="cozy.functools_ext.V"><code class="xref py py-obj docutils literal notranslate"><span class="pre">V</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.functools_ext.compose" title="cozy.functools_ext.compose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compose</span></code></a>(f, g)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.functools_ext.B" title="cozy.functools_ext.B"><code class="xref py py-obj docutils literal notranslate"><span class="pre">B</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.functools_ext.C" title="cozy.functools_ext.C"><code class="xref py py-obj docutils literal notranslate"><span class="pre">C</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py data">
+<dt class="sig sig-object py" id="cozy.functools_ext.T">
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">T</span></span><a class="headerlink" href="#cozy.functools_ext.T" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="cozy.functools_ext.U">
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">U</span></span><a class="headerlink" href="#cozy.functools_ext.U" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="cozy.functools_ext.V">
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">V</span></span><a class="headerlink" href="#cozy.functools_ext.V" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="cozy.functools_ext.B">
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">B</span></span><a class="headerlink" href="#cozy.functools_ext.B" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="cozy.functools_ext.C">
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">C</span></span><a class="headerlink" href="#cozy.functools_ext.C" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.functools_ext.preorder_mapfold">
-<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">preorder_mapfold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accum0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.functools_ext.preorder_mapfold" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">preorder_mapfold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">T</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accum0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.functools_ext.preorder_mapfold" title="Link to this definition">¶</a></dt>
+<dd><p>Simultaneously maps and folds over a nested Python datastructure in preorder traversal order. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>val0</strong> (<em>any</em>) – The datastructure to traverse.</p></li>
+<li><p><strong>f</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>, </em><em>T</em><em>]</em><em>, </em><em>tuple</em><em>[</em><em>any</em><em>, </em><em>T</em><em>]</em><em>]</em>) – This function takes as input a value inside the datastructure, the accumulated value and should return a mapped value and newly accumulated value.</p></li>
+<li><p><strong>accum0</strong> (<em>T</em>) – Initial accumulation parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The mapped datastructure and final accumulated value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[any, T]</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.functools_ext.preorder_fold">
-<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">preorder_fold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accum0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.functools_ext.preorder_fold" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">preorder_fold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">U</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">U</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accum0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">U</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">U</span></span></span><a class="headerlink" href="#cozy.functools_ext.preorder_fold" title="Link to this definition">¶</a></dt>
+<dd><p>Folds over a Python datastructure in preorder traversal. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>val0</strong> (<em>any</em>) – The datastructure to traverse.</p></li>
+<li><p><strong>f</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>, </em><em>U</em><em>]</em><em>, </em><em>U</em><em>]</em>) – This function takes as input the value inside the datastructure, the accumulated value and should return a new accumulated value.</p></li>
+<li><p><strong>accum0</strong> (<em>U</em>) – Initial accumulation parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The final accumulated value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>U</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.functools_ext.fmap">
-<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">fmap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.functools_ext.fmap" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">fmap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">any</span></span></span><a class="headerlink" href="#cozy.functools_ext.fmap" title="Link to this definition">¶</a></dt>
+<dd><p>Maps a Python datastructure. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>val0</strong> (<em>any</em>) – The datastructure to map. Note that for dictionaries, both keys and values will be mapped.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The mapped datastructure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>any</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.functools_ext.compose">
-<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">compose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.functools_ext.compose" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.functools_ext.</span></span><span class="sig-name descname"><span class="pre">compose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">B</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">C</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Ellipsis</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">B</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">Ellipsis</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">C</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.functools_ext.compose" title="Link to this definition">¶</a></dt>
+<dd><p>Composes two functions, <cite>f</cite> and <cite>g</cite>, to create a new function h(*a, **kw) = f(g(*a, **kw))</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f</strong> (<em>Callable</em><em>[</em><em>[</em><em>B</em><em>]</em><em>, </em><em>C</em><em>]</em>) – The first function to compose.</p></li>
+<li><p><strong>g</strong> (<em>Callable</em><em>[</em><em>[</em><em>...</em><em>]</em><em>, </em><em>B</em><em>]</em>) – The second function to compose.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A newly composed function which takes in an arbitrary number of arguments and keyword arguments, and returns a C.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Callable[[…], C]</p>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 </section>
