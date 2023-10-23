@@ -64,7 +64,7 @@ def run_weather_1():
 
     sess = proj.session('main')
 
-    my_print = VirtualPrint(
+    my_print = VirtualPrint.from_fun_offset(
         proj,
         fun_name='scan_temperatures',
         offset=0x4C,
@@ -85,7 +85,7 @@ def run_weather_2():
     proj.angr_proj.hook_symbol('__isoc99_fscanf', fscanf_wrapper(proj.angr_proj.arch.memory_endness))
     sess = proj.session('main')
 
-    my_print = VirtualPrint(
+    my_print = VirtualPrint.from_fun_offset(
         proj,
         fun_name='scan_temperatures',
         offset=0x46,
@@ -106,7 +106,7 @@ def run_weather_3():
     proj.angr_proj.hook_symbol('__isoc99_fscanf', fscanf_wrapper(proj.angr_proj.arch.memory_endness))
     sess = proj.session('main')
 
-    my_print = VirtualPrint(
+    my_print = VirtualPrint.from_fun_offset(
         proj,
         fun_name='scan_temperatures',
         offset=0x46,

@@ -177,7 +177,7 @@ Running the binaries through a tool like Ghidra reveals that the NULL
 dereference occurs at an offset of 0x10 from the start of my_fun in the
 prepatched binary. At this point the address being dereferenced is stored
 in the RAX register. Let’s create a directive that encodes these observations:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mem_write_okay_prepatched</span> <span class="o">=</span> <span class="n">Assert</span><span class="p">(</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mem_write_okay_prepatched</span> <span class="o">=</span> <span class="n">Assert</span><span class="o">.</span><span class="n">from_fun_offset</span><span class="p">(</span>
         <span class="n">project</span><span class="o">=</span><span class="n">proj_prepatched</span><span class="p">,</span>
         <span class="n">fun_name</span><span class="o">=</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span>
         <span class="n">offset</span><span class="o">=</span><span class="mh">0x10</span><span class="p">,</span>
@@ -210,7 +210,7 @@ triggered:</p>
 returned a <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.AssertFailed" title="cozy.project.AssertFailed"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.AssertFailed</span></code></a> object.</p>
 <p>Now let’s make another assert for the postpatched session and verify
 that no NULL dereference occurs in the postpatch:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mem_write_okay_postpatched</span> <span class="o">=</span> <span class="n">Assert</span><span class="p">(</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mem_write_okay_postpatched</span> <span class="o">=</span> <span class="n">Assert</span><span class="o">.</span><span class="n">from_fun_offset</span><span class="p">(</span>
         <span class="n">project</span><span class="o">=</span><span class="n">proj_postpatched</span><span class="p">,</span>
         <span class="n">fun_name</span><span class="o">=</span><span class="s2">&quot;my_fun&quot;</span><span class="p">,</span>
         <span class="n">offset</span><span class="o">=</span><span class="mh">0x17</span><span class="p">,</span>

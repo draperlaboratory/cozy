@@ -1,6 +1,7 @@
 import claripy
 import cozy.analysis as analysis
 import cozy.claripy_ext as claripy_ext
+from cozy.directive import Assume
 from cozy.project import Project
 from cozy.constants import *
 import cozy.primitives as primitives
@@ -36,7 +37,7 @@ def run_post_patched():
 
     sess = proj.session('patch_fun')
     args = construct_args(sess)
-    #sess.add_directives(Assume(proj, "patch_fun", 0x0, lambda st: (st.regs.rsi >= 0) & (st.regs.rsi < 3)))
+    sess.add_directives(Assume.from_fun_offset(proj, "patch_fun", 0x0, lambda st: (st.regs.rsi >= 0) & (st.regs.rsi < 3)))
     return (proj.object_ranges(), sess.run(*args))
 
 print("Running pre-patched.")

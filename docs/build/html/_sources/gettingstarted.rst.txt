@@ -156,7 +156,7 @@ dereference occurs at an offset of 0x10 from the start of my_fun in the
 prepatched binary. At this point the address being dereferenced is stored
 in the RAX register. Let's create a directive that encodes these observations::
 
-    mem_write_okay_prepatched = Assert(
+    mem_write_okay_prepatched = Assert.from_fun_offset(
             project=proj_prepatched,
             fun_name="my_fun",
             offset=0x10,
@@ -190,7 +190,7 @@ returned a :py:class:`cozy.project.AssertFailed` object.
 Now let's make another assert for the postpatched session and verify
 that no NULL dereference occurs in the postpatch::
 
-    mem_write_okay_postpatched = Assert(
+    mem_write_okay_postpatched = Assert.from_fun_offset(
             project=proj_postpatched,
             fun_name="my_fun",
             offset=0x17,

@@ -1,30 +1,48 @@
 import sys
+from collections.abc import Callable
 
 import angr, claripy
 from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord
+from cle import Backend
 
-from .directive import Assume, Assert, VirtualPrint, ErrorDirective
+from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
 
 class RunResult:
+    """
+    Base class for a result of running a :py:class:`~cozy.project.Session`.
+
+    :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
+    """
     def __init__(self, assume_warnings: list[tuple[Assume, SimState]]):
         self.assume_warnings = assume_warnings
 
 class TerminatedResult(RunResult):
+    """
+    This class is used for storing the results of running a session where all states either terminated or ended in an error.
+
+    :ivar list[SimState] deadended: States that reached normal termination.
+    :ivar list[ErrorRecord] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
+    """
     def __init__(self, deadended: list[SimState], errored: list[ErrorRecord], assume_warnings: list[tuple[Assume, SimState]]):
         super().__init__(assume_warnings)
         self.deadended = deadended
         self.errored = errored
 
 class AssertFailed(RunResult):
-    def __init__(self, assert_failed, assume_warnings: list[tuple[Assume, SimState]]):
+    """
+    This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
+
+    :ivar Assert assert_failed: The assertion that was triggered.
+    """
+    def __init__(self, assert_failed: Assert, assume_warnings: list[tuple[Assume, SimState]]):
         super().__init__(assume_warnings)
         self.assert_failed = assert_failed
 
 # This on_mem_write is designed to be attached as a breakpoint that is triggered
 # whenever memory is written. This hook simply logs the current instruction pointer
 # for each written byte in state.globals['mem_writes']
-def on_mem_write(state):
+def _on_mem_write(state):
     # TODO: Switch from Python dictionary to purely function map/dictionary
     # data structure for better performance.
     if 'mem_writes' in state.globals:
@@ -57,7 +75,10 @@ def on_mem_write(state):
 # (asserts/assumes). You can malloc memory for storage prior to running the session.
 # Once you are ready to run the session, use the run method.
 class Session:
-    def __init__(self, proj, start_fun=None):
+    def __init__(self, proj, start_fun: str | int | None=None):
+        """
+        Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
+        """
         self.proj = proj
 
         self.start_fun = start_fun
@@ -70,7 +91,7 @@ class Session:
         else:
             self.state = self.proj.angr_proj.factory.blank_state(add_options=state_options)
 
-        self.state.inspect.b('mem_write', when=angr.BP_AFTER, action=on_mem_write)
+        self.state.inspect.b('mem_write', when=angr.BP_AFTER, action=_on_mem_write)
 
         # Initialize mutable state related to this session
         self.directives = []
@@ -79,40 +100,81 @@ class Session:
 
         self.state_strong_refs = []
 
-    def store_fs(self, filename, simfile):
+    def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
+        """
+        Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments to state.fs.insert.
+
+        :param str filename: The filename of the new file.
+        :param angr.SimFile simfile: The file to make available to the simulated program.
+        :return: None
+        :rtype: None
+        """
         self.state.fs.insert(filename, simfile)
 
-    def malloc(self, num_bytes):
+    def malloc(self, num_bytes: int) -> int:
+        """
+        Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory before the :py:meth:`~cozy.project.Project.run` method is called.
+
+        :param int num_bytes: The number of bytes to allocate.
+        :return: A pointer to the allocated memory block.
+        :rtype: int
+        """
         if not self.heap_registered:
             self.state.register_plugin("heap", angr.state_plugins.heap.heap_ptmalloc.SimHeapPTMalloc())
             self.heap_registered = True
         return self.state.heap.malloc(num_bytes)
 
-    def store(self, addr, data):
+    def store(self, addr: int, data: claripy.ast.bits):
+        """
+        Stores data at some address. This method simply forwards the arguments to state.memory.store.
+
+        :param int addr: Address to store the data at.
+        :param claripy.ast.bits data: The data to store in memory.
+        """
         self.state.memory.store(addr, data)
 
-    def add_directives(self, *args):
-        self.directives.extend(args)
+    def add_directives(self, *directives: Directive) -> None:
+        """
+        Adds multiple directives to the session.
 
-    def add_constraints(self, *args):
-        self.state.add_constraints(*args)
+        :param Directive directives: The directives to add.
+        :return: None
+        :rtype: None
+        """
+        self.directives.extend(directives)
 
-    def save_states(self, states):
+    def add_constraints(self, *constraints: claripy.ast.bool) -> None:
+        """
+        Adds multiple constraints to the session's state.
+
+        :param claripy.ast.bool constraints: The constraints to add
+        :return: None
+        :rtype: None
+        """
+        self.state.add_constraints(*constraints)
+
+    def _save_states(self, states):
         for state in states:
             # SimStateHistory already has a variable named strongref_state that is used when EFFICIENT_STATE_MERGING
             # is enabled. However strongref_state in SimStateHistory may be set to None as part of a state cleanup
             # process. It seems that the primary usecase for strongref_state in angr is to help with merging states
             state.history.custom_strongref_state = state
 
-    def save_constraints(self, states):
+    def _save_constraints(self, states):
         for state in states:
             state.history.custom_constraints = state.solver.constraints
 
-    # If start_fun is None, then we run the analysis from the program start (ie, main function)
-    # start_fun can be an address of a function or a function name
-    # cache_intermediate_states is required for dumping the execution graph
-    # cache_constraints is required for performing memoized binary search when diffing states
-    def run(self, *args, cache_intermediate_states=False, cache_constraints=True) -> AssertFailed | TerminatedResult:
+    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True) -> AssertFailed | TerminatedResult:
+        """
+        Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.
+
+        :param claripy.ast.bits args: The arguments to pass to the function. angr will utilize the function's type signature to figure out the calling convention to use with the arguments.
+        :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached, preventing their garbage collection. This is required for dumping the execution graph.
+        :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will be cached, which is required for performing memoized binary search when diffing states.
+        :return: The result of running this session.
+        :rtype: AssertFailed | TerminatedResult
+        """
+
         # TODO: Figure out if we can safely remove this restriction. Initial tests seem to suggest that
         # running twice will result in different outcomes
         if self.has_run:
@@ -120,7 +182,7 @@ class Session:
         self.has_run = True
 
         if cache_intermediate_states:
-            self.save_states([self.state])
+            self._save_states([self.state])
 
         # Determine the address of the desired function
         if self.start_fun is None:
@@ -145,9 +207,9 @@ class Session:
             state = self.state
 
         if cache_intermediate_states:
-            self.save_states([state])
+            self._save_states([state])
         if cache_constraints:
-            self.save_constraints([state])
+            self._save_constraints([state])
 
         # This concretization strategy is necessary for nullable symbolic pointers. The default
         # concretization strategies attempts to concretize to integers within a small (128) byte
@@ -227,51 +289,93 @@ class Session:
                 simgr.move(from_stash='found', to_stash='pruned', filter_func=lambda state: state in prune_states)
 
                 if cache_intermediate_states:
-                    self.save_states(simgr.found)
+                    self._save_states(simgr.found)
                 if cache_constraints:
-                    self.save_constraints(simgr.found)
+                    self._save_constraints(simgr.found)
                 # We need to step over all the found states so that we don't immediately halt
                 # execution of these states in the next interation of the loop
                 simgr.step(num_inst=1, stash="found")
                 simgr.move(from_stash='found', to_stash="active")
                 errored_states = [error_record.state for error_record in simgr.errored]
                 if cache_intermediate_states:
-                    self.save_states(simgr.active)
-                    self.save_states(errored_states)
+                    self._save_states(simgr.active)
+                    self._save_states(errored_states)
                 if cache_constraints:
-                    self.save_constraints(simgr.active)
-                    self.save_constraints(errored_states)
+                    self._save_constraints(simgr.active)
+                    self._save_constraints(errored_states)
 
             print("No asserts triggered!")
         else:
             while len(simgr.active) > 0:
                 simgr.step()
                 if cache_intermediate_states:
-                    self.save_states(simgr.active)
+                    self._save_states(simgr.active)
                 if cache_constraints:
-                    self.save_constraints(simgr.active)
+                    self._save_constraints(simgr.active)
 
         return TerminatedResult(simgr.deadended, simgr.errored, assume_warnings)
 
 class Project:
-    # fun_prototypes should be a dictionary mapping function names/and or addresses
-    # to prototypes (type signatures) of the functions
-    def __init__(self, binary_path, fun_prototypes=None):
+    """
+    Represents a project for a single executable
+
+    :ivar angr.Project angr_proj: The angr project created for this cozy project.
+    :ivar dict[str | int, str] fun_prototypes: Maps function names or function addresses to their type signatures.
+    """
+
+    def __init__(self, binary_path: str, fun_prototypes: dict[str | int, str] | None=None):
+        """
+        Constructor for a project.
+
+        :param str binary_path: The path to the binary to analyze.
+        :param dict[str | int, str] | None fun_prototypes: Initial dictionary that maps function names or addresses to their type signatures. If None is passed, fun_prototypes is initialized to the empty dictionary.
+        """
         self.angr_proj = angr.Project(binary_path)
         if fun_prototypes is None:
             self.fun_prototypes = {}
         else:
             self.fun_prototypes = fun_prototypes
 
-    def object_ranges(self, obj_filter=lambda x: True):
+    def object_ranges(self, obj_filter: Callable[[Backend], bool] | None=None) -> list[range]:
+        """
+        Returns the ranges of the objects stored in the executable (for example: ELF objects). If obj_filter is specified, only objects that pass the filter make it into the return list.
+
+        :param Callable[[Backend], bool] | None obj_filter: Used to filter certain objects from the output list.
+        :return: A list of memory ranges.
+        :rtype: list[range]
+        """
+        if obj_filter is None:
+            obj_filter = lambda x: True
         return [range(obj.min_addr, obj.max_addr + 1) for obj in self.angr_proj.loader.all_objects if obj_filter(obj)]
 
-    def find_symbol_addr(self, fun_name):
-        return self.angr_proj.loader.find_symbol(fun_name).rebased_addr
+    def find_symbol_addr(self, sym_name: str) -> int:
+        """
+        Finds the rebased addressed of a symbol. Functions are the most common symbol type.
+
+        :param str sym_name: The symbol to lookup.
+        :return: The rebased symbol address
+        :rtype: int
+        """
+        return self.angr_proj.loader.find_symbol(sym_name).rebased_addr
 
     # fun can be either the address of a function or a function name
-    def add_prototype(self, fun, fun_prototype):
+    def add_prototype(self, fun: str | int, fun_prototype: str) -> None:
+        """
+        Adds a function prototype to this project.
+
+        :param str | int fun: The function's name or address.
+        :param str fun_prototype: The function's type signature.
+        :return: None
+        :rtype: None
+        """
         self.fun_prototypes[fun] = fun_prototype
 
-    def session(self, start_fun=None):
+    def session(self, start_fun: str | int | None=None) -> Session:
+        """
+        Returns a new session derived from this project.
+
+        :param str | int | None start_fun: The name or address of the function which this session will start with. If None is specified, then the program will start at the entry point (main function).
+        :return: The fresh session.
+        :rtype: Session
+        """
         return Session(self, start_fun=start_fun)

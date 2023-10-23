@@ -41,19 +41,19 @@
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.project.RunResult" title="cozy.project.RunResult"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RunResult</span></code></a></p></td>
-<td><p></p></td>
+<td><p>Base class for a result of running a <a class="reference internal" href="#cozy.project.Session" title="cozy.project.Session"><code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code></a>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerminatedResult</span></code></a></p></td>
-<td><p></p></td>
+<td><p>This class is used for storing the results of running a session where all states either terminated or ended in an error.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.project.AssertFailed" title="cozy.project.AssertFailed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AssertFailed</span></code></a></p></td>
-<td><p></p></td>
+<td><p>This class is used to indicate that execution failed due to an <a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><code class="xref py py-class docutils literal notranslate"><span class="pre">Assert</span></code></a> being satisfiable.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#cozy.project.Session" title="cozy.project.Session"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Session</span></code></a></p></td>
-<td><p></p></td>
+<td><p>Constructs a session derived from a project. The <a class="reference internal" href="#cozy.project.Project.session" title="cozy.project.Project.session"><code class="xref py py-meth docutils literal notranslate"><span class="pre">cozy.project.Project.session()</span></code></a> is the preferred method for creating a session, not this constructor.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.project.Project" title="cozy.project.Project"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Project</span></code></a></p></td>
-<td><p></p></td>
+<td><p>Represents a project for a single executable</p></td>
 </tr>
 </tbody>
 </table>
@@ -62,7 +62,7 @@
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.project.on_mem_write" title="cozy.project.on_mem_write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">on_mem_write</span></code></a>(state)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.project._on_mem_write" title="cozy.project._on_mem_write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_on_mem_write</span></code></a>(state)</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -70,92 +70,259 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.project.RunResult">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">RunResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">assume_warnings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><span class="pre">cozy.directive.Assume</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.RunResult" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Base class for a result of running a <a class="reference internal" href="#cozy.project.Session" title="cozy.project.Session"><code class="xref py py-class docutils literal notranslate"><span class="pre">Session</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>assume_warnings</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><a class="reference internal" href="../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><em>Assume</em></a><em>, </em><em>SimState</em><em>]</em><em>]</em>) – An assume warning occurs when a <a class="reference internal" href="../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><code class="xref py py-class docutils literal notranslate"><span class="pre">Assume</span></code></a> is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.project.TerminatedResult">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">TerminatedResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deadended</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errored</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.sim_manager.ErrorRecord</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_warnings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><span class="pre">cozy.directive.Assume</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.TerminatedResult" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#cozy.project.RunResult" title="cozy.project.RunResult"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RunResult</span></code></a></p>
+<p>This class is used for storing the results of running a session where all states either terminated or ended in an error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>deadended</strong> (<em>list</em><em>[</em><em>SimState</em><em>]</em>) – States that reached normal termination.</p></li>
+<li><p><strong>errored</strong> (<em>list</em><em>[</em><em>ErrorRecord</em><em>]</em>) – States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a <a class="reference internal" href="../directive/index.html#cozy.directive.ErrorDirective" title="cozy.directive.ErrorDirective"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.directive.ErrorDirective</span></code></a>.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.project.AssertFailed">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">AssertFailed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">assert_failed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_warnings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><span class="pre">cozy.directive.Assume</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.AssertFailed" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">AssertFailed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">assert_failed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><span class="pre">cozy.directive.Assert</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_warnings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><span class="pre">cozy.directive.Assume</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.AssertFailed" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#cozy.project.RunResult" title="cozy.project.RunResult"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RunResult</span></code></a></p>
+<p>This class is used to indicate that execution failed due to an <a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><code class="xref py py-class docutils literal notranslate"><span class="pre">Assert</span></code></a> being satisfiable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>assert_failed</strong> (<a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><em>Assert</em></a>) – The assertion that was triggered.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="cozy.project.on_mem_write">
-<span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">on_mem_write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.on_mem_write" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.project._on_mem_write">
+<span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">_on_mem_write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project._on_mem_write" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.project.Session">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">Session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_fun</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session" title="Link to this definition">¶</a></dt>
-<dd><dl class="py method">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">Session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session" title="Link to this definition">¶</a></dt>
+<dd><p>Constructs a session derived from a project. The <a class="reference internal" href="#cozy.project.Project.session" title="cozy.project.Project.session"><code class="xref py py-meth docutils literal notranslate"><span class="pre">cozy.project.Project.session()</span></code></a> is the preferred method for creating a session, not this constructor.</p>
+<dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Session.store_fs">
-<span class="sig-name descname"><span class="pre">store_fs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simfile</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.store_fs" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">store_fs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimFile</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.project.Session.store_fs" title="Link to this definition">¶</a></dt>
+<dd><p>Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments to state.fs.insert.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – The filename of the new file.</p></li>
+<li><p><strong>simfile</strong> (<em>angr.SimFile</em>) – The file to make available to the simulated program.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Session.malloc">
-<span class="sig-name descname"><span class="pre">malloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_bytes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.malloc" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">malloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#cozy.project.Session.malloc" title="Link to this definition">¶</a></dt>
+<dd><p>Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory before the <code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code> method is called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>num_bytes</strong> (<em>int</em>) – The number of bytes to allocate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pointer to the allocated memory block.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Session.store">
-<span class="sig-name descname"><span class="pre">store</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.store" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">store</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bits</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.store" title="Link to this definition">¶</a></dt>
+<dd><p>Stores data at some address. This method simply forwards the arguments to state.memory.store.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – Address to store the data at.</p></li>
+<li><p><strong>data</strong> (<em>claripy.ast.bits</em>) – The data to store in memory.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Session.add_directives">
-<span class="sig-name descname"><span class="pre">add_directives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.add_directives" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">add_directives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">directives</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../directive/index.html#cozy.directive.Directive" title="cozy.directive.Directive"><span class="pre">cozy.directive.Directive</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.project.Session.add_directives" title="Link to this definition">¶</a></dt>
+<dd><p>Adds multiple directives to the session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>directives</strong> (<a class="reference internal" href="../directive/index.html#cozy.directive.Directive" title="cozy.directive.Directive"><em>Directive</em></a>) – The directives to add.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Session.add_constraints">
-<span class="sig-name descname"><span class="pre">add_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.add_constraints" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">add_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">constraints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.project.Session.add_constraints" title="Link to this definition">¶</a></dt>
+<dd><p>Adds multiple constraints to the session’s state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>constraints</strong> (<em>claripy.ast.bool</em>) – The constraints to add</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.project.Session._save_states">
+<span class="sig-name descname"><span class="pre">_save_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session._save_states" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="cozy.project.Session.save_states">
-<span class="sig-name descname"><span class="pre">save_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.save_states" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="cozy.project.Session.save_constraints">
-<span class="sig-name descname"><span class="pre">save_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session.save_constraints" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.project.Session._save_constraints">
+<span class="sig-name descname"><span class="pre">_save_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Session._save_constraints" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Session.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_intermediate_states</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_constraints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cozy.project.AssertFailed" title="cozy.project.AssertFailed"><span class="pre">AssertFailed</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">TerminatedResult</span></a></span></span><a class="headerlink" href="#cozy.project.Session.run" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_intermediate_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_constraints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cozy.project.AssertFailed" title="cozy.project.AssertFailed"><span class="pre">AssertFailed</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">TerminatedResult</span></a></span></span><a class="headerlink" href="#cozy.project.Session.run" title="Link to this definition">¶</a></dt>
+<dd><p>Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>claripy.ast.bits</em>) – The arguments to pass to the function. angr will utilize the function’s type signature to figure out the calling convention to use with the arguments.</p></li>
+<li><p><strong>cache_intermediate_states</strong> (<em>bool</em>) – If this flag is True, then intermediate execution states will be cached, preventing their garbage collection. This is required for dumping the execution graph.</p></li>
+<li><p><strong>cache_constraints</strong> (<em>bool</em>) – If this flag is True, then the intermediate execution state’s constraints will be cached, which is required for performing memoized binary search when diffing states.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The result of running this session.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#cozy.project.AssertFailed" title="cozy.project.AssertFailed">AssertFailed</a> | <a class="reference internal" href="#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult">TerminatedResult</a></p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.project.Project">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">Project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binary_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_prototypes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Project" title="Link to this definition">¶</a></dt>
-<dd><dl class="py method">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.project.</span></span><span class="sig-name descname"><span class="pre">Project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binary_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_prototypes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Project" title="Link to this definition">¶</a></dt>
+<dd><p>Represents a project for a single executable</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>angr_proj</strong> (<em>angr.Project</em>) – The angr project created for this cozy project.</p></li>
+<li><p><strong>fun_prototypes</strong> (<em>dict</em><em>[</em><em>str</em><em> | </em><em>int</em><em>, </em><em>str</em><em>]</em>) – Maps function names or function addresses to their type signatures.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Constructor for a project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>binary_path</strong> (<em>str</em>) – The path to the binary to analyze.</p></li>
+<li><p><strong>fun_prototypes</strong> (<em>dict</em><em>[</em><em>str</em><em> | </em><em>int</em><em>, </em><em>str</em><em>] </em><em>| </em><em>None</em>) – Initial dictionary that maps function names or addresses to their type signatures. If None is passed, fun_prototypes is initialized to the empty dictionary.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Project.object_ranges">
-<span class="sig-name descname"><span class="pre">object_ranges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">lambda</span> <span class="pre">x:</span> <span class="pre">...</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Project.object_ranges" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">object_ranges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">cle.Backend</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">range</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.project.Project.object_ranges" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the ranges of the objects stored in the executable (for example: ELF objects). If obj_filter is specified, only objects that pass the filter make it into the return list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj_filter</strong> (<em>Callable</em><em>[</em><em>[</em><em>Backend</em><em>]</em><em>, </em><em>bool</em><em>] </em><em>| </em><em>None</em>) – Used to filter certain objects from the output list.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of memory ranges.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[range]</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Project.find_symbol_addr">
-<span class="sig-name descname"><span class="pre">find_symbol_addr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fun_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Project.find_symbol_addr" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">find_symbol_addr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sym_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#cozy.project.Project.find_symbol_addr" title="Link to this definition">¶</a></dt>
+<dd><p>Finds the rebased addressed of a symbol. Functions are the most common symbol type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sym_name</strong> (<em>str</em>) – The symbol to lookup.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The rebased symbol address</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Project.add_prototype">
-<span class="sig-name descname"><span class="pre">add_prototype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fun</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_prototype</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Project.add_prototype" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">add_prototype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_prototype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.project.Project.add_prototype" title="Link to this definition">¶</a></dt>
+<dd><p>Adds a function prototype to this project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fun</strong> (<em>str</em><em> | </em><em>int</em>) – The function’s name or address.</p></li>
+<li><p><strong>fun_prototype</strong> (<em>str</em>) – The function’s type signature.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.project.Project.session">
-<span class="sig-name descname"><span class="pre">session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_fun</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.project.Project.session" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cozy.project.Session" title="cozy.project.Session"><span class="pre">Session</span></a></span></span><a class="headerlink" href="#cozy.project.Project.session" title="Link to this definition">¶</a></dt>
+<dd><p>Returns a new session derived from this project.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>start_fun</strong> (<em>str</em><em> | </em><em>int</em><em> | </em><em>None</em>) – The name or address of the function which this session will start with. If None is specified, then the program will start at the entry point (main function).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The fresh session.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#cozy.project.Session" title="cozy.project.Session">Session</a></p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 

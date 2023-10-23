@@ -72,7 +72,7 @@ def run(proj, **kwargs):
     sess = proj.session('process_sensor_data')
     # angr will not move abort() calls into the errored list, so we need to
     # set things up to do that in the framework code instead.
-    sess.add_directives(ErrorDirective(proj, "abort", 0x0))
+    sess.add_directives(ErrorDirective.from_fun_offset(proj, "abort", 0x0))
     initialize_state(sess)
     return (proj.object_ranges(), sess.run(**kwargs))
 

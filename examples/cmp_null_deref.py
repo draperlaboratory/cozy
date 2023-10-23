@@ -22,7 +22,7 @@ def run_pre_patched():
 
     sess = proj.session('my_fun')
 
-    non_null_input = Assume(
+    non_null_input = Assume.from_fun_offset(
             project=proj,
             fun_name="my_fun",
             offset=0x0,
@@ -32,7 +32,7 @@ def run_pre_patched():
     # To use the above assume, uncomment the following line
     #sess.add_directives(non_null_input)
 
-    mem_write_okay = Assert(
+    mem_write_okay = Assert.from_fun_offset(
             project=proj,
             # The address of the function where we are inserting the assert
             fun_name="my_fun",
@@ -61,7 +61,7 @@ def run_post_patched():
     proj.add_prototype('my_fun', 'void f(int *a)')
 
     directives = [
-        Assert(
+        Assert.from_fun_offset(
             project=proj,
             # The address of the function where we are inserting the assert
             fun_name="my_fun",
