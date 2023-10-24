@@ -40,17 +40,17 @@
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.primitives.sym_ptr" title="cozy.primitives.sym_ptr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sym_ptr</span></code></a>(arch[, name])</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.primitives.sym_ptr" title="cozy.primitives.sym_ptr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sym_ptr</span></code></a>(→ claripy.BVS)</p></td>
+<td><p>Generates a fresh symbolic pointer for the input architecture.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.primitives.sym_ptr_constraints" title="cozy.primitives.sym_ptr_constraints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sym_ptr_constraints</span></code></a>(symbolic_ptr, concrete_addr[, ...])</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.primitives.sym_ptr_constraints" title="cozy.primitives.sym_ptr_constraints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sym_ptr_constraints</span></code></a>(→ claripy.ast.bool)</p></td>
+<td><p>Generates claripy expressions for constraining the input symbolic pointer to a specific concrete value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.primitives.from_twos_comp" title="cozy.primitives.from_twos_comp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_twos_comp</span></code></a>(val, num_bits)</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.primitives.from_twos_comp" title="cozy.primitives.from_twos_comp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_twos_comp</span></code></a>(→ int)</p></td>
+<td><p>Converts an integer from two's complement form back to an integer, assuming the value is stored in num_bits space.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.primitives.to_twos_comp" title="cozy.primitives.to_twos_comp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_twos_comp</span></code></a>(val, num_bits)</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.primitives.to_twos_comp" title="cozy.primitives.to_twos_comp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_twos_comp</span></code></a>(→ int)</p></td>
+<td><p>Converts an integer value to two's complement representation, assuming the value is stored in num_bits space.</p></td>
 </tr>
 </tbody>
 </table>
@@ -59,35 +59,96 @@
 <h3>Attributes<a class="headerlink" href="#attributes" title="Link to this heading">¶</a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.primitives.name_ctr" title="cozy.primitives.name_ctr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name_ctr</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.primitives._name_ctr" title="cozy.primitives._name_ctr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_name_ctr</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py data">
-<dt class="sig sig-object py" id="cozy.primitives.name_ctr">
-<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">name_ctr</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#cozy.primitives.name_ctr" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.primitives._name_ctr">
+<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">_name_ctr</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#cozy.primitives._name_ctr" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.primitives.sym_ptr">
-<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">sym_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">archinfo.Arch</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.primitives.sym_ptr" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">sym_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">archinfo.Arch</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">claripy.BVS</span></span></span><a class="headerlink" href="#cozy.primitives.sym_ptr" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a fresh symbolic pointer for the input architecture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arch</strong> (<em>Type</em><em>[</em><em>Arch</em><em>]</em>) – The architecture the pointer is for. For example in x64, the paramater passed should be archinfo.ArchAMD64, and a 64 bit symbolic pointer will be returned.</p></li>
+<li><p><strong>name</strong> (<em>str</em><em> | </em><em>None</em>) – A human readable name for the symbolic pointer. If None is passed an autogenerated symbolic_ptr_i name is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A fresh symbolic bitvector whose size is appropriate for the input architecture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>claripy.BVS</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.primitives.sym_ptr_constraints">
-<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">sym_ptr_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbolic_ptr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_addr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">can_be_null</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.primitives.sym_ptr_constraints" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">sym_ptr_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbolic_ptr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">can_be_null</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">claripy.ast.bool</span></span></span><a class="headerlink" href="#cozy.primitives.sym_ptr_constraints" title="Link to this definition">¶</a></dt>
+<dd><p>Generates claripy expressions for constraining the input symbolic pointer to a specific concrete value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>symbolic_ptr</strong> (<em>claripy.ast.bits</em>) – The symbolic pointer to constrain.</p></li>
+<li><p><strong>concrete_addr</strong> (<em>int</em>) – The concrete address which the symbolic pointer should be equal to.</p></li>
+<li><p><strong>can_be_null</strong> (<em>bool</em>) – If this value is True, the returned constraints will contain a disjunction which allows the symbolic pointer to be NULL.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A claripy proposition constraining the symbolic pointer.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>claripy.ast.bool</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.primitives.from_twos_comp">
-<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">from_twos_comp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_bits</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.primitives.from_twos_comp" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">from_twos_comp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_bits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#cozy.primitives.from_twos_comp" title="Link to this definition">¶</a></dt>
+<dd><p>Converts an integer from two’s complement form back to an integer, assuming the value is stored in num_bits space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>val</strong> (<em>int</em>) – The two’s complement integer to convert. This number must be non-negative.</p></li>
+<li><p><strong>num_bits</strong> (<em>int</em>) – The number of bits used to store the number.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A signed Python representation of the integer.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.primitives.to_twos_comp">
-<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">to_twos_comp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_bits</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.primitives.to_twos_comp" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.primitives.</span></span><span class="sig-name descname"><span class="pre">to_twos_comp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_bits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#cozy.primitives.to_twos_comp" title="Link to this definition">¶</a></dt>
+<dd><p>Converts an integer value to two’s complement representation, assuming the value is stored in num_bits space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>val</strong> (<em>int</em>) – The integer value to convert.</p></li>
+<li><p><strong>num_bits</strong> (<em>int</em>) – The number of bits used to store the integer.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A two’s complement representation of the value. This value is non-negative.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 </section>
