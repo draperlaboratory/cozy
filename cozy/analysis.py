@@ -22,13 +22,12 @@ class StateTag(Enum):
 
 # Given a state, returns a range of addresses that were used as part of the stack but are no longer
 # valid stack locations. This will happen if the stack grows, then shrinks.
-def invalid_stack_addrs(st: SimState) -> range:
+def _invalid_stack_addrs(st: SimState) -> range:
     curr_sp = st.callstack.stack_ptr
     # The red page is at the extrema of the stack, so we can use that to determine
     # the addresses to diqualify
     red_page_addr = st.memory._red_pageno * st.memory.page_size
     if st.arch.stack_change < 0:
-        #print("invalid_stack_addrs", hex(red_page_addr), hex(curr_sp))
         # The stack grows down
         return range(red_page_addr, curr_sp)
     else:
@@ -37,7 +36,7 @@ def invalid_stack_addrs(st: SimState) -> range:
 
 # If stack_change is negative, then the stack grows down
 # Otherwise the stack grows up
-def invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range, stack_change: int):
+def _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range, stack_change: int):
     if stack_change < 0:
         start = min(invalid_stack_left.start, invalid_stack_right.start)
         stop = min(invalid_stack_left.stop, invalid_stack_right.stop)
@@ -262,7 +261,7 @@ def concretize(solver, state_bundle, n=1):
 
     return ret
 
-def get_virtual_prints(st):
+def _get_virtual_prints(st):
     if 'virtual_prints' in st.globals:
         return st.globals['virtual_prints']
     else:
@@ -327,7 +326,7 @@ class SingletonState:
         :return: A list of concrete inputs that satisfies the constraints attached to the state.
         :rtype: list[ConcreteSingletonInput]
         """
-        state_bundle = (args, get_virtual_prints(self.state))
+        state_bundle = (args, _get_virtual_prints(self.state))
         solver = claripy.Solver()
         solver.add(self.state.solver.constraints)
         # self.state.solver does not seem to support the batch_eval method, so we can't use that here
@@ -383,7 +382,7 @@ class PairComparison:
         joint_solver = claripy.Solver()
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
-        state_bundle = (args, self.mem_diff, self.reg_diff, get_virtual_prints(sl), get_virtual_prints(sr))
+        state_bundle = (args, self.mem_diff, self.reg_diff, _get_virtual_prints(sl), _get_virtual_prints(sr))
         concrete_results = concretize(joint_solver, state_bundle, n=num_examples)
         return [ConcretePairInput(conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right)
                 for (conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right) in
@@ -520,13 +519,13 @@ class ComparisonResults:
                 failure_list.append(pair_comp)
         return failure_list
 
-    def report(self, args: any, num_examples=3, concrete_arg_mapper=None) -> str:
+    def report(self, args: any, concrete_arg_mapper: Callable[[any], any] | None=None, num_examples: int=3) -> str:
         """
         Generates a human readable report of the result object, saved as a string. This string is suitable for printing.
 
         :param any args: The symbolic/concolic arguments used during exeuction, here these args are concretized so that we can give examples of concrete input.
-        :param int num_examples: The number of concrete examples to show the user.
         :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param int num_examples: The number of concrete examples to show the user.
         :return: A human readable summary of the comparison.
         :rtype: str
         """
@@ -640,6 +639,13 @@ class ComparisonResults:
         return output
 
 def analyze_errored(result: TerminatedResult) -> list[SingletonState]:
+    """
+    Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via :py:func:`cozy.analysis.report_errored_states`.
+
+    :param TerminatedResult result: The object containing the errored states we wish to analyze.
+    :return: A list containing information dumped about the errored states.
+    :rtype: list[SingletonState]
+    """
     stdout_fileno = sys.stdout.fileno()
     stderr_fileno = sys.stderr.fileno()
     return [SingletonState(error_record.state,
@@ -648,7 +654,16 @@ def analyze_errored(result: TerminatedResult) -> list[SingletonState]:
                            i, StateTag.ERROR_STATE, error_record.error)
             for (i, error_record) in enumerate(result.errored)]
 
-def report_errored_states(errored: list[SingletonState], args, concrete_arg_mapper=None, num_examples=5) -> str:
+def report_errored_states(errored: list[SingletonState], args: any, concrete_arg_mapper: Callable[[any], any] | None=None, num_examples: int=3) -> str:
+    """
+    Creates a human readable report about a list of errored states.
+
+    :param list[SingletonState] errored: The errored states to analyze.
+    :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+    :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+    :return: The report as a string
+    :rtype: str
+    """
     output = ""
     if len(errored) > 0:
         for err in errored:
@@ -731,8 +746,8 @@ def compare_states(pre_patched: TerminatedResult, post_patched: TerminatedResult
         # If ignore_invalid_stack is enabled, then any data that was stored on the stack in the past,
         # but is now invalid due to movement of the stack pointer is ignored
         if ignore_invalid_stack:
-            inv_addrs_pre_patched = list(map(functools_ext.compose(invalid_stack_addrs, unwrap_sim_state), states_pre_patched))
-            inv_addrs_post_patched = list(map(functools_ext.compose(invalid_stack_addrs, unwrap_sim_state), states_post_patched))
+            inv_addrs_pre_patched = list(map(functools_ext.compose(_invalid_stack_addrs, unwrap_sim_state), states_pre_patched))
+            inv_addrs_post_patched = list(map(functools_ext.compose(_invalid_stack_addrs, unwrap_sim_state), states_post_patched))
         else:
             inv_addrs_pre_patched = None
             inv_addrs_post_patched = None
@@ -750,7 +765,7 @@ def compare_states(pre_patched: TerminatedResult, post_patched: TerminatedResult
 
                 if ignore_invalid_stack:
                     stack_change = state_pre.arch.stack_change
-                    ignore_addrs = prog_addrs + [invalid_stack_overlap(inv_addrs_pre_patched[i], inv_addrs_post_patched[j], stack_change)]
+                    ignore_addrs = prog_addrs + [_invalid_stack_overlap(inv_addrs_pre_patched[i], inv_addrs_post_patched[j], stack_change)]
                 else:
                     ignore_addrs = prog_addrs
 

@@ -27,11 +27,11 @@ Functions
 
 .. autoapisummary::
 
-   cozy.analysis.invalid_stack_addrs
-   cozy.analysis.invalid_stack_overlap
+   cozy.analysis._invalid_stack_addrs
+   cozy.analysis._invalid_stack_overlap
    cozy.analysis.hexify
    cozy.analysis.concretize
-   cozy.analysis.get_virtual_prints
+   cozy.analysis._get_virtual_prints
    cozy.analysis.analyze_errored
    cozy.analysis.report_errored_states
    cozy.analysis.compare_states
@@ -91,10 +91,10 @@ Functions
       
 
 
-.. py:function:: invalid_stack_addrs(st: angr.SimState) -> range
+.. py:function:: _invalid_stack_addrs(st: angr.SimState) -> range
 
 
-.. py:function:: invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range, stack_change: int)
+.. py:function:: _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range, stack_change: int)
 
 
 .. py:class:: StateDiff(use_memoized_binary_search=True)
@@ -129,7 +129,7 @@ Functions
 .. py:function:: concretize(solver, state_bundle, n=1)
 
 
-.. py:function:: get_virtual_prints(st)
+.. py:function:: _get_virtual_prints(st)
 
 
 .. py:class:: ConcretePairInput(args, mem_diff: dict[int, tuple[int, int]], reg_diff: dict[str, tuple[int, int]], left_vprints: list[tuple[cozy.directive.VirtualPrint, any]], right_vprints: list[tuple[cozy.directive.VirtualPrint, any]])
@@ -310,13 +310,13 @@ Functions
       :rtype: list[PairComparison]
 
 
-   .. py:method:: report(args: any, num_examples=3, concrete_arg_mapper=None) -> str
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
 
       Generates a human readable report of the result object, saved as a string. This string is suitable for printing.
 
       :param any args: The symbolic/concolic arguments used during exeuction, here these args are concretized so that we can give examples of concrete input.
-      :param int num_examples: The number of concrete examples to show the user.
       :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+      :param int num_examples: The number of concrete examples to show the user.
       :return: A human readable summary of the comparison.
       :rtype: str
 
@@ -324,8 +324,22 @@ Functions
 
 .. py:function:: analyze_errored(result: cozy.project.TerminatedResult) -> list[SingletonState]
 
+   Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via :py:func:`cozy.analysis.report_errored_states`.
 
-.. py:function:: report_errored_states(errored: list[SingletonState], args, concrete_arg_mapper=None, num_examples=5) -> str
+   :param TerminatedResult result: The object containing the errored states we wish to analyze.
+   :return: A list containing information dumped about the errored states.
+   :rtype: list[SingletonState]
+
+
+.. py:function:: report_errored_states(errored: list[SingletonState], args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+   Creates a human readable report about a list of errored states.
+
+   :param list[SingletonState] errored: The errored states to analyze.
+   :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+   :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+   :return: The report as a string
+   :rtype: str
 
 
 .. py:function:: compare_states(pre_patched: cozy.project.TerminatedResult, post_patched: cozy.project.TerminatedResult, prog_addrs: list[range], ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False, compare_std_err=False, use_memoized_binary_search=True) -> ComparisonResults

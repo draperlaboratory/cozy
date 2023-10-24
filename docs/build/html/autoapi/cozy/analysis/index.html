@@ -68,10 +68,10 @@
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.invalid_stack_addrs" title="cozy.analysis.invalid_stack_addrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">invalid_stack_addrs</span></code></a>(→ range)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis._invalid_stack_addrs" title="cozy.analysis._invalid_stack_addrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_invalid_stack_addrs</span></code></a>(→ range)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.invalid_stack_overlap" title="cozy.analysis.invalid_stack_overlap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">invalid_stack_overlap</span></code></a>(invalid_stack_left, ...)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis._invalid_stack_overlap" title="cozy.analysis._invalid_stack_overlap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_invalid_stack_overlap</span></code></a>(invalid_stack_left, ...)</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.hexify" title="cozy.analysis.hexify"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hexify</span></code></a>(val0)</p></td>
@@ -80,14 +80,14 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.concretize" title="cozy.analysis.concretize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">concretize</span></code></a>(solver, state_bundle[, n])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.get_virtual_prints" title="cozy.analysis.get_virtual_prints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_virtual_prints</span></code></a>(st)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis._get_virtual_prints" title="cozy.analysis._get_virtual_prints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_get_virtual_prints</span></code></a>(st)</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.analyze_errored" title="cozy.analysis.analyze_errored"><code class="xref py py-obj docutils literal notranslate"><span class="pre">analyze_errored</span></code></a>(→ list[SingletonState])</p></td>
-<td><p></p></td>
+<td><p>Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via <a class="reference internal" href="#cozy.analysis.report_errored_states" title="cozy.analysis.report_errored_states"><code class="xref py py-func docutils literal notranslate"><span class="pre">cozy.analysis.report_errored_states()</span></code></a>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.report_errored_states" title="cozy.analysis.report_errored_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">report_errored_states</span></code></a>(→ str)</p></td>
-<td><p></p></td>
+<td><p>Creates a human readable report about a list of errored states.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.compare_states" title="cozy.analysis.compare_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compare_states</span></code></a>(→ ComparisonResults)</p></td>
 <td><p>Compares a bundle of pre-patched states with a bundle of post-patched states.</p></td>
@@ -152,13 +152,13 @@ attributes – see the documentation for details.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="cozy.analysis.invalid_stack_addrs">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">invalid_stack_addrs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">st</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimState</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">range</span></span></span><a class="headerlink" href="#cozy.analysis.invalid_stack_addrs" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.analysis._invalid_stack_addrs">
+<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">_invalid_stack_addrs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">st</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimState</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">range</span></span></span><a class="headerlink" href="#cozy.analysis._invalid_stack_addrs" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="cozy.analysis.invalid_stack_overlap">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">invalid_stack_overlap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">invalid_stack_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">range</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">invalid_stack_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">range</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stack_change</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.invalid_stack_overlap" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.analysis._invalid_stack_overlap">
+<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">_invalid_stack_overlap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">invalid_stack_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">range</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">invalid_stack_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">range</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stack_change</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis._invalid_stack_overlap" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py class">
@@ -215,8 +215,8 @@ attributes – see the documentation for details.</p>
 <dd></dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="cozy.analysis.get_virtual_prints">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">get_virtual_prints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">st</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.get_virtual_prints" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.analysis._get_virtual_prints">
+<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">_get_virtual_prints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">st</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis._get_virtual_prints" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py class">
@@ -529,14 +529,14 @@ attributes – see the documentation for details.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.analysis.ComparisonResults.report">
-<span class="sig-name descname"><span class="pre">report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.analysis.ComparisonResults.report" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.analysis.ComparisonResults.report" title="Link to this definition">¶</a></dt>
 <dd><p>Generates a human readable report of the result object, saved as a string. This string is suitable for printing.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>args</strong> (<em>any</em>) – The symbolic/concolic arguments used during exeuction, here these args are concretized so that we can give examples of concrete input.</p></li>
-<li><p><strong>num_examples</strong> (<em>int</em>) – The number of concrete examples to show the user.</p></li>
 <li><p><strong>concrete_arg_mapper</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on another part of the input arguments.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The number of concrete examples to show the user.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -553,12 +553,40 @@ attributes – see the documentation for details.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.analysis.analyze_errored">
 <span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">analyze_errored</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.analysis.analyze_errored" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via <a class="reference internal" href="#cozy.analysis.report_errored_states" title="cozy.analysis.report_errored_states"><code class="xref py py-func docutils literal notranslate"><span class="pre">cozy.analysis.report_errored_states()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>result</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>TerminatedResult</em></a>) – The object containing the errored states we wish to analyze.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list containing information dumped about the errored states.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState">SingletonState</a>]</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.analysis.report_errored_states">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">report_errored_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">errored</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.analysis.report_errored_states" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">report_errored_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">errored</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.analysis.report_errored_states" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a human readable report about a list of errored states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>errored</strong> (<em>list</em><em>[</em><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><em>SingletonState</em></a><em>]</em>) – The errored states to analyze.</p></li>
+<li><p><strong>concrete_arg_mapper</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on another part of the input arguments.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to show the user for each errored state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The report as a string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.analysis.compare_states">
