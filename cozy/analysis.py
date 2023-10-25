@@ -47,7 +47,7 @@ def _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range
 
 class StateDiff:
     """
-    StateDiff encapsulates the memoized state used by the difference method. This class is used internally by compare_states and is typically not for external use.
+    StateDiff encapsulates the memoized state used by the difference method. This class is used internally by ComparisonResults and is typically not for external use.
     """
 
     def __init__(self, use_memoized_binary_search=True):
@@ -229,7 +229,7 @@ def hexify(val0):
             return val1
     return fmap(val0, f)
 
-def concretize(solver, state_bundle, n=1):
+def _concretize(solver, state_bundle, n=1):
     def f(elem, accum):
         if isinstance(elem, claripy.ast.Base):
             accum.append(elem)
@@ -330,7 +330,7 @@ class SingletonState:
         solver = claripy.Solver()
         solver.add(self.state.solver.constraints)
         # self.state.solver does not seem to support the batch_eval method, so we can't use that here
-        concrete_results = concretize(solver, state_bundle, n=num_examples)
+        concrete_results = _concretize(solver, state_bundle, n=num_examples)
         return [ConcreteSingletonInput(conc_args, conc_vprints) for (conc_args, conc_vprints) in concrete_results]
 
 class PairComparison:
@@ -383,7 +383,7 @@ class PairComparison:
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
         state_bundle = (args, self.mem_diff, self.reg_diff, _get_virtual_prints(sl), _get_virtual_prints(sr))
-        concrete_results = concretize(joint_solver, state_bundle, n=num_examples)
+        concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
         return [ConcretePairInput(conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right)
                 for (conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right) in
                 concrete_results]
@@ -397,14 +397,147 @@ class ComparisonResults:
     :ivar dict[SimState, SingletonState] orphans_right_lookup: maps post-patched orphaned states to singleton state information
     """
 
-    def __init__(self):
+    def __init__(self, pre_patched: TerminatedResult, post_patched: TerminatedResult, ignore_addrs: list[range],
+                 ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False,
+                 compare_std_err=False, use_memoized_binary_search=True):
+        """
+        Compares a bundle of pre-patched states with a bundle of post-patched states.
+
+        :param project.TerminatedResult pre_patched: The pre-patched state bundle
+        :param project.TerminatedResult post_patched: The post-patched state bundle
+        :param list[range] ignore_addrs: A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.
+        :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
+        :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
+        :param bool compare_registers: If True, then the analysis will compare registers used by the program.
+        :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.
+        :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
+        :param bool use_memoized_binary_search: If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.
+        """
+
         self.pairs: dict[tuple[SimState, SimState], PairComparison] = dict()
         # An orphan is a state that is not compatible with any other state
         # Testing has revealed that there are typically never any orphans
         self.orphans_left_lookup: dict[SimState, SingletonState] = dict()
         self.orphans_right_lookup: dict[SimState, SingletonState] = dict()
 
-    def add_pair(self, pair_comp: PairComparison):
+        singleton_state_cache: dict[SimState, SingletonState] = dict()
+        def get_singleton_state(state_info: SimState | ErrorRecord, state_id: int) -> SingletonState:
+            if isinstance(state_info, ErrorRecord):
+                error_info = state_info.error
+                state: SimState = state_info.state
+                state_tag = StateTag.ERROR_STATE
+            else:
+                error_info = None
+                state: SimState = state_info
+                state_tag = StateTag.TERMINATED_STATE
+
+            if state in singleton_state_cache:
+                return singleton_state_cache[state]
+            else:
+                if compare_std_out:
+                    stdout_fileno = sys.stdout.fileno()
+                    stdout = state.posix.dumps(stdout_fileno)
+                else:
+                    stdout = None
+                if compare_std_err:
+                    stderr_fileno = sys.stderr.fileno()
+                    stderr = state.posix.dumps(stderr_fileno)
+                else:
+                    stderr = None
+                sing_state = SingletonState(state, stdout, stderr, state_id, state_tag, error_info)
+                singleton_state_cache[state] = sing_state
+                return sing_state
+
+        memoized_diff = StateDiff(use_memoized_binary_search=use_memoized_binary_search)
+
+        def compare(states_pre_patched: list[SimState] | list[ErrorRecord],
+                    states_post_patched: list[SimState] | list[ErrorRecord],
+                    orphans_pre: dict[int, SimState] | dict[int, ErrorRecord],
+                    orphans_post: dict[int, SimState] | dict[int, ErrorRecord]):
+            def unwrap_sim_state(state_info: SimState | ErrorRecord) -> SimState:
+                if isinstance(state_info, ErrorRecord):
+                    return state_info.state
+                else:
+                    return state_info
+
+            # If ignore_invalid_stack is enabled, then any data that was stored on the stack in the past,
+            # but is now invalid due to movement of the stack pointer is ignored
+            if ignore_invalid_stack:
+                inv_addrs_pre_patched = list(
+                    map(functools_ext.compose(_invalid_stack_addrs, unwrap_sim_state), states_pre_patched))
+                inv_addrs_post_patched = list(
+                    map(functools_ext.compose(_invalid_stack_addrs, unwrap_sim_state), states_post_patched))
+            else:
+                inv_addrs_pre_patched = None
+                inv_addrs_post_patched = None
+
+            is_terminated_comparison = True
+
+            for (i, state_pre_info) in enumerate(states_pre_patched):
+                state_pre = unwrap_sim_state(state_pre_info)
+                if isinstance(state_pre_info, ErrorRecord):
+                    is_terminated_comparison = False
+                for (j, state_post_info) in enumerate(states_post_patched):
+                    state_post: SimState = unwrap_sim_state(state_post_info)
+                    if isinstance(state_post_info, ErrorRecord):
+                        is_terminated_comparison = False
+
+                    if ignore_invalid_stack:
+                        stack_change = state_pre.arch.stack_change
+                        pair_ignore_addrs = ignore_addrs + [_invalid_stack_overlap(inv_addrs_pre_patched[i], inv_addrs_post_patched[j], stack_change)]
+                    else:
+                        pair_ignore_addrs = ignore_addrs
+
+                    diff = memoized_diff.difference(
+                        state_pre, state_post, pair_ignore_addrs,
+                        compute_mem_diff=compare_memory if is_terminated_comparison else False,
+                        compute_reg_diff=compare_registers if is_terminated_comparison else False
+                    )
+
+                    if diff is not None:
+                        # These states are compatible, so remove them from the orphans dict
+                        orphans_pre.pop(i, None)
+                        orphans_post.pop(j, None)
+
+                        (mem_diff, reg_diff) = diff
+
+                        mem_diff_ip = {
+                            addr: (
+                            state_pre.globals['mem_writes'].get(addr), state_post.globals['mem_writes'].get(addr))
+                            for addr in mem_diff.keys()
+                        }
+
+                        comparison = PairComparison(
+                            get_singleton_state(state_pre_info, i),
+                            get_singleton_state(state_post_info, j),
+                            mem_diff, reg_diff, mem_diff_ip
+                        )
+
+                        self._add_pair(comparison)
+
+        orphans_pre: dict[int, SimState] = {i: state for (i, state) in enumerate(pre_patched.deadended)}
+        orphans_post: dict[int, SimState] = {i: state for (i, state) in enumerate(post_patched.deadended)}
+        orphans_pre_errored: dict[int, ErrorRecord] = {i: error_record for (i, error_record) in
+                                                       enumerate(pre_patched.errored)}
+        orphans_post_errored: dict[int, ErrorRecord] = {i: error_record for (i, error_record) in
+                                                        enumerate(post_patched.errored)}
+
+        compare(pre_patched.deadended, post_patched.deadended, orphans_pre, orphans_post)
+        compare(pre_patched.errored, post_patched.deadended, orphans_pre_errored, orphans_post)
+        compare(pre_patched.deadended, post_patched.errored, orphans_pre, orphans_post_errored)
+        compare(pre_patched.errored, post_patched.errored, orphans_pre_errored, orphans_post_errored)
+
+        def add_orphans(orphans_dict: dict[int, SimState] | dict[int, ErrorRecord], add_orphan):
+            # These states that are orphans did not have any compatible states
+            for (i, orphan_state) in orphans_dict.items():
+                add_orphan(get_singleton_state(orphan_state, i))
+
+        add_orphans(orphans_pre, self._add_orphan_left)
+        add_orphans(orphans_post, self._add_orphan_right)
+        add_orphans(orphans_pre_errored, self._add_orphan_left)
+        add_orphans(orphans_post_errored, self._add_orphan_right)
+
+    def _add_pair(self, pair_comp: PairComparison):
         """
         Adds a result of comparing two states to the result object.
 
@@ -413,7 +546,7 @@ class ComparisonResults:
         """
         self.pairs[(pair_comp.state_left.state, pair_comp.state_right.state)] = pair_comp
 
-    def add_orphan_left(self, orph_state: SingletonState):
+    def _add_orphan_left(self, orph_state: SingletonState):
         """
         Adds a pre-patched orphan to the result object.
 
@@ -422,7 +555,7 @@ class ComparisonResults:
         """
         self.orphans_left_lookup[orph_state.state] = orph_state
 
-    def add_orphan_right(self, orph_state: SingletonState):
+    def _add_orphan_right(self, orph_state: SingletonState):
         """
         Adds a post-patched orphan to the result object.
 
@@ -638,35 +771,56 @@ class ComparisonResults:
 
         return output
 
-def analyze_errored(result: TerminatedResult) -> list[SingletonState]:
+class ErrorResults:
     """
-    Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via :py:func:`cozy.analysis.report_errored_states`.
+    This class is for getting results about errored states, which can be done with only a single TerminatedResult.
+    """
+    def __init__(self, result: TerminatedResult):
+        """
+        Constructor for ErrorResults
 
-    :param TerminatedResult result: The object containing the errored states we wish to analyze.
-    :return: A list containing information dumped about the errored states.
-    :rtype: list[SingletonState]
-    """
-    stdout_fileno = sys.stdout.fileno()
-    stderr_fileno = sys.stderr.fileno()
-    return [SingletonState(error_record.state,
-                           error_record.state.posix.dumps(stdout_fileno),
-                           error_record.state.posix.dumps(stderr_fileno),
-                           i, StateTag.ERROR_STATE, error_record.error)
-            for (i, error_record) in enumerate(result.errored)]
+        :param TerminatedResult result: The results to extract errored states from and analyze.
+        """
+        self.errored_lookup = dict()
+        stdout_fileno = sys.stdout.fileno()
+        stderr_fileno = sys.stderr.fileno()
 
-def report_errored_states(errored: list[SingletonState], args: any, concrete_arg_mapper: Callable[[any], any] | None=None, num_examples: int=3) -> str:
-    """
-    Creates a human readable report about a list of errored states.
+        for (i, error_record) in enumerate(result.errored):
+            self.errored_lookup[error_record.state] = SingletonState(
+                error_record.state,
+                error_record.state.posix.dumps(stdout_fileno),
+                error_record.state.posix.dumps(stderr_fileno),
+                i, StateTag.ERROR_STATE, error_record.error)
 
-    :param list[SingletonState] errored: The errored states to analyze.
-    :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
-    :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
-    :return: The report as a string
-    :rtype: str
-    """
-    output = ""
-    if len(errored) > 0:
-        for err in errored:
+    def get_errored_singleton(self, state: SimState) -> SingletonState:
+        """
+        Returns the SingletonState associated with some errored SimState
+
+        :param SimState state: The state for which we should find a corresponding SingletonState
+        """
+        return self.errored_lookup[state]
+
+    def __iter__(self) -> Iterator[SingletonState]:
+        """
+        Iterates over the SingletonState errored states stored in this object
+
+        :return: An iterator over errored SingletonStates.
+        :rtype: Iterator[SingletonState]
+        """
+        return iter(self.errored_lookup.values())
+
+    def report(self, args: any, concrete_arg_mapper: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+        """
+        Creates a human readable report about a list of errored states.
+
+        :param any args: The arguments to concretize
+        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+        :return: The report as a string
+        :rtype: str
+        """
+        output = ""
+        for err in self.errored_lookup.values():
             output += "Error State #{}\n".format(err.state_id)
             output += "{}\n".format(err.error_info)
             concrete_vals_lst = err.concrete_examples(args, num_examples=num_examples)
@@ -679,140 +833,4 @@ def report_errored_states(errored: list[SingletonState], args: any, concrete_arg
                 output += "{}.\n".format(j + 1)
                 output += "\t{}\n".format(str(concrete_args))
             output += "\n"
-    return output
-
-def compare_states(pre_patched: TerminatedResult, post_patched: TerminatedResult, prog_addrs: list[range],
-                   ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False,
-                   compare_std_err=False, use_memoized_binary_search=True) -> ComparisonResults:
-    """
-    Compares a bundle of pre-patched states with a bundle of post-patched states.
-
-    :param project.TerminatedResult pre_patched: The pre-patched state bundle
-    :param project.TerminatedResult post_patched: The post-patched state bundle
-    :param list[range] prog_addrs: A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.
-    :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
-    :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
-    :param bool compare_registers: If True, then the analysis will compare registers used by the program.
-    :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.
-    :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
-    :param bool use_memoized_binary_search: If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.
-    :return: The results from the comparison. To further analyze the results, see the fields stored in the output object.
-    :rtype: ComparisonResults
-    """
-
-    ret = ComparisonResults()
-
-    singleton_state_cache: dict[SimState, SingletonState] = dict()
-
-    def get_singleton_state(state_info: SimState | ErrorRecord, state_id: int) -> SingletonState:
-        if isinstance(state_info, ErrorRecord):
-            error_info = state_info.error
-            state: SimState = state_info.state
-            state_tag = StateTag.ERROR_STATE
-        else:
-            error_info = None
-            state: SimState = state_info
-            state_tag = StateTag.TERMINATED_STATE
-
-        if state in singleton_state_cache:
-            return singleton_state_cache[state]
-        else:
-            if compare_std_out:
-                stdout_fileno = sys.stdout.fileno()
-                stdout = state.posix.dumps(stdout_fileno)
-            else:
-                stdout = None
-            if compare_std_err:
-                stderr_fileno = sys.stderr.fileno()
-                stderr = state.posix.dumps(stderr_fileno)
-            else:
-                stderr = None
-            sing_state = SingletonState(state, stdout, stderr, state_id, state_tag, error_info)
-            singleton_state_cache[state] = sing_state
-            return sing_state
-
-    memoized_diff = StateDiff(use_memoized_binary_search=use_memoized_binary_search)
-
-    def compare(states_pre_patched: list[SimState] | list[ErrorRecord],
-                states_post_patched: list[SimState] | list[ErrorRecord],
-                orphans_pre: dict[int, SimState] | dict[int, ErrorRecord],
-                orphans_post: dict[int, SimState] | dict[int, ErrorRecord]):
-        def unwrap_sim_state(state_info: SimState | ErrorRecord) -> SimState:
-            if isinstance(state_info, ErrorRecord):
-                return state_info.state
-            else:
-                return state_info
-
-        # If ignore_invalid_stack is enabled, then any data that was stored on the stack in the past,
-        # but is now invalid due to movement of the stack pointer is ignored
-        if ignore_invalid_stack:
-            inv_addrs_pre_patched = list(map(functools_ext.compose(_invalid_stack_addrs, unwrap_sim_state), states_pre_patched))
-            inv_addrs_post_patched = list(map(functools_ext.compose(_invalid_stack_addrs, unwrap_sim_state), states_post_patched))
-        else:
-            inv_addrs_pre_patched = None
-            inv_addrs_post_patched = None
-
-        is_terminated_comparison = True
-
-        for (i, state_pre_info) in enumerate(states_pre_patched):
-            state_pre = unwrap_sim_state(state_pre_info)
-            if isinstance(state_pre_info, ErrorRecord):
-                is_terminated_comparison = False
-            for (j, state_post_info) in enumerate(states_post_patched):
-                state_post: SimState = unwrap_sim_state(state_post_info)
-                if isinstance(state_post_info, ErrorRecord):
-                    is_terminated_comparison = False
-
-                if ignore_invalid_stack:
-                    stack_change = state_pre.arch.stack_change
-                    ignore_addrs = prog_addrs + [_invalid_stack_overlap(inv_addrs_pre_patched[i], inv_addrs_post_patched[j], stack_change)]
-                else:
-                    ignore_addrs = prog_addrs
-
-                diff = memoized_diff.difference(
-                    state_pre, state_post, ignore_addrs,
-                    compute_mem_diff=compare_memory if is_terminated_comparison else False,
-                    compute_reg_diff=compare_registers if is_terminated_comparison else False
-                )
-
-                if diff is not None:
-                    # These states are compatible, so remove them from the orphans dict
-                    orphans_pre.pop(i, None)
-                    orphans_post.pop(j, None)
-
-                    (mem_diff, reg_diff) = diff
-
-                    mem_diff_ip = {
-                        addr: (state_pre.globals['mem_writes'].get(addr), state_post.globals['mem_writes'].get(addr))
-                        for addr in mem_diff.keys()
-                    }
-
-                    comparison = PairComparison(
-                        get_singleton_state(state_pre_info, i),
-                        get_singleton_state(state_post_info, j),
-                        mem_diff, reg_diff, mem_diff_ip
-                    )
-
-                    ret.add_pair(comparison)
-
-    orphans_pre: dict[int, SimState] = {i: state for (i, state) in enumerate(pre_patched.deadended)}
-    orphans_post: dict[int, SimState] = {i: state for (i, state) in enumerate(post_patched.deadended)}
-    orphans_pre_errored: dict[int, ErrorRecord] = {i: error_record for (i, error_record) in enumerate(pre_patched.errored)}
-    orphans_post_errored: dict[int, ErrorRecord] = {i: error_record for (i, error_record) in enumerate(post_patched.errored)}
-
-    compare(pre_patched.deadended, post_patched.deadended, orphans_pre, orphans_post)
-    compare(pre_patched.errored, post_patched.deadended, orphans_pre_errored, orphans_post)
-    compare(pre_patched.deadended, post_patched.errored, orphans_pre, orphans_post_errored)
-    compare(pre_patched.errored, post_patched.errored, orphans_pre_errored, orphans_post_errored)
-
-    def add_orphans(orphans_dict: dict[int, SimState] | dict[int, ErrorRecord], add_orphan):
-        # These states that are orphans did not have any compatible states
-        for (i, orphan_state) in orphans_dict.items():
-            add_orphan(get_singleton_state(orphan_state, i))
-
-    add_orphans(orphans_pre, ret.add_orphan_left)
-    add_orphans(orphans_post, ret.add_orphan_right)
-    add_orphans(orphans_pre_errored, ret.add_orphan_left)
-    add_orphans(orphans_post_errored, ret.add_orphan_right)
-
-    return ret
+        return output

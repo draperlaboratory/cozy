@@ -20,14 +20,14 @@ def compare_and_dump(proj_a, proj_b, rslt_a, rslt_b, file_name_a, file_name_b,
     addrs_b = proj_b.object_ranges()
     g_a = eg_a.reconstruct_bbl_addr_graph()
     g_b = eg_b.reconstruct_bbl_addr_graph()
-    comparison_results = analysis.compare_states(rslt_a,rslt_b, addrs_a + addrs_b,
-                                                 compare_memory=compare_memory,
-                                                 compare_registers=compare_registers,
-                                                 # We extract std[out|err] below.
-                                                 # But maybe we should get it from 
-                                                 # the analysis
-                                                 compare_std_err=False,
-                                                 compare_std_out=False)
+    comparison_results = analysis.ComparisonResults(rslt_a,rslt_b, addrs_a + addrs_b,
+                                                    compare_memory=compare_memory,
+                                                    compare_registers=compare_registers,
+                                                    # We extract std[out|err] below.
+                                                    # But maybe we should get it from
+                                                    # the analysis
+                                                    compare_std_err=False,
+                                                    compare_std_out=False)
     leaves_a = [v for (v, d) in g_a.out_degree() if d == 0]
     leaves_b = [v for (v, d) in g_b.out_degree() if d == 0]
     for na in leaves_a:

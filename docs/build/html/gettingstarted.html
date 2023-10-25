@@ -267,8 +267,9 @@ memory that are a result of different program instructions:</p>
 <span class="n">There</span> <span class="n">are</span> <span class="mi">2</span> <span class="n">deadended</span> <span class="n">states</span> <span class="ow">and</span> <span class="mi">0</span> <span class="n">errored</span> <span class="n">states</span> <span class="k">for</span> <span class="n">the</span> <span class="n">post</span><span class="o">-</span><span class="n">patch</span> <span class="n">run</span><span class="o">.</span>
 </pre></div>
 </div>
-<p>We can now make a comparison between these two terminated results:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">comparison_results</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">compare_states</span><span class="p">(</span><span class="n">prepatched_result</span><span class="p">,</span> <span class="n">postpatched_result</span><span class="p">,</span> <span class="n">prog_ranges_union</span><span class="p">)</span>
+<p>We can now make a comparison between these two terminated results. Constructing a ComparisonResults object is used to do
+the comparison computation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">comparison_results</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">ComparisonResults</span><span class="p">(</span><span class="n">prepatched_result</span><span class="p">,</span> <span class="n">postpatched_result</span><span class="p">,</span> <span class="n">prog_ranges_union</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>To view a human readable report, we can now call the <a class="reference internal" href="autoapi/cozy/analysis/index.html#cozy.analysis.ComparisonResults.report" title="cozy.analysis.ComparisonResults.report"><code class="xref py py-meth docutils literal notranslate"><span class="pre">cozy.analysis.ComparisonResults.report()</span></code></a> method, which
@@ -310,6 +311,10 @@ the memory contents and register contents may be symbolic, we provide a concreti
 <p>The next lines describe any orphaned states - typically there will be none. An orphaned state is a state in which
 there are no compatible pair states.</p>
 </section>
+<section id="further-examples">
+<h2>Further Examples<a class="headerlink" href="#further-examples" title="Link to this heading">¶</a></h2>
+<p>Further examples on how to use cozy for some simple programs can be found at <a class="reference external" href="https://github.com/draperlaboratory/cozy/tree/main/examples">https://github.com/draperlaboratory/cozy/tree/main/examples</a></p>
+</section>
 </section>
 
 
@@ -336,6 +341,7 @@ there are no compatible pair states.</p>
 <li class="toctree-l2"><a class="reference internal" href="#example-walkthrough">Example Walkthrough</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#directives-assumes-and-asserts">Directives - Assumes and Asserts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#making-the-comparisons">Making the Comparisons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#further-examples">Further Examples</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>

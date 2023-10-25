@@ -248,9 +248,10 @@ This prints the following messages::
     There are 1 deadended states and 0 errored states for the pre-patch run.
     There are 2 deadended states and 0 errored states for the post-patch run.
 
-We can now make a comparison between these two terminated results::
+We can now make a comparison between these two terminated results. Constructing a ComparisonResults object is used to do
+the comparison computation::
 
-    comparison_results = cozy.analysis.compare_states(prepatched_result, postpatched_result, prog_ranges_union)
+    comparison_results = cozy.analysis.ComparisonResults(prepatched_result, postpatched_result, prog_ranges_union)
 
 To view a human readable report, we can now call the :py:meth:`cozy.analysis.ComparisonResults.report` method, which
 will convert the :py:class:`~cozy.analysis.ComparisonResults` to a human readable summary::
@@ -298,3 +299,9 @@ the memory contents and register contents may be symbolic, we provide a concreti
 
 The next lines describe any orphaned states - typically there will be none. An orphaned state is a state in which
 there are no compatible pair states.
+
+================
+Further Examples
+================
+
+Further examples on how to use cozy for some simple programs can be found at https://github.com/draperlaboratory/cozy/tree/main/examples

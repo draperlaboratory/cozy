@@ -128,24 +128,24 @@ def concrete_mapper(integers_lst):
 print("Running weather-1")
 (weather_1_addrs, weather_1_states) = run_weather_1()
 if input("Would you like to view error states for weather-1? (y/n)") == "y":
-    errored_info = analysis.analyze_errored(weather_1_states)
-    print(analysis.report_errored_states(errored_info, args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    errored_info = analysis.ErrorResults(weather_1_states)
+    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 input("Press enter to run weather-2")
 
 print("\nRunning weather-2")
 (weather_2_addrs, weather_2_states) = run_weather_2()
 if input("Would you like to view error states for weather-2? (y/n)") == "y":
-    errored_info = analysis.analyze_errored(weather_2_states)
-    print(analysis.report_errored_states(errored_info, args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    errored_info = analysis.ErrorResults(weather_2_states)
+    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 input("Press enter to run weather-3")
 
 print("\nRunning weather-3")
 (weather_3_addrs, weather_3_states) = run_weather_3()
 if input("Would you like to view error states for weather-3? (y/n)") == "y":
-    errored_info = analysis.analyze_errored(weather_3_states)
-    print(analysis.report_errored_states(errored_info, args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    errored_info = analysis.ErrorResults(weather_3_states)
+    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 mem_reg_diff = False
 if input("When comparing programs would you like to use memory and registers to perform the diffing? (y/n)") == "y":
@@ -153,15 +153,15 @@ if input("When comparing programs would you like to use memory and registers to 
 
 if input("Would you like to compare weather-1 and weather-2? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-1 and WEATHER-2")
-    comparison_results = analysis.compare_states(weather_1_states, weather_2_states, weather_1_addrs + weather_2_addrs, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
+    comparison_results = analysis.ComparisonResults(weather_1_states, weather_2_states, weather_1_addrs + weather_2_addrs, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
 
 if input("Would you like to compare weather-2 and weather-3? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-2 and WEATHER-3")
-    comparison_results = analysis.compare_states(weather_2_states, weather_3_states, weather_2_addrs + weather_3_addrs, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
+    comparison_results = analysis.ComparisonResults(weather_2_states, weather_3_states, weather_2_addrs + weather_3_addrs, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
 
 if input("Would you like to compare weather-1 and weather-3? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-1 and WEATHER-3")
-    comparison_results = analysis.compare_states(weather_1_states, weather_3_states, weather_1_addrs + weather_3_addrs, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
+    comparison_results = analysis.ComparisonResults(weather_1_states, weather_3_states, weather_1_addrs + weather_3_addrs, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))

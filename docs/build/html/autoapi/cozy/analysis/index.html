@@ -44,7 +44,7 @@
 <td><p>Create a collection of name/value pairs.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.StateDiff" title="cozy.analysis.StateDiff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StateDiff</span></code></a></p></td>
-<td><p>StateDiff encapsulates the memoized state used by the difference method. This class is used internally by compare_states and is typically not for external use.</p></td>
+<td><p>StateDiff encapsulates the memoized state used by the difference method. This class is used internally by ComparisonResults and is typically not for external use.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.ConcretePairInput" title="cozy.analysis.ConcretePairInput"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ConcretePairInput</span></code></a></p></td>
 <td><p>Stores information about the concretization of a compatible state pair.</p></td>
@@ -60,6 +60,9 @@
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.ComparisonResults" title="cozy.analysis.ComparisonResults"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ComparisonResults</span></code></a></p></td>
 <td><p>This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible state in the other execution tree. In most scenarios there will be no orphaned states.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.ErrorResults" title="cozy.analysis.ErrorResults"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ErrorResults</span></code></a></p></td>
+<td><p>This class is for getting results about errored states, which can be done with only a single TerminatedResult.</p></td>
 </tr>
 </tbody>
 </table>
@@ -77,20 +80,11 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.hexify" title="cozy.analysis.hexify"><code class="xref py py-obj docutils literal notranslate"><span class="pre">hexify</span></code></a>(val0)</p></td>
 <td><p>Recursively transforms all integers in a Python datastructure (that is mappable with functools_ext.fmap) to hex strings.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.concretize" title="cozy.analysis.concretize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">concretize</span></code></a>(solver, state_bundle[, n])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis._concretize" title="cozy.analysis._concretize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_concretize</span></code></a>(solver, state_bundle[, n])</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis._get_virtual_prints" title="cozy.analysis._get_virtual_prints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_get_virtual_prints</span></code></a>(st)</p></td>
 <td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.analyze_errored" title="cozy.analysis.analyze_errored"><code class="xref py py-obj docutils literal notranslate"><span class="pre">analyze_errored</span></code></a>(→ list[SingletonState])</p></td>
-<td><p>Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via <a class="reference internal" href="#cozy.analysis.report_errored_states" title="cozy.analysis.report_errored_states"><code class="xref py py-func docutils literal notranslate"><span class="pre">cozy.analysis.report_errored_states()</span></code></a>.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.analysis.report_errored_states" title="cozy.analysis.report_errored_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">report_errored_states</span></code></a>(→ str)</p></td>
-<td><p>Creates a human readable report about a list of errored states.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cozy.analysis.compare_states" title="cozy.analysis.compare_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compare_states</span></code></a>(→ ComparisonResults)</p></td>
-<td><p>Compares a bundle of pre-patched states with a bundle of post-patched states.</p></td>
 </tr>
 </tbody>
 </table>
@@ -164,7 +158,7 @@ attributes – see the documentation for details.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.analysis.StateDiff">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">StateDiff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">use_memoized_binary_search</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.StateDiff" title="Link to this definition">¶</a></dt>
-<dd><p>StateDiff encapsulates the memoized state used by the difference method. This class is used internally by compare_states and is typically not for external use.</p>
+<dd><p>StateDiff encapsulates the memoized state used by the difference method. This class is used internally by ComparisonResults and is typically not for external use.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>use_memoized_binary_search</strong> (<em>bool</em>) – When use_memoized_binary_search is enabled, the difference algorithm will begin by comparing ancestors of the left and right states rather than the states themselves. This will improve performance in most cases, but will actually degrade performance when all pairs of states are compatible. This is because early exits from difference occur when ancestor states are incompatible.</p>
@@ -210,8 +204,8 @@ attributes – see the documentation for details.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="cozy.analysis.concretize">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">concretize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">solver</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_bundle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.concretize" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.analysis._concretize">
+<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">_concretize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">solver</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_bundle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis._concretize" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
@@ -341,7 +335,7 @@ attributes – see the documentation for details.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.analysis.ComparisonResults">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">ComparisonResults</span></span><a class="headerlink" href="#cozy.analysis.ComparisonResults" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">ComparisonResults</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pre_patched</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">post_patched</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_addrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">range</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_invalid_stack</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_registers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_std_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_std_err</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_memoized_binary_search</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ComparisonResults" title="Link to this definition">¶</a></dt>
 <dd><p>This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible state in the other execution tree. In most scenarios there will be no orphaned states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Variables<span class="colon">:</span></dt>
@@ -352,9 +346,25 @@ attributes – see the documentation for details.</p>
 </ul>
 </dd>
 </dl>
+<p>Compares a bundle of pre-patched states with a bundle of post-patched states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pre_patched</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>project.TerminatedResult</em></a>) – The pre-patched state bundle</p></li>
+<li><p><strong>post_patched</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>project.TerminatedResult</em></a>) – The post-patched state bundle</p></li>
+<li><p><strong>ignore_addrs</strong> (<em>list</em><em>[</em><em>range</em><em>]</em>) – A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.</p></li>
+<li><p><strong>ignore_invalid_stack</strong> (<em>bool</em>) – If this flag is True, then memory differences in locations previously occupied by the stack are ignored.</p></li>
+<li><p><strong>compare_memory</strong> (<em>bool</em>) – If True, then the analysis will compare locations in the program memory.</p></li>
+<li><p><strong>compare_registers</strong> (<em>bool</em>) – If True, then the analysis will compare registers used by the program.</p></li>
+<li><p><strong>compare_std_out</strong> (<em>bool</em>) – If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.</p></li>
+<li><p><strong>compare_std_err</strong> (<em>bool</em>) – If True, then the analysis will save stderr written by the program in the results.</p></li>
+<li><p><strong>use_memoized_binary_search</strong> (<em>bool</em>) – If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="cozy.analysis.ComparisonResults.add_pair">
-<span class="sig-name descname"><span class="pre">add_pair</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pair_comp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.analysis.PairComparison" title="cozy.analysis.PairComparison"><span class="pre">PairComparison</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ComparisonResults.add_pair" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.analysis.ComparisonResults._add_pair">
+<span class="sig-name descname"><span class="pre">_add_pair</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pair_comp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.analysis.PairComparison" title="cozy.analysis.PairComparison"><span class="pre">PairComparison</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ComparisonResults._add_pair" title="Link to this definition">¶</a></dt>
 <dd><p>Adds a result of comparing two states to the result object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -367,8 +377,8 @@ attributes – see the documentation for details.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="cozy.analysis.ComparisonResults.add_orphan_left">
-<span class="sig-name descname"><span class="pre">add_orphan_left</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">orph_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ComparisonResults.add_orphan_left" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.analysis.ComparisonResults._add_orphan_left">
+<span class="sig-name descname"><span class="pre">_add_orphan_left</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">orph_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ComparisonResults._add_orphan_left" title="Link to this definition">¶</a></dt>
 <dd><p>Adds a pre-patched orphan to the result object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -381,8 +391,8 @@ attributes – see the documentation for details.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="cozy.analysis.ComparisonResults.add_orphan_right">
-<span class="sig-name descname"><span class="pre">add_orphan_right</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">orph_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ComparisonResults.add_orphan_right" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.analysis.ComparisonResults._add_orphan_right">
+<span class="sig-name descname"><span class="pre">_add_orphan_right</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">orph_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ComparisonResults._add_orphan_right" title="Link to this definition">¶</a></dt>
 <dd><p>Adds a post-patched orphan to the result object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -550,31 +560,49 @@ attributes – see the documentation for details.</p>
 
 </dd></dl>
 
-<dl class="py function">
-<dt class="sig sig-object py" id="cozy.analysis.analyze_errored">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">analyze_errored</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.analysis.analyze_errored" title="Link to this definition">¶</a></dt>
-<dd><p>Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via <a class="reference internal" href="#cozy.analysis.report_errored_states" title="cozy.analysis.report_errored_states"><code class="xref py py-func docutils literal notranslate"><span class="pre">cozy.analysis.report_errored_states()</span></code></a>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.analysis.ErrorResults">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">ErrorResults</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.analysis.ErrorResults" title="Link to this definition">¶</a></dt>
+<dd><p>This class is for getting results about errored states, which can be done with only a single TerminatedResult.</p>
+<p>Constructor for ErrorResults</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>result</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>TerminatedResult</em></a>) – The object containing the errored states we wish to analyze.</p>
+<dd class="field-odd"><p><strong>result</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>TerminatedResult</em></a>) – The results to extract errored states from and analyze.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A list containing information dumped about the errored states.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState">SingletonState</a>]</p>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.analysis.ErrorResults.get_errored_singleton">
+<span class="sig-name descname"><span class="pre">get_errored_singleton</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimState</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a></span></span><a class="headerlink" href="#cozy.analysis.ErrorResults.get_errored_singleton" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the SingletonState associated with some errored SimState</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>state</strong> (<em>SimState</em>) – The state for which we should find a corresponding SingletonState</p>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="py function">
-<dt class="sig sig-object py" id="cozy.analysis.report_errored_states">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">report_errored_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">errored</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.analysis.report_errored_states" title="Link to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.analysis.ErrorResults.__iter__">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">collections.abc.Iterator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><span class="pre">SingletonState</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.analysis.ErrorResults.__iter__" title="Link to this definition">¶</a></dt>
+<dd><p>Iterates over the SingletonState errored states stored in this object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An iterator over errored SingletonStates.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Iterator[<a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState">SingletonState</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.analysis.ErrorResults.report">
+<span class="sig-name descname"><span class="pre">report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.analysis.ErrorResults.report" title="Link to this definition">¶</a></dt>
 <dd><p>Creates a human readable report about a list of errored states.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>errored</strong> (<em>list</em><em>[</em><a class="reference internal" href="#cozy.analysis.SingletonState" title="cozy.analysis.SingletonState"><em>SingletonState</em></a><em>]</em>) – The errored states to analyze.</p></li>
+<li><p><strong>args</strong> (<em>any</em>) – The arguments to concretize</p></li>
 <li><p><strong>concrete_arg_mapper</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on another part of the input arguments.</p></li>
 <li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to show the user for each errored state.</p></li>
 </ul>
@@ -588,31 +616,6 @@ attributes – see the documentation for details.</p>
 </dl>
 </dd></dl>
 
-<dl class="py function">
-<dt class="sig sig-object py" id="cozy.analysis.compare_states">
-<span class="sig-prename descclassname"><span class="pre">cozy.analysis.</span></span><span class="sig-name descname"><span class="pre">compare_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pre_patched</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">post_patched</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">prog_addrs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">range</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_invalid_stack</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_registers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_std_out</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_std_err</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_memoized_binary_search</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cozy.analysis.ComparisonResults" title="cozy.analysis.ComparisonResults"><span class="pre">ComparisonResults</span></a></span></span><a class="headerlink" href="#cozy.analysis.compare_states" title="Link to this definition">¶</a></dt>
-<dd><p>Compares a bundle of pre-patched states with a bundle of post-patched states.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pre_patched</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>project.TerminatedResult</em></a>) – The pre-patched state bundle</p></li>
-<li><p><strong>post_patched</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>project.TerminatedResult</em></a>) – The post-patched state bundle</p></li>
-<li><p><strong>prog_addrs</strong> (<em>list</em><em>[</em><em>range</em><em>]</em>) – A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.</p></li>
-<li><p><strong>ignore_invalid_stack</strong> (<em>bool</em>) – If this flag is True, then memory differences in locations previously occupied by the stack are ignored.</p></li>
-<li><p><strong>compare_memory</strong> (<em>bool</em>) – If True, then the analysis will compare locations in the program memory.</p></li>
-<li><p><strong>compare_registers</strong> (<em>bool</em>) – If True, then the analysis will compare registers used by the program.</p></li>
-<li><p><strong>compare_std_out</strong> (<em>bool</em>) – If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.</p></li>
-<li><p><strong>compare_std_err</strong> (<em>bool</em>) – If True, then the analysis will save stderr written by the program in the results.</p></li>
-<li><p><strong>use_memoized_binary_search</strong> (<em>bool</em>) – If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The results from the comparison. To further analyze the results, see the fields stored in the output object.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#cozy.analysis.ComparisonResults" title="cozy.analysis.ComparisonResults">ComparisonResults</a></p>
-</dd>
-</dl>
 </dd></dl>
 
 </section>

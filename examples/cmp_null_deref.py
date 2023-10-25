@@ -104,7 +104,7 @@ prog_addrs = pre_prog_addrs + post_prog_addrs
 
 
 args = (arg0,)
-comparison_results = analysis.compare_states(pre_patched, post_patched, prog_addrs)
+comparison_results = analysis.ComparisonResults(pre_patched, post_patched, prog_addrs)
 
 if (dump_execution_graphs):
     execution_graph.compare_and_dump(pre_proj, post_proj, pre_patched, post_patched, "null_pre.json", "null_post.json", args=args, num_examples=2)

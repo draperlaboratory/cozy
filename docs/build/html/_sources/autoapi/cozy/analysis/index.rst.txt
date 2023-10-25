@@ -19,6 +19,7 @@ Classes
    cozy.analysis.SingletonState
    cozy.analysis.PairComparison
    cozy.analysis.ComparisonResults
+   cozy.analysis.ErrorResults
 
 
 
@@ -30,11 +31,8 @@ Functions
    cozy.analysis._invalid_stack_addrs
    cozy.analysis._invalid_stack_overlap
    cozy.analysis.hexify
-   cozy.analysis.concretize
+   cozy.analysis._concretize
    cozy.analysis._get_virtual_prints
-   cozy.analysis.analyze_errored
-   cozy.analysis.report_errored_states
-   cozy.analysis.compare_states
 
 
 
@@ -100,7 +98,7 @@ Functions
 .. py:class:: StateDiff(use_memoized_binary_search=True)
 
 
-   StateDiff encapsulates the memoized state used by the difference method. This class is used internally by compare_states and is typically not for external use.
+   StateDiff encapsulates the memoized state used by the difference method. This class is used internally by ComparisonResults and is typically not for external use.
 
    :param bool use_memoized_binary_search: When use_memoized_binary_search is enabled, the difference algorithm will begin by comparing ancestors of the left and right states rather than the states themselves. This will improve performance in most cases, but will actually degrade performance when all pairs of states are compatible. This is because early exits from difference occur when ancestor states are incompatible.
 
@@ -126,7 +124,7 @@ Functions
    :return: A deep copy of the datastructure, with all integers converted to hex strings.
 
 
-.. py:function:: concretize(solver, state_bundle, n=1)
+.. py:function:: _concretize(solver, state_bundle, n=1)
 
 
 .. py:function:: _get_virtual_prints(st)
@@ -206,7 +204,7 @@ Functions
 
 
 
-.. py:class:: ComparisonResults
+.. py:class:: ComparisonResults(pre_patched: cozy.project.TerminatedResult, post_patched: cozy.project.TerminatedResult, ignore_addrs: list[range], ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False, compare_std_err=False, use_memoized_binary_search=True)
 
 
    This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible state in the other execution tree. In most scenarios there will be no orphaned states.
@@ -215,7 +213,19 @@ Functions
    :ivar dict[SimState, SingletonState] orphans_left_lookup: maps pre-patched orphaned states to singleton state information
    :ivar dict[SimState, SingletonState] orphans_right_lookup: maps post-patched orphaned states to singleton state information
 
-   .. py:method:: add_pair(pair_comp: PairComparison)
+   Compares a bundle of pre-patched states with a bundle of post-patched states.
+
+   :param project.TerminatedResult pre_patched: The pre-patched state bundle
+   :param project.TerminatedResult post_patched: The post-patched state bundle
+   :param list[range] ignore_addrs: A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.
+   :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
+   :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
+   :param bool compare_registers: If True, then the analysis will compare registers used by the program.
+   :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.
+   :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
+   :param bool use_memoized_binary_search: If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.
+
+   .. py:method:: _add_pair(pair_comp: PairComparison)
 
       Adds a result of comparing two states to the result object.
 
@@ -223,7 +233,7 @@ Functions
       :return: None
 
 
-   .. py:method:: add_orphan_left(orph_state: SingletonState)
+   .. py:method:: _add_orphan_left(orph_state: SingletonState)
 
       Adds a pre-patched orphan to the result object.
 
@@ -231,7 +241,7 @@ Functions
       :return: None
 
 
-   .. py:method:: add_orphan_right(orph_state: SingletonState)
+   .. py:method:: _add_orphan_right(orph_state: SingletonState)
 
       Adds a post-patched orphan to the result object.
 
@@ -322,40 +332,39 @@ Functions
 
 
 
-.. py:function:: analyze_errored(result: cozy.project.TerminatedResult) -> list[SingletonState]
-
-   Constructs SingletonState objects for all errored states stored in the input TerminatedResult. This result is suitable for generating a report on the errored states via :py:func:`cozy.analysis.report_errored_states`.
-
-   :param TerminatedResult result: The object containing the errored states we wish to analyze.
-   :return: A list containing information dumped about the errored states.
-   :rtype: list[SingletonState]
+.. py:class:: ErrorResults(result: cozy.project.TerminatedResult)
 
 
-.. py:function:: report_errored_states(errored: list[SingletonState], args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+   This class is for getting results about errored states, which can be done with only a single TerminatedResult.
 
-   Creates a human readable report about a list of errored states.
+   Constructor for ErrorResults
 
-   :param list[SingletonState] errored: The errored states to analyze.
-   :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
-   :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
-   :return: The report as a string
-   :rtype: str
+   :param TerminatedResult result: The results to extract errored states from and analyze.
+
+   .. py:method:: get_errored_singleton(state: angr.SimState) -> SingletonState
+
+      Returns the SingletonState associated with some errored SimState
+
+      :param SimState state: The state for which we should find a corresponding SingletonState
 
 
-.. py:function:: compare_states(pre_patched: cozy.project.TerminatedResult, post_patched: cozy.project.TerminatedResult, prog_addrs: list[range], ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False, compare_std_err=False, use_memoized_binary_search=True) -> ComparisonResults
+   .. py:method:: __iter__() -> collections.abc.Iterator[SingletonState]
 
-   Compares a bundle of pre-patched states with a bundle of post-patched states.
+      Iterates over the SingletonState errored states stored in this object
 
-   :param project.TerminatedResult pre_patched: The pre-patched state bundle
-   :param project.TerminatedResult post_patched: The post-patched state bundle
-   :param list[range] prog_addrs: A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.
-   :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
-   :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
-   :param bool compare_registers: If True, then the analysis will compare registers used by the program.
-   :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.
-   :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
-   :param bool use_memoized_binary_search: If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.
-   :return: The results from the comparison. To further analyze the results, see the fields stored in the output object.
-   :rtype: ComparisonResults
+      :return: An iterator over errored SingletonStates.
+      :rtype: Iterator[SingletonState]
+
+
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about a list of errored states.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+      :return: The report as a string
+      :rtype: str
+
 
 
