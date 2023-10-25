@@ -13,9 +13,9 @@ from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAn
 MAX_NUM_ROWS = 3
 MAX_NUM_VALS = 5
 
-proj_orig = Project('../../resources/spec-elicitation-demo/v5/build/weather-orig')
-proj_patched_1 = Project('../../resources/spec-elicitation-demo/v5/build/weather-patched-1')
-proj_patched_2 = Project('../../resources/spec-elicitation-demo/v5/build/weather-patched-2')
+proj_orig = Project('test_programs/weather_demo/v5/build/weather-orig')
+proj_patched_1 = Project('test_programs/weather_demo/v5/build/weather-patched-1')
+proj_patched_2 = Project('test_programs/weather_demo/v5/build/weather-patched-2')
 
 sensor_row_struct = angr.types.parse_type('struct SensorRow {int *vals; int num_vals; struct SensorRow *next; }').with_arch(proj_orig.angr_proj.arch)
 angr.types.register_types(sensor_row_struct)

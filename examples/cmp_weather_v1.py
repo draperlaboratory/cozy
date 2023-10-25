@@ -7,7 +7,7 @@ from cozy.directive import VirtualPrint
 import angr, claripy
 
 def concrete_datafile():
-    with open('../../resources/spec-elicitation-demo/v1/data.txt', 'r') as data_file:
+    with open('test_programs/weather_demo/v1/data.txt', 'r') as data_file:
         file_content = data_file.read()
     return angr.SimFile('data.txt', content=file_content)
 
@@ -58,7 +58,7 @@ class fscanf_wrapper(angr.SimProcedure):
             return zero
 
 def run_weather_1():
-    proj = Project('../../resources/spec-elicitation-demo/v1/weather-1')
+    proj = Project('test_programs/weather_demo/v1/weather-1')
     proj.add_prototype('main', 'int main()')
     proj.angr_proj.hook_symbol('__isoc99_fscanf', fscanf_wrapper(proj.angr_proj.arch.memory_endness))
 
@@ -80,7 +80,7 @@ def run_weather_1():
     return (proj.object_ranges(), sess.run())
 
 def run_weather_2():
-    proj = Project('../../resources/spec-elicitation-demo/v1/weather-2')
+    proj = Project('test_programs/weather_demo/v1/weather-2')
     proj.add_prototype('main', 'int main()')
     proj.angr_proj.hook_symbol('__isoc99_fscanf', fscanf_wrapper(proj.angr_proj.arch.memory_endness))
     sess = proj.session('main')
@@ -101,7 +101,7 @@ def run_weather_2():
     return (proj.object_ranges(), sess.run())
 
 def run_weather_3():
-    proj = Project('../../resources/spec-elicitation-demo/v1/weather-3')
+    proj = Project('test_programs/weather_demo/v1/weather-3')
     proj.add_prototype('main', 'int main()')
     proj.angr_proj.hook_symbol('__isoc99_fscanf', fscanf_wrapper(proj.angr_proj.arch.memory_endness))
     sess = proj.session('main')
