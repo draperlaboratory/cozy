@@ -22,6 +22,8 @@
         pkgs.python311
         pkgs.python311Packages.angr
         pkgs.python311Packages.networkx
+        pkgs.python311Packages.sphinx
+        pkgs.python311Packages.sphinx-autoapi
         self.packages.x86_64-linux.default
       ];
     };
