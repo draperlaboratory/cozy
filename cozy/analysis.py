@@ -14,7 +14,8 @@ from .functools_ext import *
 from . import range_ext
 import sys
 import collections.abc
-from .project import TerminatedResult
+from .project import TerminatedResult, AssertFailed
+
 
 class StateTag(Enum):
     TERMINATED_STATE = 0
@@ -725,7 +726,7 @@ class ComparisonResults:
                             for (pdirective, conc_print_val) in vprints:
                                 if pdirective.concrete_mapper is not None:
                                     conc_print_val = pdirective.concrete_mapper(conc_print_val)
-                                output += "({}, {})\n".format(pdirective.info_str, conc_print_val)
+                                output += "{}: {}\n".format(pdirective.info_str, conc_print_val)
                         if len(concrete_input.left_vprints) > 0:
                             output += "Prepatched virtual prints:\n"
                             print_vprints(concrete_input.left_vprints)
@@ -833,4 +834,31 @@ class ErrorResults:
                 output += "{}.\n".format(j + 1)
                 output += "\t{}\n".format(str(concrete_args))
             output += "\n"
+        return output
+
+class AssertFailedResults:
+    def __init__(self, assert_failed: AssertFailed):
+        self.assert_failed = assert_failed
+        self.singleton_state = SingletonState(assert_failed.failure_state, None, None, 0, StateTag.ERROR_STATE)
+
+    def report(self, args: any, concrete_arg_mapper: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+        output = "Assert for address {} was triggered: {}\n".format(hex(self.assert_failed.assertion.addr), str(self.assert_failed.cond))
+        if self.assert_failed.assertion.info_str is not None:
+            output += self.assert_failed.assertion.info_str + "\n"
+        concrete_inputs = self.singleton_state.concrete_examples(args, num_examples)
+        output += "Here are {} concrete input(s) for this particular assertion:\n".format(len(concrete_inputs))
+        for (i, concrete_input) in enumerate(concrete_inputs):
+            if concrete_arg_mapper is not None:
+                concrete_args = concrete_arg_mapper(concrete_input.args)
+            else:
+                concrete_args = concrete_input.args
+            output += "{}.\n".format(i + 1)
+            output += "\t{}\n".format(str(concrete_args))
+            if len(concrete_input.vprints) > 0:
+                output += "Virtual prints:\n"
+                for (pdirective, conc_print_val) in concrete_input.vprints:
+                    if pdirective.concrete_mapper is not None:
+                        conc_print_val = pdirective.concrete_mapper(conc_print_val)
+                    output += "{}: {}\n".format(pdirective.info_str, conc_print_val)
+        output += "\n"
         return output

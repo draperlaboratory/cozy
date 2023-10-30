@@ -1,7 +1,7 @@
 import archinfo
 
 import cozy.analysis as analysis
-from cozy.project import Project
+from cozy.project import Project, AssertFailed
 from cozy.directive import Assume, Assert
 from cozy.constants import *
 import cozy.primitives as primitives
@@ -48,7 +48,11 @@ def run_pre_patched():
     sess.add_directives(mem_write_okay)
 
     args = construct_args(sess)
-    sess.run(*args)
+    run_results = sess.run(*args)
+    if isinstance(run_results, AssertFailed):
+        print(analysis.AssertFailedResults(run_results).report(args))
+    else:
+        print("No asserts triggered!")
 
     sess = proj.session('my_fun')
     args = construct_args(sess)
@@ -79,7 +83,11 @@ def run_post_patched():
     sess = proj.session('my_fun')
     sess.add_directives(*directives)
     args = construct_args(sess)
-    sess.run(*args)
+    run_results = sess.run(*args)
+    if isinstance(run_results, AssertFailed):
+        print(analysis.AssertFailedResults(run_results).report(args))
+    else:
+        print("No asserts triggered!")
 
     sess = proj.session('my_fun')
     args = construct_args(sess)

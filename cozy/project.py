@@ -33,11 +33,15 @@ class AssertFailed(RunResult):
     """
     This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
 
-    :ivar Assert assert_failed: The assertion that was triggered.
+    :ivar Assert assertion: The assertion that was triggered.
+    :ivar claripy.ast.bool cond: The condition that caused the assertion to trigger
+    :ivar SimState failure_state: The state that was created to test the assertion.
     """
-    def __init__(self, assert_failed: Assert, assume_warnings: list[tuple[Assume, SimState]]):
+    def __init__(self, assertion: Assert, cond: claripy.ast.bool, failure_state: SimState, assume_warnings: list[tuple[Assume, SimState]]):
         super().__init__(assume_warnings)
-        self.assert_failed = assert_failed
+        self.cond = cond
+        self.assertion = assertion
+        self.failure_state = failure_state
 
 # This on_mem_write is designed to be attached as a breakpoint that is triggered
 # whenever memory is written. This hook simply logs the current instruction pointer
@@ -248,16 +252,13 @@ class Session:
                 for found_state in simgr.found:
                     if found_state.satisfiable():
                         relevant_directives = addrs_to_directive[found_state.addr]
-                        if len(relevant_directives) == 0:
-                            print("Gotcha")
                         for directive in relevant_directives:
                             if isinstance(directive, Assume):
                                 cond = directive.condition_fun(found_state)
                                 found_state.add_constraints(cond)
-                                print("Checking Assume...")
                                 if not found_state.satisfiable():
                                     assume_warnings.append((directive, found_state))
-                                    print("Assume for address {} was not satisfiable. In this path of execution there is no possible way for execution to proceed past this point: {}".format(hex(directive.addr), str(cond)))
+                                    print("cozy WARNING: Assume for address {} was not satisfiable. In this path of execution there is no possible way for execution to proceed past this point: {}".format(hex(directive.addr), str(cond)))
                                     if directive.info_str is not None:
                                         print(directive.info_str)
                             elif isinstance(directive, Assert):
@@ -265,12 +266,8 @@ class Session:
                                 # To check for validity, we need to check that (not cond) is unsatisfiable
                                 state_cpy = found_state.copy()
                                 state_cpy.add_constraints(~cond)
-                                print("Checking Assert...")
                                 if state_cpy.satisfiable():
-                                    print("Assert for address {} was triggered: {}".format(hex(directive.addr), str(cond)))
-                                    if directive.info_str is not None:
-                                        print(directive.info_str)
-                                    return AssertFailed(directive, assume_warnings)
+                                    return AssertFailed(directive, cond, state_cpy, assume_warnings)
                             elif isinstance(directive, VirtualPrint):
                                 if 'virtual_prints' in found_state.globals:
                                     accum_prints = found_state.globals['virtual_prints'].copy()
@@ -303,8 +300,6 @@ class Session:
                 if cache_constraints:
                     self._save_constraints(simgr.active)
                     self._save_constraints(errored_states)
-
-            print("No asserts triggered!")
         else:
             while len(simgr.active) > 0:
                 simgr.step()
