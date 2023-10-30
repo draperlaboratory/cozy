@@ -41,7 +41,7 @@
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cozy.execution_graph.ExecutionGraph" title="cozy.execution_graph.ExecutionGraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ExecutionGraph</span></code></a></p></td>
-<td><p></p></td>
+<td><p>This class is used to store a <cite>networkx.DiGraph</cite>, decorated with     <cite>SimStates</cite>, representing the full history of a symbolic program execution.</p></td>
 </tr>
 </tbody>
 </table>
@@ -50,46 +50,123 @@
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.execution_graph.serialize_diff" title="cozy.execution_graph.serialize_diff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">serialize_diff</span></code></a>(diff)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.execution_graph._serialize_diff" title="cozy.execution_graph._serialize_diff"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_serialize_diff</span></code></a>(diff)</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#cozy.execution_graph.compare_and_dump" title="cozy.execution_graph.compare_and_dump"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compare_and_dump</span></code></a>(proj_a, proj_b, rslt_a, rslt_b, ...)</p></td>
-<td><p></p></td>
+<td><p>Generates JSON data suitable for visual comparison using Cozy-Viz from the     results of two symbolic executions.</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py function">
-<dt class="sig sig-object py" id="cozy.execution_graph.serialize_diff">
-<span class="sig-prename descclassname"><span class="pre">cozy.execution_graph.</span></span><span class="sig-name descname"><span class="pre">serialize_diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">diff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.serialize_diff" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="cozy.execution_graph._serialize_diff">
+<span class="sig-prename descclassname"><span class="pre">cozy.execution_graph.</span></span><span class="sig-name descname"><span class="pre">_serialize_diff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">diff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph._serialize_diff" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="cozy.execution_graph.compare_and_dump">
-<span class="sig-prename descclassname"><span class="pre">cozy.execution_graph.</span></span><span class="sig-name descname"><span class="pre">compare_and_dump</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proj_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proj_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rslt_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rslt_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_memory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_registers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_vex</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.compare_and_dump" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">cozy.execution_graph.</span></span><span class="sig-name descname"><span class="pre">compare_and_dump</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proj_a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><span class="pre">cozy.project.Project</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">proj_b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><span class="pre">cozy.project.Project</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">rslt_a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">rslt_b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name_a</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name_b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_arg_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_memory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compare_registers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_vex</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.compare_and_dump" title="Link to this definition">¶</a></dt>
+<dd><p>Generates JSON data suitable for visual comparison using Cozy-Viz from the     results of two symbolic executions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>proj_a</strong> (<a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><em>Project</em></a>) – The project associated with the first execuction.</p></li>
+<li><p><strong>proj_b</strong> (<a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><em>Project</em></a>) – The project associated with the second execuction.</p></li>
+<li><p><strong>rslt_a</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>TerminatedResult</em></a>) – The result of the first execution.</p></li>
+<li><p><strong>rslt_b</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>TerminatedResult</em></a>) – The result of the second execution.</p></li>
+<li><p><strong>file_name_a</strong> (<em>str</em>) – The filename for the JSON serializing the first execution</p></li>
+<li><p><strong>file_name_b</strong> (<em>str</em>) – The filename for the JSON serializing the second execution</p></li>
+<li><p><strong>concrete_arg_mapper</strong> (<em>Callable</em><em> [</em><em>[</em><em>any</em><em>]</em><em>,</em><em>any</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – This function is used to
+post-process concretized versions of args before they are added to the
+return string. Some examples of this function include converting an integer
+to a negative number due to use of two’s complement, or slicing off parts of
+the argument based on another part of the input arguments. Default None.</p></li>
+<li><p><strong>compare_memory</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to, for each pair of
+corresponding dead-end states, compare memory contents and include any
+significant differences in the JSON. Default True.</p></li>
+<li><p><strong>compare_registers</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to, for each pair of
+corresponding dead-end states, compare register contents and include
+any differences in the JSON. Default True.</p></li>
+<li><p><strong>include_vex</strong> (<em>bool</em><em>, </em><em>optional</em>) – whether to, for each SimState, generate the
+corresponding VEX IR and include the result in the JSON. Default False.</p></li>
+<li><p><strong>args</strong> (<em>any</em><em>, </em><em>optional</em>) – The input arguments to concretize. This argument
+may be a Python datastructure, the concretizer will make a deep copy with
+claripy symbolic variables replaced with concrete values. See
+<a class="reference internal" href="../analysis/index.html#cozy.analysis.PairComparison" title="cozy.analysis.PairComparison"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.analysis.PairComparison</span></code></a>. Default = [].</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em><em>, </em><em>optional</em>) – The number of concrete examples to
+generate and incorporate into the JSON, for each dead-end state. Default 0.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cozy.execution_graph.ExecutionGraph">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.execution_graph.</span></span><span class="sig-name descname"><span class="pre">ExecutionGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">result</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph" title="Link to this definition">¶</a></dt>
-<dd><dl class="py method">
-<dt class="sig sig-object py" id="cozy.execution_graph.ExecutionGraph.get_bbl_asm">
-<span class="sig-name descname"><span class="pre">get_bbl_asm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph.get_bbl_asm" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.execution_graph.</span></span><span class="sig-name descname"><span class="pre">ExecutionGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><span class="pre">cozy.project.Project</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><span class="pre">cozy.project.TerminatedResult</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph" title="Link to this definition">¶</a></dt>
+<dd><p>This class is used to store a <cite>networkx.DiGraph</cite>, decorated with     <cite>SimStates</cite>, representing the full history of a symbolic program execution.
+It constructs an ExecutionGraph, from a project and the results of an
+executed project session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>proj</strong> (<a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><em>Project</em></a>) – the project associated with the execution.</p></li>
+<li><p><strong>result</strong> (<a class="reference internal" href="../project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><em>TerminatedResult</em></a>) – the result of the execution.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.execution_graph.ExecutionGraph._get_bbl_asm">
+<span class="sig-name descname"><span class="pre">_get_bbl_asm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.block.Block</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph._get_bbl_asm" title="Link to this definition">¶</a></dt>
+<dd><p>An internal method which renders the assembly corresponding to a given basic block as a formatted string</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>b</strong> (<em>Block</em>) – The block to render.</p>
+</dd>
+<dt class="field-even">Return str<span class="colon">:</span></dt>
+<dd class="field-even"><p>The rendered string.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.execution_graph.ExecutionGraph.reconstruct_bbl_addr_graph">
 <span class="sig-name descname"><span class="pre">reconstruct_bbl_addr_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph.reconstruct_bbl_addr_graph" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Convert the SimState-decorated graph into a graph decorated with
+integers, carrying symbolic program execution data in the attributes
+<cite>stdout</cite>, <cite>stderr</cite>, <cite>contents</cite> (this holds a basic block),
+<cite>constraints</cite> and <cite>state</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return networkx.DiGraph<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The resulting graph.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.execution_graph.ExecutionGraph.reconstruct_bbl_pp_graph">
 <span class="sig-name descname"><span class="pre">reconstruct_bbl_pp_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph.reconstruct_bbl_pp_graph" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Convert the SimState-decorated graph into a graph decorated with
+integers, carrying symbolic program execution data in the attributes
+<cite>stdout</cite>, <cite>stderr</cite>, <cite>contents</cite>, <cite>constraints</cite> ,`vex` and <cite>state</cite>. The
+difference from <a class="reference internal" href="#cozy.execution_graph.ExecutionGraph.reconstruct_bbl_addr_graph" title="cozy.execution_graph.ExecutionGraph.reconstruct_bbl_addr_graph"><code class="xref py py-func docutils literal notranslate"><span class="pre">reconstruct_bbl_addr_graph()</span></code></a> is that the data is
+now pretty-printed and suitable for serialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return networkx.DiGraph<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The resulting graph.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cozy.execution_graph.ExecutionGraph.dump_bbp_pp_cytoscape">
-<span class="sig-name descname"><span class="pre">dump_bbp_pp_cytoscape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph.dump_bbp_pp_cytoscape" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">dump_bbp_pp_cytoscape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.execution_graph.ExecutionGraph.dump_bbp_pp_cytoscape" title="Link to this definition">¶</a></dt>
+<dd><p>Dump the graph as cytoscapejs readable JSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – The filename for the generated json.</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 
