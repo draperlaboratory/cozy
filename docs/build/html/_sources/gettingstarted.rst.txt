@@ -110,8 +110,8 @@ the source code, so we can add the function signature quite easily::
 
 We now need to create sessions from each project. A session is created
 from a specific project, and represents a single execution run. Here we pass
-"my_fun" to the :py:meth:`~cozy.project.Project.session` method, which indicates that we are going to be running
-the "my_fun" function::
+"my_fun" to the :py:meth:`~cozy.project.Project.session` method, which indicates
+that we are going to be running the "my_fun" function::
 
     sess_prepatched = proj_prepatched.session("my_fun")
     sess_postpatched = proj_postpatched.session("my_fun")
@@ -120,6 +120,12 @@ Since we will only be comparing the my_fun function, we need to create
 the symbolic value to pass to the functions::
 
     arg0 = claripy.BVS("num_arg", 64)
+
+Alternatively we could have used the :py:func:`cozy.primitives.sym_ptr` helper
+function to create the claripy symbolic variable::
+
+    import archinfo
+    arg0 = cozy.primitives.sym_ptr(archinfo.ArchAMD64, "num_arg")
 
 We will now constrain arg0 to be either NULL or be equal to a valid memory
 address in our two sessions. Currently angr has limited support for symbolic
@@ -174,18 +180,32 @@ Let's add the directive to the prepatch session::
 Let's invoke the prepatched my_fun with arg0 as the symbolic input via the
 :py:meth:`~cozy.project.Session.run` method::
 
-    sess_prepatched.run(arg0)
+    run_result = sess_prepatched.run(arg0)
+    run_result
 
-In the console we see the following message, indicating that the assert was
-triggered::
+In the console we see that run_result is an AssertFailed object,
+indicating that the assertion was triggered::
 
-    Checking Assert...
+    <cozy.project.AssertFailed object at 0x7f93e8dde010>
+
+To view a report on what went wrong with the assertion, let's create
+a :py:class:`cozy.analysis.AssertFailedResults` object, then call its
+:py:meth:`~cozy.analysis.AssertFailedResults.report` method to get
+the report as a human readable string::
+
+    assertion_results = cozy.analysis.AssertFailedResults(run_result)
+    print(assertion_results.report([arg0]))
+
+Which prints off the human readable report::
+
     Assert for address 0x401179 was triggered: <Bool num_arg_102_64 != 0x0>
     Dereferencing null pointer
-    <cozy.project.AssertFailed object at 0x7effa73faa50>
+    Here are 1 concrete input(s) for this particular assertion:
+    1.
+        [0]
 
-Additionally we note that the :py:meth:`~cozy.project.Session.run` method
-returned a :py:class:`cozy.project.AssertFailed` object.
+As part of the report, cozy reports that the concretized input that leads to
+this assertion being triggered occurs when the input argument is 0.
 
 Now let's make another assert for the postpatched session and verify
 that no NULL dereference occurs in the postpatch::
@@ -200,14 +220,8 @@ that no NULL dereference occurs in the postpatch::
     sess_postpatched.add_directives(mem_write_okay_postpatched)
     sess_postpatched.run()
 
-In the console we see the following message, indicating that no asserts were
-triggered::
-
-    No asserts triggered!
-    <cozy.project.TerminatedResult object at 0x7effa723c410>
-
-Additionally we get a :py:class:`cozy.project.TerminatedResult`
-object from the :py:meth:`~cozy.project.Session.run` method.
+In the console we see that we got a :py:class:`~cozy.project.TerminatedResult`,
+indicating that no assertions were triggered.
 
 ======================
 Making the Comparisons

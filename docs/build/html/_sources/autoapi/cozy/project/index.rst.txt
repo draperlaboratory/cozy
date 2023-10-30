@@ -48,14 +48,16 @@ Functions
    :ivar list[ErrorRecord] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
 
 
-.. py:class:: AssertFailed(assert_failed: cozy.directive.Assert, assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]])
+.. py:class:: AssertFailed(assertion: cozy.directive.Assert, cond: claripy.ast.bool, failure_state: angr.SimState, assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]])
 
 
    Bases: :py:obj:`RunResult`
 
    This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
 
-   :ivar Assert assert_failed: The assertion that was triggered.
+   :ivar Assert assertion: The assertion that was triggered.
+   :ivar claripy.ast.bool cond: The condition that caused the assertion to trigger
+   :ivar SimState failure_state: The state that was created to test the assertion.
 
 
 .. py:function:: _on_mem_write(state)

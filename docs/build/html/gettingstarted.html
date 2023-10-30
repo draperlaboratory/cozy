@@ -135,8 +135,8 @@ the source code, so we can add the function signature quite easily:</p>
 </div>
 <p>We now need to create sessions from each project. A session is created
 from a specific project, and represents a single execution run. Here we pass
-“my_fun” to the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Project.session" title="cozy.project.Project.session"><code class="xref py py-meth docutils literal notranslate"><span class="pre">session()</span></code></a> method, which indicates that we are going to be running
-the “my_fun” function:</p>
+“my_fun” to the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Project.session" title="cozy.project.Project.session"><code class="xref py py-meth docutils literal notranslate"><span class="pre">session()</span></code></a> method, which indicates
+that we are going to be running the “my_fun” function:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sess_prepatched</span> <span class="o">=</span> <span class="n">proj_prepatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">)</span>
 <span class="n">sess_postpatched</span> <span class="o">=</span> <span class="n">proj_postpatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;my_fun&quot;</span><span class="p">)</span>
 </pre></div>
@@ -144,6 +144,12 @@ the “my_fun” function:</p>
 <p>Since we will only be comparing the my_fun function, we need to create
 the symbolic value to pass to the functions:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">arg0</span> <span class="o">=</span> <span class="n">claripy</span><span class="o">.</span><span class="n">BVS</span><span class="p">(</span><span class="s2">&quot;num_arg&quot;</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alternatively we could have used the <a class="reference internal" href="autoapi/cozy/primitives/index.html#cozy.primitives.sym_ptr" title="cozy.primitives.sym_ptr"><code class="xref py py-func docutils literal notranslate"><span class="pre">cozy.primitives.sym_ptr()</span></code></a> helper
+function to create the claripy symbolic variable:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">archinfo</span>
+<span class="n">arg0</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">primitives</span><span class="o">.</span><span class="n">sym_ptr</span><span class="p">(</span><span class="n">archinfo</span><span class="o">.</span><span class="n">ArchAMD64</span><span class="p">,</span> <span class="s2">&quot;num_arg&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>We will now constrain arg0 to be either NULL or be equal to a valid memory
@@ -195,19 +201,33 @@ Let’s add the directive to the prepatch session:</p>
 </div>
 <p>Let’s invoke the prepatched my_fun with arg0 as the symbolic input via the
 <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sess_prepatched</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">run_result</span> <span class="o">=</span> <span class="n">sess_prepatched</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">)</span>
+<span class="n">run_result</span>
 </pre></div>
 </div>
-<p>In the console we see the following message, indicating that the assert was
-triggered:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Checking</span> <span class="n">Assert</span><span class="o">...</span>
-<span class="n">Assert</span> <span class="k">for</span> <span class="n">address</span> <span class="mh">0x401179</span> <span class="n">was</span> <span class="n">triggered</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">Bool</span> <span class="n">num_arg_102_64</span> <span class="o">!=</span> <span class="mh">0x0</span><span class="o">&gt;</span>
+<p>In the console we see that run_result is an AssertFailed object,
+indicating that the assertion was triggered:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">cozy</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">AssertFailed</span> <span class="nb">object</span> <span class="n">at</span> <span class="mh">0x7f93e8dde010</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>To view a report on what went wrong with the assertion, let’s create
+a <a class="reference internal" href="autoapi/cozy/analysis/index.html#cozy.analysis.AssertFailedResults" title="cozy.analysis.AssertFailedResults"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.analysis.AssertFailedResults</span></code></a> object, then call its
+<a class="reference internal" href="autoapi/cozy/analysis/index.html#cozy.analysis.AssertFailedResults.report" title="cozy.analysis.AssertFailedResults.report"><code class="xref py py-meth docutils literal notranslate"><span class="pre">report()</span></code></a> method to get
+the report as a human readable string:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">assertion_results</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">AssertFailedResults</span><span class="p">(</span><span class="n">run_result</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">assertion_results</span><span class="o">.</span><span class="n">report</span><span class="p">([</span><span class="n">arg0</span><span class="p">]))</span>
+</pre></div>
+</div>
+<p>Which prints off the human readable report:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Assert</span> <span class="k">for</span> <span class="n">address</span> <span class="mh">0x401179</span> <span class="n">was</span> <span class="n">triggered</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">Bool</span> <span class="n">num_arg_102_64</span> <span class="o">!=</span> <span class="mh">0x0</span><span class="o">&gt;</span>
 <span class="n">Dereferencing</span> <span class="n">null</span> <span class="n">pointer</span>
-<span class="o">&lt;</span><span class="n">cozy</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">AssertFailed</span> <span class="nb">object</span> <span class="n">at</span> <span class="mh">0x7effa73faa50</span><span class="o">&gt;</span>
+<span class="n">Here</span> <span class="n">are</span> <span class="mi">1</span> <span class="n">concrete</span> <span class="nb">input</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">this</span> <span class="n">particular</span> <span class="n">assertion</span><span class="p">:</span>
+<span class="mf">1.</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>Additionally we note that the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method
-returned a <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.AssertFailed" title="cozy.project.AssertFailed"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.AssertFailed</span></code></a> object.</p>
+<p>As part of the report, cozy reports that the concretized input that leads to
+this assertion being triggered occurs when the input argument is 0.</p>
 <p>Now let’s make another assert for the postpatched session and verify
 that no NULL dereference occurs in the postpatch:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mem_write_okay_postpatched</span> <span class="o">=</span> <span class="n">Assert</span><span class="o">.</span><span class="n">from_fun_offset</span><span class="p">(</span>
@@ -221,14 +241,8 @@ that no NULL dereference occurs in the postpatch:</p>
 <span class="n">sess_postpatched</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>In the console we see the following message, indicating that no asserts were
-triggered:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>No asserts triggered!
-&lt;cozy.project.TerminatedResult object at 0x7effa723c410&gt;
-</pre></div>
-</div>
-<p>Additionally we get a <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.project.TerminatedResult</span></code></a>
-object from the <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a> method.</p>
+<p>In the console we see that we got a <a class="reference internal" href="autoapi/cozy/project/index.html#cozy.project.TerminatedResult" title="cozy.project.TerminatedResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">TerminatedResult</span></code></a>,
+indicating that no assertions were triggered.</p>
 </section>
 <section id="making-the-comparisons">
 <h2>Making the Comparisons<a class="headerlink" href="#making-the-comparisons" title="Link to this heading">¶</a></h2>
