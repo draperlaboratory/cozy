@@ -53,30 +53,26 @@ class Menu extends Component {
 }
 
 function noMemoryDiffs(leaf, other) {
-  if (other.length == 0) return true
   const comparison = leaf.data().compatibilities[other.id()]
   if (Object.keys(comparison.memdiff).length) return false
-  else return true
+  else return noErrors(leaf,other)
 }
 
 function noRegisterDiffs(leaf, other) {
-  if (other.length == 0) return true
   const comparison = leaf.data().compatibilities[other.id()]
   if (Object.keys(comparison.regdiff).length) return false
-  else return true
+  else return noErrors(leaf,other)
 }
 
 function noErrors(leaf, other) {
-  if (other.length == 0) return true
   if (leaf.data().error || other.data().error) return false
   else return true
 }
 
 function noStdDiffs(leaf, other) {
-  if (other.length == 0) return true
   if (leaf.data().stdout != other.data().stdout ||
     leaf.data().stderr != other.data().stderr) return false
-  else return true
+  else return noErrors(leaf,other)
 }
 
 export default class MenuBar extends Component {
@@ -157,16 +153,16 @@ export default class MenuBar extends Component {
         title="Prune"
         setOpen=${o => this.setOpen(o)}>
         <option onClick=${() => this.prune(noMemoryDiffs)}>
-            Branches with Identical Memory
+            Completed Branches with Identical Memory
         </option>
         <option onClick=${() => this.prune(noRegisterDiffs)}>
-            Branches with Identical Register Contents 
-        </option>
-        <option onClick=${() => this.prune(noErrors)}>
-            Branches with no Errors
+            Completed Branches with Identical Register Contents 
         </option>
         <option onClick=${() => this.prune(noStdDiffs)}>
-            Branches with Identical Stdout/Stderr
+            Completed Branches with Identical Stdout/Stderr
+        </option>
+        <option onClick=${() => this.prune(noErrors)}>
+            All Completed (Error-free) Branches
         </option>
       <//>
       <${Menu} open=${state.open}

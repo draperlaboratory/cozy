@@ -210,7 +210,9 @@ class App extends Component {
       let flag = true
       let other = leaf.cy() == this.cy1.cy ? this.cy2.cy : this.cy1.cy
       for (const key in leaf.data().compatibilities) {
-        flag &&= test(leaf, other.nodes(`#${key}`))
+        const otherleaf = other.nodes(`#${key}`)
+        if (otherleaf.length == 0) continue
+        flag &&= test(leaf, otherleaf)
       }
       if (flag) removeBranch(leaf)
     }
