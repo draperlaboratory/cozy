@@ -30,9 +30,12 @@ function tidyChildren(node, {mergeConstraints}) {
       // A. the child has the same constraints, or 
       // B. we've enabled constraint merging
       if (out.length == 1 && (mergeConstraints || constraintsEq(constraints1, constraints2))) {
-        // we accumulate the assembly contents and vex into the child
+        // we accumulate the assembly, into the child
         out[0].data().contents = candidate.data().contents + '\n' + out[0].data().contents
-        out[0].data().vex = candidate.data().vex + '\n' + out[0].data().vex
+        /// we accumulate vex, if there is any, into the child
+        if (candidate.data().vex) {
+          out[0].data().vex = candidate.data().vex + '\n' + out[0].data().vex
+        }
         // introduce edges linking the child to its grandparent
         for (const parent of candidate.incomers('node')) {
           const edgeData = { 
