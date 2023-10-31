@@ -25,6 +25,14 @@ class Menu extends Component {
     }
   }
 
+  toggleOpen() {
+    if (this.props.open != this.props.title) {
+      this.props.setOpen(this.props.title)
+    } else {
+      this.props.setOpen(null)
+    }
+  }
+
   render(props) {
     const optionStyle = {
       position: "absolute",
@@ -40,7 +48,7 @@ class Menu extends Component {
       <button 
         style=${menuStyle} 
         ref=${this.button} 
-        onClick=${() => props.setOpen(props.title)}
+        onClick=${() => this.toggleOpen()}
         onMouseEnter=${() => props.open && props.setOpen(props.title)}>
         ${props.title}
       </button>
