@@ -9,7 +9,7 @@ To get started with building cozy, run the following commands in the project roo
 ```commandline
 python3 -m venv venv
 source venv/bin/activate
-pip3 install angr sphinx sphinx-autoapi
+pip3 install angr sphinx sphinx-autoapi networkx claripy
 ```
 
 Alternatively, if you have `nix` installed and flakes enabled, run

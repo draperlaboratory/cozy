@@ -3,10 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cozy"
-version = "0.0.1"
+name = "cozy-re"
+version = "1.0"
 authors = [
   { name="Caleb Helbling", email="chelbling@draper.com" },
+  { name="Graham Leach-Krouse", email="gleach-krouse@draper.com"},
 ]
 description = "The Cozy Comparitive Symbolic Evaluation Engine"
 readme = "README.md"
