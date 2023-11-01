@@ -30,7 +30,7 @@ class VizHandler(SimpleHTTPRequestHandler):
             self.wfile.write(bytes(json.dumps(self.postpatch),'utf-8'))
         else: super().do_GET()
 
-def start_viz_server(pre,post):
+def start_viz_server(pre={},post={}):
     """
     Serves Cozy-Viz on localhost:8080, for visualization of information
     generated using :fun:`cozy.execution_graph.compare_and_dump`.
