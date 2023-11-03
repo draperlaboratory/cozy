@@ -3,6 +3,8 @@ import json
 from functools import partial
 import sys
 import os
+import threading
+import webbrowser
 
 def get_vizroot():
     candidates = [os.path.join(d, "cozy-viz") for d in sys.path]
@@ -30,11 +32,15 @@ class VizHandler(SimpleHTTPRequestHandler):
             self.wfile.write(bytes(json.dumps(self.postpatch),'utf-8'))
         else: super().do_GET()
 
-def start_viz_server(pre={},post={}):
+def start_viz_server(pre={}, post={}, open_browser=False, port=8080):
     """
     Serves Cozy-Viz on localhost:8080, for visualization of information
     generated using :fun:`cozy.execution_graph.compare_and_dump`.
     """
     print("launching visualization server, on localhost:8080…")
     handler = partial(VizHandler, pre, post, directory=get_vizroot())
-    HTTPServer(("",8080),handler).serve_forever()
+    thread = threading.Thread(None,HTTPServer(("",port),handler).serve_forever)
+    thread.start()
+    if open_browser:
+        webbrowser.open_new("localhost:" + str(port) + "/?pre=/pre&post=/post")
+    
