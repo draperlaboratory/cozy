@@ -25,6 +25,33 @@ class App extends Component {
     window.app = this
   }
 
+  componentDidMount() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isServedPre = urlParams.get('pre')
+    const isServedPost = urlParams.get('post')
+    if (isServedPre) {
+      fetch(isServedPre)
+        .then(rslt => rslt.json())
+        .then(raw => {
+          const obj = JSON.parse(raw)
+          if (!obj.elements) throw new Error("Malformed post-patch JSON")
+          this.mountToCytoscape(obj, this.cy1)
+        })
+        .catch(e => console.error(e))
+    }
+    if (isServedPost) {
+      fetch(isServedPost)
+        .then(rslt => rslt.json())
+        .then(raw => {
+          const obj = JSON.parse(raw)
+          if (!obj.elements) throw new Error("Malformed post-patch JSON")
+          this.mountToCytoscape(obj, this.cy2)
+        })
+        .catch(e => console.error(e))
+
+    }
+  }
+
   handleClick(ev) {
     //bail out if graphs are not available
     if (!this.cy1.cy || !this.cy2.cy) {
@@ -61,12 +88,12 @@ class App extends Component {
   }
 
   refresh() {
-    this.cy1.cy.json({elements: JSON.parse(this.cy1.orig).elements})
-    this.cy2.cy.json({elements: JSON.parse(this.cy2.orig).elements})
+    this.cy1.cy.json({ elements: JSON.parse(this.cy1.orig).elements })
+    this.cy2.cy.json({ elements: JSON.parse(this.cy2.orig).elements })
     // refocus all foci, and reset viewport
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
-    this.setState({status: null})
+    this.setState({ status: null })
   }
 
   tidy(opts) {
@@ -79,22 +106,25 @@ class App extends Component {
     // remove all foci, and reset viewport
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
-    this.setState({status: null})
+    this.setState({ status: null })
   }
 
   async handleDrop(ev, ref) {
     ev.preventDefault()
     ev.target.classList.remove("dragHover")
-    const data = ev.dataTransfer
-    const file = data.files[0]
+    const file = ev.dataTransfer.files[0]
     const raw = await file.text().then(text => JSON.parse(text))
-    const cy = cytoscape({ 
+    this.mountToCytoscape(raw, ref)
+  }
+
+  mountToCytoscape(raw, ref) {
+    const cy = cytoscape({
       style: diffStyle,
       elements: raw.elements
     })
 
     // mount to DOM
-    cy.mount(ev.target)
+    cy.mount(ref.current)
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
     // set layout
@@ -108,24 +138,28 @@ class App extends Component {
       assembly += leaf.data().contents
       leaf.data().assembly = assembly
     }
-    cy.nodes().map(node => this.initializeNode(node,cy))
-    cy.on('add', ev => { if (ev.target.group() === 'nodes') {
-      this.initializeNode(ev.target, cy)
-    }})
+    cy.nodes().map(node => this.initializeNode(node, cy))
+    cy.on('add', ev => {
+      if (ev.target.group() === 'nodes') {
+        this.initializeNode(ev.target, cy)
+      }
+    })
 
     // clear focus on click without target
-    cy.on('click', ev => { if (!ev.target.group) {
-      this.batch(() => {
-        this.cy1.cy.blur()
-        this.cy2.cy.blur()
-        this.tooltip.current.clearTooltip()
-      })
-    }})
-    
+    cy.on('click', ev => {
+      if (!ev.target.group) {
+        this.batch(() => {
+          this.cy1.cy.blur()
+          this.cy2.cy.blur()
+          this.tooltip.current.clearTooltip()
+        })
+      }
+    })
+
     // stow graph data in reference
     ref.cy = cy
     ref.orig = JSON.stringify(cy.json())
-    this.setState({status: null})
+    this.setState({ status: null })
   }
 
   initializeNode(node, cy) {
@@ -145,13 +179,13 @@ class App extends Component {
       if (cy.loci && !ev.target.hasClass('pathHighlight')) return;
       this.tooltip.current.attachTo(ev.target)
     })
-    
-    node.leaves().on('click', 
+
+    node.leaves().on('click',
       ev => this.handleClick(ev))
   }
 
   startRender(method) {
-    this.setState({status: "rendering"}, method)
+    this.setState({ status: "rendering" }, method)
   }
 
   batch(cb) {
@@ -165,13 +199,13 @@ class App extends Component {
   async setTidiness(tidiness) {
     // we insert a few milliseconds delay to allow for prior state updates to
     // render
-    await new Promise(r => setTimeout(r,50))
+    await new Promise(r => setTimeout(r, 50))
     switch (tidiness) {
-      case "untidy" : {
+      case "untidy": {
         this.refresh()
         break;
       }
-      case "tidy" : {
+      case "tidy": {
         if (this.state.tidiness == "very-tidy") {
           // if we're already very tidy, we need to refresh and then merge nodes
           // from there.
@@ -183,15 +217,15 @@ class App extends Component {
         else this.tidy({})
         break;
       }
-      case "very-tidy" : {
+      case "very-tidy": {
         this.batch(() => {
           this.refresh()
-          this.tidy({mergeConstraints: true})
+          this.tidy({ mergeConstraints: true })
         })
         break;
       }
     }
-    this.setState({tidiness, status: null})
+    this.setState({ tidiness, status: null })
   }
 
   resetLayout() {
@@ -234,7 +268,7 @@ class App extends Component {
           onDragover=${ev => ev.target.classList.add("dragHover")}
           onDragleave=${ev => ev.target.classList.remove("dragHover")}
           onDragleave=${ev => ev.target.classList.remove("dragHover")}
-          onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy1, this.cy2))} 
+          onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy1))} 
           ref=${this.cy1} id="cy1">
             <span id="labelLeft">prepatch</span>
         </div>
@@ -243,7 +277,7 @@ class App extends Component {
           onDragover=${ev => ev.target.classList.add("dragHover")}
           onDragleave=${ev => ev.target.classList.remove("dragHover")}
           onDragleave=${ev => ev.target.classList.remove("dragHover")}
-          onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy2, this.cy1))}
+          onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy2))}
           ref=${this.cy2} id="cy2">
             <span id="labelRight">postpatch</span>
         </div>

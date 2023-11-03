@@ -5,13 +5,14 @@ from angr.block import Block
 from collections.abc import Callable
 from .project import Project, TerminatedResult
 from . import analysis
+from .server import start_viz_server
 
 def _serialize_diff(diff):
     for k,[v1,v2] in diff.items():
         diff[k] = [str(v1),str(v2)]
     return diff
 
-# TODO might want to have a class for proj/rslt/name triples or something
+
 def compare_and_dump(proj_a: Project, proj_b: Project,
                      rslt_a: TerminatedResult, rslt_b: TerminatedResult, 
                      file_name_a: str, file_name_b: str, 
@@ -20,8 +21,10 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
                      include_vex: bool = False,
                      args: any = [], num_examples: int = 0):
     """
-    Generates JSON data suitable for visual comparison using Cozy-Viz from the \
-    results of two symbolic executions.
+    Generates and saves JSON data for Cozy-Viz.
+
+    Generates JSON data for Cozy-Viz from the results of two symbolic
+    executions, and saves the result to two files, one for pre and one for post.
 
     :param Project proj_a: The project associated with the first execuction.
     :param Project proj_b: The project associated with the second execuction.
@@ -48,6 +51,108 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
         :class:`cozy.analysis.PairComparison`. Default = [].
     :param int, optional num_examples: The number of concrete examples to
         generate and incorporate into the JSON, for each dead-end state. Default 0.
+    """
+    g_a, g_b = generate_comparison(proj_a, proj_b, rslt_a, rslt_b,
+         concrete_arg_mapper=concrete_arg_mapper,
+         compare_memory=compare_memory, 
+         compare_registers=compare_registers,
+         include_vex=include_vex,
+         args=args, num_examples=num_examples)
+    def write_graph(g, file_name):
+        data = json.dumps(nx.cytoscape_data(g))
+        with open(file_name, "w") as f:
+            f.write(data)
+    write_graph(g_a, file_name_a)
+    write_graph(g_b, file_name_b)
+
+def compare_and_viz(proj_a: Project, proj_b: Project,
+                    rslt_a: TerminatedResult, rslt_b: TerminatedResult, 
+                    concrete_arg_mapper: Callable [[any], any] | None = None, 
+                    compare_memory: bool = True, compare_registers: bool = True,
+                    include_vex: bool = False,
+                    args: any = [], num_examples: int = 0,
+                    open_browser=False, port=8080
+                    ):
+    """
+    Generates and visualizes JSON data for Cozy-Viz.
+
+    Generates JSON data suitable for visual comparison using Cozy-Viz from the \
+    results of two symbolic executions, and launches a server to view the data.
+
+    :param Project proj_a: The project associated with the first execuction.
+    :param Project proj_b: The project associated with the second execuction.
+    :param TerminatedResult rslt_a: The result of the first execution.
+    :param TerminatedResult rslt_b: The result of the second execution.
+    :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
+        post-process concretized versions of args before they are added to the
+        return string. Some examples of this function include converting an integer
+        to a negative number due to use of two's complement, or slicing off parts of
+        the argument based on another part of the input arguments. Default None.
+    :param bool, optional compare_memory: whether to, for each pair of
+        corresponding dead-end states, compare memory contents and include any
+        significant differences in the JSON. Default True.
+    :param bool, optional compare_registers: whether to, for each pair of
+        corresponding dead-end states, compare register contents and include
+        any differences in the JSON. Default True.
+    :param bool, optional include_vex: whether to, for each SimState, generate the
+        corresponding VEX IR and include the result in the JSON. Default False.
+    :param any, optional args: The input arguments to concretize. This argument
+        may be a Python datastructure, the concretizer will make a deep copy with
+        claripy symbolic variables replaced with concrete values. See
+        :class:`cozy.analysis.PairComparison`. Default [].
+    :param int, optional num_examples: The number of concrete examples to
+        generate and incorporate into the JSON, for each dead-end state. Default 0.
+    :param bool, optional open_browser: Automatically open cozy-viz with the
+        comparison data loaded. Default False.
+    :param int, optional port: The port to serve cozy-viz on. Default 8080.
+    """
+    g_a, g_b = generate_comparison(proj_a, proj_b, rslt_a, rslt_b,
+         concrete_arg_mapper=concrete_arg_mapper,
+         compare_memory=compare_memory, 
+         compare_registers=compare_registers,
+         include_vex=include_vex,
+         args=args, num_examples=num_examples)
+    start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)))
+
+# TODO might want to have a class for proj/rslt/name triples or something
+def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
+                        TerminatedResult, rslt_b: TerminatedResult,
+                        concrete_arg_mapper: Callable [[any], any] | None = None,
+                        compare_memory: bool = True, compare_registers: bool = True,
+                        include_vex: bool = False,
+                        args: any = [], num_examples: int = 0):
+    """
+    Generates JSON data for Cozy-Viz.
+
+    Generates JSON data suitable for visual comparison using Cozy-Viz from the \
+    results of two symbolic executions.
+
+    :param Project proj_a: The project associated with the first execuction.
+    :param Project proj_b: The project associated with the second execuction.
+    :param TerminatedResult rslt_a: The result of the first execution.
+    :param TerminatedResult rslt_b: The result of the second execution.
+    :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
+        post-process concretized versions of args before they are added to the
+        return string. Some examples of this function include converting an integer
+        to a negative number due to use of two's complement, or slicing off parts of
+        the argument based on another part of the input arguments. Default None.
+    :param bool, optional compare_memory: whether to, for each pair of
+        corresponding dead-end states, compare memory contents and include any
+        significant differences in the JSON. Default True.
+    :param bool, optional compare_registers: whether to, for each pair of
+        corresponding dead-end states, compare register contents and include
+        any differences in the JSON. Default True.
+    :param bool, optional include_vex: whether to, for each SimState, generate the
+        corresponding VEX IR and include the result in the JSON. Default False.
+    :param any, optional args: The input arguments to concretize. This argument
+        may be a Python datastructure, the concretizer will make a deep copy with
+        claripy symbolic variables replaced with concrete values. See
+        :class:`cozy.analysis.PairComparison`. Default = [].
+    :param int, optional num_examples: The number of concrete examples to
+        generate and incorporate into the JSON, for each dead-end state. Default 0.
+
+    :return (networkx.DiGraph, networkx.DiGraph): A pair of directed graphs
+        representing the two symbolic executions.
     """
 
     eg_a = ExecutionGraph(proj_a,rslt_a)
@@ -100,12 +205,7 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
             del attr['state']
     stringify_attrs(eg_a, g_a)
     stringify_attrs(eg_b, g_b)
-    def write_graph(g, file_name):
-        data = json.dumps(nx.cytoscape_data(g))
-        with open(file_name, "w") as f:
-            f.write(data)
-    write_graph(g_a, file_name_a)
-    write_graph(g_b, file_name_b)
+    return (g_a, g_b)
 
 
 
