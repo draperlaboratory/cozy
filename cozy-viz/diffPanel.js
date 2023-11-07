@@ -50,23 +50,37 @@ export default class DiffPanel extends Component {
   }
 
   diffAssemblyWith(leftFocus,rightFocus) {
+    const leftLines = leftFocus.data().assembly.split('\n')
+    const rightLines = rightFocus.data().assembly.split('\n')
     const diffs = Diff.diffLines(leftFocus.data().assembly, rightFocus.data().assembly, {
       comparator(l,r) { return l.substring(6) == r.substring(6) }
     })
     let renderedRight = []
     let renderedLeft = []
+    let curLeft = 0
+    let curRight = 0
     for (const diff of diffs) {
       let hunkRight
       let hunkLeft
       if (diff?.added) {
         hunkRight = html`<span class="hunkAdded">${diff.value}</span>`
         hunkLeft = html`<span>${Array(diff.count).fill('\n').join("")}</span>`
+        curRight += diff.count
       } else if (diff?.removed) {
         hunkLeft = html`<span class="hunkRemoved">${diff.value}</span>`
         hunkRight = html`<span>${Array(diff.count).fill('\n').join("")}</span>`
+        curLeft += diff.count
       } else {
-        hunkRight = html`<span>${diff.value}</span>`
-        hunkLeft = html`<span>${diff.value}</span>`
+        const leftPiece = []
+        const rightPiece = []
+        for (let i = 0; i < diff.count; i++) {
+          leftPiece.push(leftLines[curLeft] + '\n')
+          rightPiece.push(rightLines[curRight] + '\n')
+          curRight++
+          curLeft++
+        }
+        hunkRight = html`<span>${rightPiece}</span>`
+        hunkLeft = html`<span>${leftPiece}</span>`
       }
       renderedRight.push(hunkRight)
       renderedLeft.push(hunkLeft)
