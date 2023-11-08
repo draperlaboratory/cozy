@@ -110,11 +110,24 @@ class App extends Component {
   }
 
   async handleDrop(ev, ref) {
+    ev.stopPropagation()
     ev.preventDefault()
     ev.target.classList.remove("dragHover")
     const file = ev.dataTransfer.files[0]
     const raw = await file.text().then(text => JSON.parse(text))
     this.mountToCytoscape(raw, ref)
+  }
+
+  handleDragover(ev) {
+    ev.stopPropagation()
+    ev.preventDefault()
+    ev.target.classList.add("dragHover")
+  }
+
+  handleDragleave(ev) {
+    ev.stopPropagation()
+    ev.preventDefault()
+    ev.target.classList.remove("dragHover")
   }
 
   mountToCytoscape(raw, ref) {
@@ -265,18 +278,16 @@ class App extends Component {
       <div id="main-view">
         <div 
           onMouseEnter=${() => this.tooltip.current.clearTooltip()} 
-          onDragover=${ev => ev.target.classList.add("dragHover")}
-          onDragleave=${ev => ev.target.classList.remove("dragHover")}
-          onDragleave=${ev => ev.target.classList.remove("dragHover")}
+          onDragover=${ev => this.handleDragover(ev)}
+          onDragleave=${ev => this.handleDragleave(ev)}
           onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy1))} 
           ref=${this.cy1} id="cy1">
             <span id="labelLeft">prepatch</span>
         </div>
         <div 
           onMouseEnter=${() => this.tooltip.current.clearTooltip()} 
-          onDragover=${ev => ev.target.classList.add("dragHover")}
-          onDragleave=${ev => ev.target.classList.remove("dragHover")}
-          onDragleave=${ev => ev.target.classList.remove("dragHover")}
+          onDragover=${ev => this.handleDragover(ev)}
+          onDragleave=${ev => this.handleDragleave(ev)}
           onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy2))}
           ref=${this.cy2} id="cy2">
             <span id="labelRight">postpatch</span>
