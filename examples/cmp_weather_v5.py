@@ -104,9 +104,11 @@ def concrete_mapper(concrete_args):
     return (analysis.hexify(latest_data_init), out_rows)
 
 dump_execution_graphs = input("Would you like to dump the execution graphs of comparing weather-orig and weather-patched-1? (y/n)") == "y"
+visualize_execution_graphs = input("Would you like to visualize the comparison of weather-orig and weather-patched-1? (y/n)") == "y"
+cache_intermediate_states = dump_execution_graphs or visualize_execution_graphs
 
 print("Running weather-orig")
-(weather_orig_addrs, weather_orig_states) = run_weather_orig(cache_intermediate_states=dump_execution_graphs)
+(weather_orig_addrs, weather_orig_states) = run_weather_orig(cache_intermediate_states=cache_intermediate_states)
 
 if input("Would you like to view error states for weather-orig? (y/n)") == "y":
     errored_info = analysis.ErrorResults(weather_orig_states)
@@ -115,7 +117,7 @@ if input("Would you like to view error states for weather-orig? (y/n)") == "y":
 input("Press enter to run weather-patched-1")
 
 print("\nRunning weather-patched-1")
-(weather_patched_1_addrs, weather_patched_1_states) = run_weather_patched_1(cache_intermediate_states=dump_execution_graphs)
+(weather_patched_1_addrs, weather_patched_1_states) = run_weather_patched_1(cache_intermediate_states=cache_intermediate_states)
 if input("Would you like to view error states for weather-patched-1? (y/n)") == "y":
     errored_info = analysis.ErrorResults(weather_patched_1_states)
     print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
@@ -127,10 +129,15 @@ if dump_execution_graphs:
                                      concrete_arg_mapper=concrete_mapper,
                                      args=args, num_examples=2)
 
+if visualize_execution_graphs:
+    execution_graph.compare_and_viz(proj_orig, proj_patched_1, weather_orig_states, weather_patched_1_states,
+                                    concrete_arg_mapper=concrete_mapper, args=args,
+                                    num_examples=2, open_browser=True)
+
 input("Press enter to run weather-patched-2")
 
 print("\nRunning weather-patched-2")
-(weather_patched_2_addrs, weather_patched_2_states) = run_weather_patched_2(cache_intermediate_states=dump_execution_graphs)
+(weather_patched_2_addrs, weather_patched_2_states) = run_weather_patched_2(cache_intermediate_states=cache_intermediate_states)
 if input("Would you like to view error states for weather-patched-2? (y/n)") == "y":
     errored_info = analysis.ErrorResults(weather_patched_2_states)
     print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))

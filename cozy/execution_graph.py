@@ -112,7 +112,7 @@ def compare_and_viz(proj_a: Project, proj_b: Project,
          compare_registers=compare_registers,
          include_vex=include_vex,
          args=args, num_examples=num_examples)
-    start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)))
+    start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)), open_browser=open_browser, port=port)
 
 # TODO might want to have a class for proj/rslt/name triples or something
 def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
