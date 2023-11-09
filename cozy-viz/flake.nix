@@ -4,7 +4,8 @@
   inputs.flake-utils.url  = "github:numtide/flake-utils";
 
   outputs = { self, nixpkgs, flake-utils}: flake-utils.lib.eachDefaultSystem (system:
-    let pkgs = nixpkgs.legacyPackages.${system};
+  let 
+    pkgs = nixpkgs.legacyPackages.${system};
     in {
 
       devShell = pkgs.mkShell { 
@@ -14,6 +15,14 @@
           pkgs.nodePackages.browser-sync
           pkgs.nodejs
         ]; 
+      };
+
+      packages.bundler = pkgs.buildNpmPackage {
+        name = "cozy-viz-bundler";
+        version = "0.0";
+        src = ./.;
+        npmDepsHash = "sha256-3DRXImi5vMZTJnLHJ3dtvQmeTDhqiFFlByudwvhYOV0=";
+        dontNpmBuild = true;
       };
 
       serve = let
@@ -32,9 +41,27 @@
         postBuild = "wrapProgram $out/bin/${name} --prefix PATH : $out/bin";
       };
 
+      bundle = let
+        name = "bundle-cozy-viz";
+        script = pkgs.writeShellScriptBin name ''
+          node ${self.packages.${system}.bundler}/lib/node_modules/cozy-viz/bundler.mjs
+        '';
+        buildInputs = [ self.packages.${system}.bundler ]; 
+      in pkgs.symlinkJoin {
+        name = name;
+        paths = [script] ++ buildInputs;
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = "wrapProgram $out/bin/${name} --prefix PATH : $out/bin";
+      };
+
       defaultApp = {
         type = "app";
         program = "${self.serve.${system}}/bin/serve-hungr-viz";
+      };
+
+      apps.bundle = {
+        type = "app";
+        program = "${self.bundle.${system}}/bin/bundle-cozy-viz";
       };
   });
 }

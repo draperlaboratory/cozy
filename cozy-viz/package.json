@@ -1,0 +1,10 @@
+{
+  "name": "cozy-viz",
+  "version": "0.0.0",
+  "dependencies": {
+    "esbuild": "^0.19.5"
+  },
+  "scripts": {
+    "build": "node ./bundler.mjs"
+  }
+}
