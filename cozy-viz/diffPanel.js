@@ -136,7 +136,12 @@ export default class DiffPanel extends Component {
         <pre class="concrete-example">${JSON.stringify(concretion, undefined, 2)}</pre>
       `)
     }
-    return examples
+    return html`<div id="concretion-header">
+      Viewing ${concretions.length} concrete input examples
+    </div>
+    <div id="concretion-data">
+      ${examples}
+    </div>`
   }
 
   render(props, state) {
@@ -189,10 +194,8 @@ export default class DiffPanel extends Component {
           ${this.getMemoryDifference()}
         </div>`
       }
-      ${state.mode == "concretions" && concretionAvailable && html`
-        <div id="concretion-data">
-          ${this.getConcretion()}
-        </div>`
+      ${state.mode == "concretions" && concretionAvailable && 
+          this.getConcretion()
       }
       </div>`
   }
