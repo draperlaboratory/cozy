@@ -186,6 +186,11 @@ button:disabled {
   text-align:right;
 }
 
+#concretion-header {
+  font-family:monospace;
+  margin-left:1em;
+}
+
 #concretion-data {
   display:flex;
   justify-content:center;
