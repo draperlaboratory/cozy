@@ -6,16 +6,16 @@ and after the application of a patch.
 
 ## Usage
 
-
 https://github.com/draperlaboratory/VIBES-internal/assets/6383381/05e2b78b-3839-4f12-ac27-a62cae9d9349
-
 
 ### Running
 
-To use angr-viz locally, you'll need to serve the directory contents. `python
+To use cozy-viz locally, you'll need to serve the directory contents. `python
 -m http.server` will generally do the trick. If you'd like a fancier
 development-oriented server, and you have nix installed and flakes enabled, you
-can `nix run` to fire up a configured `browser-sync`.
+can `nix run` to fire up a configured `browser-sync`. If you've installed cozy
+with `pip`, you should also be able to launch cozy-viz using the functions in
+cozy's `server.py`—check the documentation for that.
 
 ### Loading Traces
 
@@ -44,7 +44,7 @@ enabled. You should see one or more buttons at the bottom of the screen light
 up to indicate their availability. Clicking these buttons will display things
 like a diff of the sequence of assembly instructions associated with the left
 and right paths, a diff of the constraints on memory and registers contents,
-and a set of "concretions" - concrete values that, when given as input to the
+and a set of "concretions"—concrete values that, when given as input to the
 prepatched function, produce the behavior on the left, and when given as input
 to the postpatched function, produce the behavior on the right.
 
@@ -75,6 +75,7 @@ The basic format is:
           "stdout": STDOUT 
           "stderr": STDERR,
           "contents": ASSEMBLY,
+          "vex": VEX,
           "constraints": [
             CONSTRAINT, 
             …
@@ -110,3 +111,5 @@ The basic format is:
 
 angr-viz consolidates non-branching sequences of nodes, so there are likely
 more nodes listed in the JSON that will actually appear in the visualization.
+Depending on how cozy was configured to generate the JSON, not every field
+above will necessarily appear.
