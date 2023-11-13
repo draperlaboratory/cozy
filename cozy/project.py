@@ -168,13 +168,14 @@ class Session:
         for state in states:
             state.history.custom_constraints = state.solver.constraints
 
-    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True) -> AssertFailed | TerminatedResult:
+    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> AssertFailed | TerminatedResult:
         """
         Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.
 
         :param claripy.ast.bits args: The arguments to pass to the function. angr will utilize the function's type signature to figure out the calling convention to use with the arguments.
         :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached, preventing their garbage collection. This is required for dumping the execution graph.
         :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will be cached, which is required for performing memoized binary search when diffing states.
+        :param int | None ret_addr: What address to return to if calling as a function
         :return: The result of running this session.
         :rtype: AssertFailed | TerminatedResult
         """
@@ -206,7 +207,9 @@ class Session:
             else:
                 fun_prototype = None
 
-            state = self.proj.angr_proj.factory.call_state(fun_addr, *args, base_state=self.state, prototype=fun_prototype, add_options={angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS, angr.options.SYMBOLIC_WRITE_ADDRESSES})
+            kwargs = dict() if ret_addr is None else {"ret_addr": ret_addr}
+
+            state = self.proj.angr_proj.factory.call_state(fun_addr, *args, base_state=self.state, prototype=fun_prototype, add_options={angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS, angr.options.SYMBOLIC_WRITE_ADDRESSES}, **kwargs)
         else:
             state = self.state
 

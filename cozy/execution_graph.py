@@ -1,3 +1,4 @@
+import angr.errors
 import networkx as nx
 import json
 import sys
@@ -278,7 +279,10 @@ class ExecutionGraph:
             # Assuming utf-8 character encoding, 
             attr['stdout'] = node.posix.dumps(sys.stdout.fileno()).decode('utf-8')
             attr['stderr'] = node.posix.dumps(sys.stderr.fileno()).decode('utf-8')
-            attr['contents'] = node.block()
+            try:
+                attr['contents'] = node.block()
+            except angr.errors.SimEngineError as exc:
+                attr['contents'] = ""
             attr['constraints'] = node.solver.constraints
         return g
 

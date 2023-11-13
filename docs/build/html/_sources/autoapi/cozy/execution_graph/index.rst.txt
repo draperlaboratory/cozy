@@ -23,6 +23,8 @@ Functions
 
    cozy.execution_graph._serialize_diff
    cozy.execution_graph.compare_and_dump
+   cozy.execution_graph.compare_and_viz
+   cozy.execution_graph.generate_comparison
 
 
 
@@ -31,7 +33,10 @@ Functions
 
 .. py:function:: compare_and_dump(proj_a: cozy.project.Project, proj_b: cozy.project.Project, rslt_a: cozy.project.TerminatedResult, rslt_b: cozy.project.TerminatedResult, file_name_a: str, file_name_b: str, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, compare_memory: bool = True, compare_registers: bool = True, include_vex: bool = False, args: any = [], num_examples: int = 0)
 
-   Generates JSON data suitable for visual comparison using Cozy-Viz from the     results of two symbolic executions.
+   Generates and saves JSON data for Cozy-Viz.
+
+   Generates JSON data for Cozy-Viz from the results of two symbolic
+   executions, and saves the result to two files, one for pre and one for post.
 
    :param Project proj_a: The project associated with the first execuction.
    :param Project proj_b: The project associated with the second execuction.
@@ -58,6 +63,74 @@ Functions
        :class:`cozy.analysis.PairComparison`. Default = [].
    :param int, optional num_examples: The number of concrete examples to
        generate and incorporate into the JSON, for each dead-end state. Default 0.
+
+
+.. py:function:: compare_and_viz(proj_a: cozy.project.Project, proj_b: cozy.project.Project, rslt_a: cozy.project.TerminatedResult, rslt_b: cozy.project.TerminatedResult, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, compare_memory: bool = True, compare_registers: bool = True, include_vex: bool = False, args: any = [], num_examples: int = 0, open_browser=False, port=8080)
+
+   Generates and visualizes JSON data for Cozy-Viz.
+
+   Generates JSON data suitable for visual comparison using Cozy-Viz from the     results of two symbolic executions, and launches a server to view the data.
+
+   :param Project proj_a: The project associated with the first execuction.
+   :param Project proj_b: The project associated with the second execuction.
+   :param TerminatedResult rslt_a: The result of the first execution.
+   :param TerminatedResult rslt_b: The result of the second execution.
+   :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
+       post-process concretized versions of args before they are added to the
+       return string. Some examples of this function include converting an integer
+       to a negative number due to use of two's complement, or slicing off parts of
+       the argument based on another part of the input arguments. Default None.
+   :param bool, optional compare_memory: whether to, for each pair of
+       corresponding dead-end states, compare memory contents and include any
+       significant differences in the JSON. Default True.
+   :param bool, optional compare_registers: whether to, for each pair of
+       corresponding dead-end states, compare register contents and include
+       any differences in the JSON. Default True.
+   :param bool, optional include_vex: whether to, for each SimState, generate the
+       corresponding VEX IR and include the result in the JSON. Default False.
+   :param any, optional args: The input arguments to concretize. This argument
+       may be a Python datastructure, the concretizer will make a deep copy with
+       claripy symbolic variables replaced with concrete values. See
+       :class:`cozy.analysis.PairComparison`. Default [].
+   :param int, optional num_examples: The number of concrete examples to
+       generate and incorporate into the JSON, for each dead-end state. Default 0.
+   :param bool, optional open_browser: Automatically open cozy-viz with the
+       comparison data loaded. Default False.
+   :param int, optional port: The port to serve cozy-viz on. Default 8080.
+
+
+.. py:function:: generate_comparison(proj_a: cozy.project.Project, proj_b: cozy.project.Project, rslt_a: cozy.project.TerminatedResult, rslt_b: cozy.project.TerminatedResult, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, compare_memory: bool = True, compare_registers: bool = True, include_vex: bool = False, args: any = [], num_examples: int = 0)
+
+   Generates JSON data for Cozy-Viz.
+
+   Generates JSON data suitable for visual comparison using Cozy-Viz from the     results of two symbolic executions.
+
+   :param Project proj_a: The project associated with the first execuction.
+   :param Project proj_b: The project associated with the second execuction.
+   :param TerminatedResult rslt_a: The result of the first execution.
+   :param TerminatedResult rslt_b: The result of the second execution.
+   :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
+       post-process concretized versions of args before they are added to the
+       return string. Some examples of this function include converting an integer
+       to a negative number due to use of two's complement, or slicing off parts of
+       the argument based on another part of the input arguments. Default None.
+   :param bool, optional compare_memory: whether to, for each pair of
+       corresponding dead-end states, compare memory contents and include any
+       significant differences in the JSON. Default True.
+   :param bool, optional compare_registers: whether to, for each pair of
+       corresponding dead-end states, compare register contents and include
+       any differences in the JSON. Default True.
+   :param bool, optional include_vex: whether to, for each SimState, generate the
+       corresponding VEX IR and include the result in the JSON. Default False.
+   :param any, optional args: The input arguments to concretize. This argument
+       may be a Python datastructure, the concretizer will make a deep copy with
+       claripy symbolic variables replaced with concrete values. See
+       :class:`cozy.analysis.PairComparison`. Default = [].
+   :param int, optional num_examples: The number of concrete examples to
+       generate and incorporate into the JSON, for each dead-end state. Default 0.
+
+   :return (networkx.DiGraph, networkx.DiGraph): A pair of directed graphs
+       representing the two symbolic executions.
 
 
 .. py:class:: ExecutionGraph(proj: cozy.project.Project, result: cozy.project.TerminatedResult)

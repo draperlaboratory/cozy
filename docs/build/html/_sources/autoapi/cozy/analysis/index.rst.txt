@@ -312,7 +312,7 @@ Functions
       :rtype: Iterator[PairComparison]
 
 
-   .. py:method:: verify(verification_assertion: cozy.functools_ext.Callable[[PairComparison], claripy.ast.Base]) -> list[PairComparison]
+   .. py:method:: verify(verification_assertion: collections.abc.Callable[[PairComparison], claripy.ast.Base]) -> list[PairComparison]
 
       Determines what compatible state pairs are valid with respect to a verification assertion. Note that the comparison results are verified with respect to the verification_assertion if the returned list is empty (has length 0).
 
@@ -321,7 +321,7 @@ Functions
       :rtype: list[PairComparison]
 
 
-   .. py:method:: report(args: any, concrete_arg_mapper: cozy.functools_ext.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
 
       Generates a human readable report of the result object, saved as a string. This string is suitable for printing.
 
@@ -357,7 +357,7 @@ Functions
       :rtype: Iterator[SingletonState]
 
 
-   .. py:method:: report(args: any, concrete_arg_mapper: cozy.functools_ext.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
 
       Creates a human readable report about a list of errored states.
 
@@ -372,7 +372,7 @@ Functions
 .. py:class:: AssertFailedResults(assert_failed: cozy.project.AssertFailed)
 
 
-   .. py:method:: report(args: any, concrete_arg_mapper: cozy.functools_ext.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
 
 
 
