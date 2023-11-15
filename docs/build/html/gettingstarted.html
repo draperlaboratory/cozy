@@ -258,14 +258,6 @@ as output, so let’s create fresh sessions and re-run without any directives at
 <span class="n">sess_postpatched</span><span class="o">.</span><span class="n">add_constraints</span><span class="p">(</span><span class="n">cozy</span><span class="o">.</span><span class="n">primitives</span><span class="o">.</span><span class="n">sym_ptr_constraints</span><span class="p">(</span><span class="n">arg0</span><span class="p">,</span> <span class="n">addr_postpatched</span><span class="p">,</span> <span class="n">can_be_null</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>Before we run our sessions, we should also save the address ranges occupied by the program instructions. Since
-cozy compares memory, we need to tell it ranges to ignore. Presumably we are not interested in differences in
-memory that are a result of different program instructions:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">prog_ranges_prepatched</span> <span class="o">=</span> <span class="n">proj_prepatched</span><span class="o">.</span><span class="n">object_ranges</span><span class="p">()</span>
-<span class="n">prog_ranges_postpatched</span> <span class="o">=</span> <span class="n">proj_postpatched</span><span class="o">.</span><span class="n">object_ranges</span><span class="p">()</span>
-<span class="n">prog_ranges_union</span> <span class="o">=</span> <span class="n">prog_ranges_prepatched</span> <span class="o">+</span> <span class="n">prog_ranges_postpatched</span>
-</pre></div>
-</div>
 <p>Now let’s run both of our new sessions:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">prepatched_result</span> <span class="o">=</span> <span class="n">sess_prepatched</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">)</span>
 <span class="n">postpatched_result</span> <span class="o">=</span> <span class="n">sess_postpatched</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">)</span>
@@ -283,7 +275,7 @@ memory that are a result of different program instructions:</p>
 </div>
 <p>We can now make a comparison between these two terminated results. Constructing a ComparisonResults object is used to do
 the comparison computation:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">comparison_results</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">ComparisonResults</span><span class="p">(</span><span class="n">prepatched_result</span><span class="p">,</span> <span class="n">postpatched_result</span><span class="p">,</span> <span class="n">prog_ranges_union</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">comparison_results</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">ComparisonResults</span><span class="p">(</span><span class="n">prepatched_result</span><span class="p">,</span> <span class="n">postpatched_result</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>To view a human readable report, we can now call the <a class="reference internal" href="autoapi/cozy/analysis/index.html#cozy.analysis.ComparisonResults.report" title="cozy.analysis.ComparisonResults.report"><code class="xref py py-meth docutils literal notranslate"><span class="pre">cozy.analysis.ComparisonResults.report()</span></code></a> method, which

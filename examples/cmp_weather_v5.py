@@ -74,7 +74,7 @@ def run(proj, **kwargs):
     # set things up to do that in the framework code instead.
     sess.add_directives(ErrorDirective.from_fun_offset(proj, "abort", 0x0))
     initialize_state(sess)
-    return (proj.object_ranges(), sess.run(**kwargs))
+    return sess.run(**kwargs)
 
 def run_weather_orig(**kwargs):
     return run(proj_orig, **kwargs)
@@ -108,7 +108,7 @@ visualize_execution_graphs = input("Would you like to visualize the comparison o
 cache_intermediate_states = dump_execution_graphs or visualize_execution_graphs
 
 print("Running weather-orig")
-(weather_orig_addrs, weather_orig_states) = run_weather_orig(cache_intermediate_states=cache_intermediate_states)
+weather_orig_states = run_weather_orig(cache_intermediate_states=cache_intermediate_states)
 
 if input("Would you like to view error states for weather-orig? (y/n)") == "y":
     errored_info = analysis.ErrorResults(weather_orig_states)
@@ -117,7 +117,7 @@ if input("Would you like to view error states for weather-orig? (y/n)") == "y":
 input("Press enter to run weather-patched-1")
 
 print("\nRunning weather-patched-1")
-(weather_patched_1_addrs, weather_patched_1_states) = run_weather_patched_1(cache_intermediate_states=cache_intermediate_states)
+weather_patched_1_states = run_weather_patched_1(cache_intermediate_states=cache_intermediate_states)
 if input("Would you like to view error states for weather-patched-1? (y/n)") == "y":
     errored_info = analysis.ErrorResults(weather_patched_1_states)
     print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
@@ -137,22 +137,22 @@ if visualize_execution_graphs:
 input("Press enter to run weather-patched-2")
 
 print("\nRunning weather-patched-2")
-(weather_patched_2_addrs, weather_patched_2_states) = run_weather_patched_2(cache_intermediate_states=cache_intermediate_states)
+weather_patched_2_states = run_weather_patched_2(cache_intermediate_states=cache_intermediate_states)
 if input("Would you like to view error states for weather-patched-2? (y/n)") == "y":
     errored_info = analysis.ErrorResults(weather_patched_2_states)
     print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 if input("Would you like to compare weather-orig and weather-patched-1? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-ORIG and WEATHER-PATCHED-1")
-    comparison_results = analysis.ComparisonResults(weather_orig_states, weather_patched_1_states, weather_orig_addrs + weather_patched_1_addrs, compare_memory=True, compare_registers=True, use_memoized_binary_search=True)
+    comparison_results = analysis.ComparisonResults(weather_orig_states, weather_patched_1_states, compare_memory=True, compare_registers=True, use_memoized_binary_search=True)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
 
 if input("Would you like to compare weather-patched-1 and weather-patched-2? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-PATCHED-1 and WEATHER-PATCHED-2")
-    comparison_results = analysis.ComparisonResults(weather_patched_1_states, weather_patched_2_states, weather_patched_1_addrs + weather_patched_2_addrs)
+    comparison_results = analysis.ComparisonResults(weather_patched_1_states, weather_patched_2_states)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
 
 if input("Would you like to compare weather-orig and weather-patched-2? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-ORIG and WEATHER-PATCHED-2")
-    comparison_results = analysis.ComparisonResults(weather_orig_states, weather_patched_2_states, weather_orig_addrs + weather_patched_2_addrs)
+    comparison_results = analysis.ComparisonResults(weather_orig_states, weather_patched_2_states)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))

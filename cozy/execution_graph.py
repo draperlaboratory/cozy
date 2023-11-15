@@ -158,11 +158,9 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
 
     eg_a = ExecutionGraph(proj_a,rslt_a)
     eg_b = ExecutionGraph(proj_b,rslt_b)
-    addrs_a = proj_a.object_ranges()
-    addrs_b = proj_b.object_ranges()
     g_a = eg_a.reconstruct_bbl_addr_graph()
     g_b = eg_b.reconstruct_bbl_addr_graph()
-    comparison_results = analysis.ComparisonResults(rslt_a,rslt_b, addrs_a + addrs_b,
+    comparison_results = analysis.ComparisonResults(rslt_a,rslt_b,
                                                     compare_memory=compare_memory,
                                                     compare_registers=compare_registers,
                                                     # We extract std[out|err] below.

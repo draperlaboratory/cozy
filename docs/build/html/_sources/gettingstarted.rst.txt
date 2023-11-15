@@ -239,14 +239,6 @@ as output, so let's create fresh sessions and re-run without any directives atta
     addr_postpatched = sess_postpatched.malloc(cozy.constants.INT_SIZE)
     sess_postpatched.add_constraints(cozy.primitives.sym_ptr_constraints(arg0, addr_postpatched, can_be_null=True))
 
-Before we run our sessions, we should also save the address ranges occupied by the program instructions. Since
-cozy compares memory, we need to tell it ranges to ignore. Presumably we are not interested in differences in
-memory that are a result of different program instructions::
-
-    prog_ranges_prepatched = proj_prepatched.object_ranges()
-    prog_ranges_postpatched = proj_postpatched.object_ranges()
-    prog_ranges_union = prog_ranges_prepatched + prog_ranges_postpatched
-
 Now let's run both of our new sessions::
 
     prepatched_result = sess_prepatched.run(arg0)
@@ -265,7 +257,7 @@ This prints the following messages::
 We can now make a comparison between these two terminated results. Constructing a ComparisonResults object is used to do
 the comparison computation::
 
-    comparison_results = cozy.analysis.ComparisonResults(prepatched_result, postpatched_result, prog_ranges_union)
+    comparison_results = cozy.analysis.ComparisonResults(prepatched_result, postpatched_result)
 
 To view a human readable report, we can now call the :py:meth:`cozy.analysis.ComparisonResults.report` method, which
 will convert the :py:class:`~cozy.analysis.ComparisonResults` to a human readable summary::
