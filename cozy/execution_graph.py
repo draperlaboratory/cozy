@@ -12,13 +12,13 @@ def _serialize_diff(diff):
         diff[k] = [str(v1),str(v2)]
     return diff
 
-
 def compare_and_dump(proj_a: Project, proj_b: Project,
                      rslt_a: TerminatedResult, rslt_b: TerminatedResult, 
                      file_name_a: str, file_name_b: str, 
                      concrete_arg_mapper: Callable [[any], any] | None = None, 
                      compare_memory: bool = True, compare_registers: bool = True,
-                     include_vex: bool = False,
+                     include_vex: bool = False, include_simprocs: bool = False,
+                     flag_syscalls: bool = False,
                      args: any = [], num_examples: int = 0):
     """
     Generates and saves JSON data for Cozy-Viz.
@@ -45,6 +45,10 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
         any differences in the JSON. Default True.
     :param bool, optional include_vex: whether to, for each SimState, generate the
         corresponding VEX IR and include the result in the JSON. Default False.
+    :param bool, optional include_simprocs: whether to, for each SimState, flag any
+        SimProcedure locations occurring in the corrsponding basic block. Default False.
+    :param bool, optional include_simprocs: whether to include a listing of
+        SimProcedures called in each basic block. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -57,6 +61,8 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
          compare_memory=compare_memory, 
          compare_registers=compare_registers,
          include_vex=include_vex,
+         include_simprocs=include_simprocs,
+         flag_syscalls=flag_syscalls,
          args=args, num_examples=num_examples)
     def write_graph(g, file_name):
         data = json.dumps(nx.cytoscape_data(g))
@@ -69,7 +75,8 @@ def compare_and_viz(proj_a: Project, proj_b: Project,
                     rslt_a: TerminatedResult, rslt_b: TerminatedResult, 
                     concrete_arg_mapper: Callable [[any], any] | None = None, 
                     compare_memory: bool = True, compare_registers: bool = True,
-                    include_vex: bool = False,
+                    include_vex: bool = False, include_simprocs: bool = False,
+                    flag_syscalls: bool = False,
                     args: any = [], num_examples: int = 0,
                     open_browser=False, port=8080
                     ):
@@ -96,6 +103,8 @@ def compare_and_viz(proj_a: Project, proj_b: Project,
         any differences in the JSON. Default True.
     :param bool, optional include_vex: whether to, for each SimState, generate the
         corresponding VEX IR and include the result in the JSON. Default False.
+    :param bool, optional include_simprocs: whether to include a listing of
+        SimProcedures called in each basic block. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -111,6 +120,8 @@ def compare_and_viz(proj_a: Project, proj_b: Project,
          compare_memory=compare_memory, 
          compare_registers=compare_registers,
          include_vex=include_vex,
+         flag_syscalls=flag_syscalls,
+         include_simprocs = include_simprocs,
          args=args, num_examples=num_examples)
     start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)), open_browser=open_browser, port=port)
 
@@ -119,7 +130,8 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
                         TerminatedResult, rslt_b: TerminatedResult,
                         concrete_arg_mapper: Callable [[any], any] | None = None,
                         compare_memory: bool = True, compare_registers: bool = True,
-                        include_vex: bool = False,
+                        include_vex: bool = False, include_simprocs: bool = False,
+                        flag_syscalls: bool = False,
                         args: any = [], num_examples: int = 0):
     """
     Generates JSON data for Cozy-Viz.
@@ -144,6 +156,8 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
         any differences in the JSON. Default True.
     :param bool, optional include_vex: whether to, for each SimState, generate the
         corresponding VEX IR and include the result in the JSON. Default False.
+    :param bool, optional include_simprocs: whether to include a listing of
+        SimProcedures called in each basic block. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -200,6 +214,9 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
     def stringify_attrs(eg, g):
         for (n, attr) in g.nodes.items():
             if include_vex: attr['vex'] = attr["contents"].vex._pp_str() or "*"
+            # FIXME: inefficient, we'll be running this many times for each basic block. 
+            if include_simprocs: attr['simprocs'] = eg._list_simprocs(attr["contents"])
+            if flag_syscalls: attr['has_syscall'] = eg._has_syscall(attr["contents"])
             attr['contents'] = eg._get_bbl_asm(attr["contents"]) or "*"
             attr['constraints'] = list(map(str, attr["constraints"])) or "*"
             del attr['state']
@@ -259,6 +276,34 @@ class ExecutionGraph:
                     ).render(formatting={})
         except:
             return "*"
+
+    def _list_simprocs(self, b : Block):
+        # FIXME Need to document return type idiomatically
+        """
+        An internal method which lists SimProcedure calls occuring in a block
+
+        :param Block b: the block to scan
+        """
+        addr = b.addr - 1 if b.thumb else b.addr
+        procs = self.proj.angr_proj._sim_procedures
+        sim_procs = []
+        for a in range(addr, addr + b.size):
+            if a in procs:
+                name = procs[a].display_name or print(procs[a])
+                home = procs[a].library_name
+
+                sim_procs.append(name + (" from " + home if home else ""))
+        return sim_procs
+
+    def _has_syscall(self, b : Block):
+        """
+        An internal method which checks whether the jumpkind of a Block is
+        a syscall.
+
+        :param Block b: the relevant Block
+        :return bool: Whether the jumpkind is a syscall
+        """
+        return b.vex.jumpkind.startswith("Ijk_Sys")
 
     def reconstruct_bbl_addr_graph(self):
         """

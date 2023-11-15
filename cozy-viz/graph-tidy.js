@@ -36,6 +36,15 @@ function tidyChildren(node, {mergeConstraints}) {
         if (candidate.data().vex) {
           out[0].data().vex = candidate.data().vex + '\n' + out[0].data().vex
         }
+        /// we accumulate has_syscall, if defined, into the child
+        if ("has_syscall" in candidate.data()) {
+          out[0].data().has_syscall |= candidate.data().has_syscall
+        }
+        /// we accumulate simprocs, if defined, into the child
+        if (candidate.data().simprocs) {
+          console.log(candidate.data().simprocs)
+          out[0].data().simprocs.unshift(...candidate.data().simprocs)
+        }
         // introduce edges linking the child to its grandparent
         for (const parent of candidate.incomers('node')) {
           const edgeData = { 

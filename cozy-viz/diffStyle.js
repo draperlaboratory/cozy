@@ -27,6 +27,10 @@ export const diffStyle = [
       'background-color': elt => {
         if (elt.data().error) {
           return "#facdcd"
+        } else if (elt.data().simprocs.length > 0) {
+          return '#f7be6d'
+        } else if (elt.data().has_syscall) {
+          return '#add8e6'
         } else {
           return '#ededed'
         }

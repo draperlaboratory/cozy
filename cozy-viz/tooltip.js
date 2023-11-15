@@ -69,9 +69,10 @@ export default class Tooltip extends Component {
   getViewData() {
     switch (this.state.mode) {
       case "constraints" : { 
-        return this.state.node?.data().constraints?.map?.(
-          c => html`<div>${c}</div>`
-        )
+        return html`<pre>${
+            this.state.node?.data().constraints?.map?.(
+              c => html`<div>${c}</div>`
+            )}</pre>`
       }
       case "assembly" : { 
         return html`<pre>${this.state.node.data().contents}</pre>`
@@ -99,6 +100,12 @@ export default class Tooltip extends Component {
         } else {
           return null
         }
+      }
+      case "simprocs" : { 
+        return html`<pre>${
+          this.state.node?.data().simprocs?.map?.(
+            simproc => html`<div>${simproc}</div>`
+          )}</pre>`
       }
       default: return null;
     }
@@ -156,6 +163,13 @@ export default class Tooltip extends Component {
             data-highlighted=${state.mode == "stderr"} 
             onClick=${() => this.setView("stderr")}>
             Stderr
+          </button>`
+        }
+        ${this.state.node?.data().simprocs.length > 0 && html`
+          <button 
+            data-highlighted=${state.mode == "simprocs"} 
+            onClick=${() => this.setView("simprocs")}>
+            SimProcedures
           </button>`
         }
       </div>
