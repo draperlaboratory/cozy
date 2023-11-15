@@ -18,6 +18,9 @@ proj_attempted_patch.add_prototype(onMessageLength_mangled, onMessageLength_prot
 proj_postpatched = cozy.project.Project("libroscpp_draper_patched.so")
 proj_postpatched.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
+proj_evil = cozy.project.Project("target-3-evil.bin")
+proj_evil.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
+
 # size is a symbolic variable that ends up being passed to the onMessageLength function. This symbolic variable
 # determines the size of the message that's going to be read. The goal is to make size be sufficiently small
 # so we don't run out of memory allocating a block to store the incoming message
@@ -25,12 +28,10 @@ size = claripy.BVS("size", 32)
 # This symbolic variable is stored inside the struct passed to a sysinfo call
 totalram = claripy.BVS("totalram", 32)
 
-#print("onMessageLength loc: ", proj_postpatched.find_symbol_addr(onMessageLength_mangled))
-
 class connectionRead_hook(angr.SimProcedure):
     def run(self, this_conn, param_1, param_2):
         # Do nothing instead of executing the read method
-        print("Inside connectionRead hook. Doing nothing...")
+        pass
 
 class sysinfo_hook(angr.SimProcedure):
     def __init__(self, *args, **kwargs):
@@ -40,7 +41,6 @@ class sysinfo_hook(angr.SimProcedure):
         # The sysinfo syscall stores its results in the struct passed as a pointer to the syscall
         # here we use the default angr values, except for totalram, which we substitute with our symbolic
         # variable we created earlier
-        print("inside sysinfo")
         value = {
             "uptime": 1234567,
             "loads": [20100, 22000, 15000],
@@ -65,6 +65,9 @@ proj_attempted_patch.angr_proj.simos.syscall_library.add("sysinfo", sysinfo_hook
 
 proj_postpatched.angr_proj.hook_symbol(connectionRead_mangled, connectionRead_hook())
 proj_postpatched.angr_proj.simos.syscall_library.add("sysinfo", sysinfo_hook)
+
+proj_evil.angr_proj.hook_symbol(connectionRead_mangled, connectionRead_hook())
+proj_evil.angr_proj.simos.syscall_library.add("sysinfo", sysinfo_hook)
 
 def totalram_exceeded_assert(st):
     return size <= totalram
@@ -99,8 +102,8 @@ def run(sess, use_assert, cache_intermediate_states=False):
 
     if isinstance(result, AssertFailed):
         print(cozy.analysis.AssertFailedResults(result).report({"size": size, "totalram": totalram}))
+        return None
     else:
-        print("No assert triggered!")
         return result
 
 def run_prepatched():
@@ -134,25 +137,48 @@ def run_postpatched():
     def run_with_assert():
         print("Running postpatched with assertion that size <= totalram...")
         sess = proj_postpatched.session(onMessageLength_mangled)
-        return run(sess, True, cache_intermediate_states=True)
+        ret = run(sess, True, cache_intermediate_states=True)
+        if ret is not None:
+            print("No asserts triggered!")
 
-    return run_with_assert()
+    def run_without_assert():
+        sess = proj_postpatched.session(onMessageLength_mangled)
+        return run(sess, False, cache_intermediate_states=True)
+
+    run_with_assert()
+    return run_without_assert()
+
+def run_evil():
+    sess = proj_evil.session(onMessageLength_mangled)
+
+    # The buffer that contains the message we just read. Since we are exploring the path where we successfully read a length, use 4 bytes to store the length
+    size_ptr = sess.malloc(0x4)
+    sess.state.memory.store(size_ptr, size, endness=proj_prepatched.angr_proj.arch.memory_endness)
+    size_ptr_ptr = sess.malloc(4)
+    sess.state.memory.store(size_ptr_ptr, claripy.BVV(size_ptr, 32),
+                            endness=proj_prepatched.angr_proj.arch.memory_endness)
+    this_obj = sess.malloc(0x100)
+    # Set _retry_time_handler to be -1
+    sess.state.memory.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
+
+    # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
+    return sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=True)
+
 
 pre_patched = run_prepatched()
 attempted_patch = run_attempted_patch()
 post_patched = run_postpatched()
+evil = run_evil()
 
 if input("Would you like to visualize the pre-patch vs attempted patch? (y/n)") == "y":
-    prog_addrs = proj_prepatched.object_ranges() + proj_attempted_patch.object_ranges()
-    comparison_results = cozy.analysis.ComparisonResults(pre_patched, attempted_patch, prog_addrs)
+    comparison_results = cozy.analysis.ComparisonResults(pre_patched, attempted_patch, [])
     print("\nComparison Results, pre-patch vs attempted patch:\n")
     print(comparison_results.report({"size": size, "totalram": totalram}))
     cozy.execution_graph.compare_and_viz(proj_prepatched, proj_attempted_patch, pre_patched, attempted_patch,
                                          args={"size": size, "totalram": totalram},
                                          num_examples=2, open_browser=True)
 elif input("Would you like to visualize the pre-patch vs the post-patch? (y/n)") == "y":
-    prog_addrs = proj_prepatched.object_ranges() + proj_postpatched.object_ranges()
-    comparison_results = cozy.analysis.ComparisonResults(pre_patched, post_patched, prog_addrs)
+    comparison_results = cozy.analysis.ComparisonResults(pre_patched, post_patched, [])
 
     print("\nComparison Results, pre-patch vs post-patch:\n")
     print(comparison_results.report({"size": size, "totalram": totalram}))
@@ -160,5 +186,12 @@ elif input("Would you like to visualize the pre-patch vs the post-patch? (y/n)")
     cozy.execution_graph.compare_and_viz(proj_prepatched, proj_postpatched, pre_patched, post_patched,
                                          args={"size": size, "totalram": totalram},
                                          num_examples=2, open_browser=True)
+elif input("Would you like to compare pre-patch vs evil? (y/n)") == "y":
+    comparison_results = cozy.analysis.ComparisonResults(pre_patched, evil, [])
 
+    print("\nComparison Results, pre-patch vs evil:\n")
+    print(comparison_results.report({"size": size, "totalram": totalram}))
 
+    cozy.execution_graph.compare_and_viz(proj_prepatched, proj_evil, pre_patched, evil,
+                                         args={"size": size, "totalram": totalram},
+                                         num_examples=2, open_browser=True)
