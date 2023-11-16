@@ -56,7 +56,7 @@ def run_pre_patched():
 
     sess = proj.session('my_fun')
     args = construct_args(sess)
-    return (proj.object_ranges(), sess.run(*args, cache_intermediate_states=dump_execution_graphs), proj)
+    return (sess.run(*args, cache_intermediate_states=dump_execution_graphs), proj)
 
 # The patched function is the same as the original, except it has an if statement
 # to check if the input argument is NULL
@@ -91,28 +91,20 @@ def run_post_patched():
 
     sess = proj.session('my_fun')
     args = construct_args(sess)
-    return (proj.object_ranges(), sess.run(*args, cache_intermediate_states=dump_execution_graphs), proj)
+    return (sess.run(*args, cache_intermediate_states=dump_execution_graphs), proj)
 
 print("Running pre-patched.")
-(pre_prog_addrs, pre_patched, pre_proj) = run_pre_patched()
+(pre_patched, pre_proj) = run_pre_patched()
 
 print("There are {} deadended states and {} errored states for the pre-patch run.".format(len(pre_patched.deadended), len(pre_patched.errored)))
 
 print("\nRunning post-patch.")
-(post_prog_addrs, post_patched, post_proj) = run_post_patched()
+(post_patched, post_proj) = run_post_patched()
 
 print("There are {} deadended states and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.errored)))
 
-# We want our memory diff to ignore the part of memory that contains our program
-# We are only interested in the stack, heap, and registers
-prog_addrs = pre_prog_addrs + post_prog_addrs
-
-#angr.analyses.congruency_check.CongruencyCheck().compare_states(pre_patched.deadended[0], post_patched.deadended[0])
-#angr.analyses.congruency_check.CongruencyCheck().compare_states(pre_patched.deadended[0], post_patched.deadended[1])
-
-
 args = (arg0,)
-comparison_results = analysis.ComparisonResults(pre_patched, post_patched, prog_addrs)
+comparison_results = analysis.ComparisonResults(pre_patched, post_patched)
 
 if (dump_execution_graphs):
     execution_graph.compare_and_dump(pre_proj, post_proj, pre_patched, post_patched, "null_pre.json", "null_post.json", args=args, num_examples=2)

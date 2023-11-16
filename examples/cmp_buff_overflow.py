@@ -21,7 +21,7 @@ def run_pre_patched():
 
     sess = proj.session('patch_fun')
     args = construct_args(sess)
-    return (proj.object_ranges(), sess.run(*args))
+    return sess.run(*args)
 
 # The patched function is the same as the original, except it has an if statement
 # to check if the input argument is NULL
@@ -32,20 +32,16 @@ def run_post_patched():
     sess = proj.session('patch_fun')
     args = construct_args(sess)
     #sess.add_directives(Assume.from_fun_offset(proj, "patch_fun", 0x0, lambda st: (st.regs.rsi >= 0) & (st.regs.rsi < 3)))
-    return (proj.object_ranges(), sess.run(*args))
+    return sess.run(*args)
 
 print("Running pre-patched.")
-(pre_prog_addrs, pre_patched) = run_pre_patched()
+pre_patched = run_pre_patched()
 print("\nRunning post-patch.")
-(post_prog_addrs, post_patched) = run_post_patched()
-
-# We want our memory diff to ignore the part of memory that contains our program
-# We are only interested in the stack, heap, and registers
-prog_addrs = pre_prog_addrs + post_prog_addrs
+post_patched = run_post_patched()
 
 def concrete_mapper(args):
     return (args[0], primitives.from_twos_comp(args[1], 32))
 
 args = (arg0, arg1)
-comparison_results = analysis.ComparisonResults(pre_patched, post_patched, prog_addrs)
+comparison_results = analysis.ComparisonResults(pre_patched, post_patched)
 print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))

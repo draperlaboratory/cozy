@@ -205,7 +205,7 @@ Functions
 
 
 
-.. py:class:: ComparisonResults(pre_patched: cozy.project.TerminatedResult, post_patched: cozy.project.TerminatedResult, ignore_addrs: list[range], ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False, compare_std_err=False, use_memoized_binary_search=True)
+.. py:class:: ComparisonResults(pre_patched: cozy.project.TerminatedResult, post_patched: cozy.project.TerminatedResult, ignore_addrs: list[range] | None = None, ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False, compare_std_err=False, use_memoized_binary_search=True)
 
 
    This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible state in the other execution tree. In most scenarios there will be no orphaned states.
@@ -218,7 +218,7 @@ Functions
 
    :param project.TerminatedResult pre_patched: The pre-patched state bundle
    :param project.TerminatedResult post_patched: The post-patched state bundle
-   :param list[range] ignore_addrs: A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.
+   :param list[range] | None ignore_addrs: A list of addresses ranges to ignore when comparing memory.
    :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
    :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
    :param bool compare_registers: If True, then the analysis will compare registers used by the program.
@@ -312,7 +312,7 @@ Functions
       :rtype: Iterator[PairComparison]
 
 
-   .. py:method:: verify(verification_assertion: cozy.functools_ext.Callable[[PairComparison], claripy.ast.Base]) -> list[PairComparison]
+   .. py:method:: verify(verification_assertion: collections.abc.Callable[[PairComparison], claripy.ast.Base]) -> list[PairComparison]
 
       Determines what compatible state pairs are valid with respect to a verification assertion. Note that the comparison results are verified with respect to the verification_assertion if the returned list is empty (has length 0).
 
@@ -321,7 +321,7 @@ Functions
       :rtype: list[PairComparison]
 
 
-   .. py:method:: report(args: any, concrete_arg_mapper: cozy.functools_ext.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
 
       Generates a human readable report of the result object, saved as a string. This string is suitable for printing.
 
@@ -357,7 +357,7 @@ Functions
       :rtype: Iterator[SingletonState]
 
 
-   .. py:method:: report(args: any, concrete_arg_mapper: cozy.functools_ext.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
 
       Creates a human readable report about a list of errored states.
 
@@ -372,7 +372,7 @@ Functions
 .. py:class:: AssertFailedResults(assert_failed: cozy.project.AssertFailed)
 
 
-   .. py:method:: report(args: any, concrete_arg_mapper: cozy.functools_ext.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+   .. py:method:: report(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
 
 
 

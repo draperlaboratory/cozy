@@ -398,7 +398,7 @@ class ComparisonResults:
     :ivar dict[SimState, SingletonState] orphans_right_lookup: maps post-patched orphaned states to singleton state information
     """
 
-    def __init__(self, pre_patched: TerminatedResult, post_patched: TerminatedResult, ignore_addrs: list[range],
+    def __init__(self, pre_patched: TerminatedResult, post_patched: TerminatedResult, ignore_addrs: list[range] | None = None,
                  ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False,
                  compare_std_err=False, use_memoized_binary_search=True):
         """
@@ -406,7 +406,7 @@ class ComparisonResults:
 
         :param project.TerminatedResult pre_patched: The pre-patched state bundle
         :param project.TerminatedResult post_patched: The post-patched state bundle
-        :param list[range] ignore_addrs: A list of addresses ranges to ignore when comparing memory. Typically, this is used for ignoring memory containing the program.
+        :param list[range] | None ignore_addrs: A list of addresses ranges to ignore when comparing memory.
         :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
         :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
         :param bool compare_registers: If True, then the analysis will compare registers used by the program.
@@ -414,6 +414,9 @@ class ComparisonResults:
         :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
         :param bool use_memoized_binary_search: If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.
         """
+
+        if ignore_addrs is None:
+            ignore_addrs = []
 
         self.pairs: dict[tuple[SimState, SimState], PairComparison] = dict()
         # An orphan is a state that is not compatible with any other state
