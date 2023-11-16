@@ -42,7 +42,6 @@ function tidyChildren(node, {mergeConstraints}) {
         }
         /// we accumulate simprocs, if defined, into the child
         if (candidate.data().simprocs) {
-          console.log(candidate.data().simprocs)
           out[0].data().simprocs.unshift(...candidate.data().simprocs)
         }
         // introduce edges linking the child to its grandparent

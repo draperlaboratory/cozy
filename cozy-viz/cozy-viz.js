@@ -24,6 +24,15 @@ class App extends Component {
     this.cy2 = createRef()
     this.tooltip = createRef()
     this.diffPanel = createRef()
+
+    this.prune = this.prune.bind(this)
+    this.handleDragleave = this.handleDragleave.bind(this)
+    this.handleDragover = this.handleDragover.bind(this)
+    this.clearTooltip = this.clearTooltip.bind(this)
+    this.resetLayout = this.resetLayout.bind(this)
+    this.toggleSyscalls = this.toggleSyscalls.bind(this)
+    this.toggleSimprocs = this.toggleSimprocs.bind(this)
+
     window.app = this
   }
 
@@ -270,6 +279,10 @@ class App extends Component {
     })
   }
 
+  clearTooltip() {
+    this.tooltip.current.clearTooltip()
+  }
+
   // prune all branches whose compatibilities all fail some test (e.g. all have
   // the same memory contents as the given branch)
   prune(test) {
@@ -296,27 +309,27 @@ class App extends Component {
       <${Tooltip} ref=${this.tooltip}/>
       <${MenuBar} 
         setTidiness=${level => this.startRender(() => this.setTidiness(level))}
-        prune=${relation => this.prune(relation)}
-        resetLayout=${() => this.resetLayout()}
+        prune=${this.prune}
+        resetLayout=${this.resetLayout}
         tidiness=${state.tidiness}
         showingSyscalls=${state.showingSyscalls}
         showingSimprocs=${state.showingSimprocs}
-        toggleSyscalls=${() => this.toggleSyscalls()}
-        toggleSimprocs=${() => this.toggleSimprocs()}
+        toggleSyscalls=${this.toggleSyscalls}
+        toggleSimprocs=${this.toggleSimprocs}
       />
       <div id="main-view">
         <div 
-          onMouseEnter=${() => this.tooltip.current.clearTooltip()} 
-          onDragover=${ev => this.handleDragover(ev)}
-          onDragleave=${ev => this.handleDragleave(ev)}
+          onMouseEnter=${this.clearTooltip} 
+          onDragover=${this.handleDragover}
+          onDragleave=${this.handleDragleave}
           onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy1))} 
           ref=${this.cy1} id="cy1">
             <span id="labelLeft">prepatch</span>
         </div>
         <div 
-          onMouseEnter=${() => this.tooltip.current.clearTooltip()} 
-          onDragover=${ev => this.handleDragover(ev)}
-          onDragleave=${ev => this.handleDragleave(ev)}
+          onMouseEnter=${this.clearTooltip} 
+          onDragover=${this.handleDragover}
+          onDragleave=${this.handleDragleave}
           onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy2))}
           ref=${this.cy2} id="cy2">
             <span id="labelRight">postpatch</span>
