@@ -1,4 +1,4 @@
-import { computePosition, flip } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.5.1/+esm';
+import { computePosition } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.5.1/+esm';
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 
@@ -57,6 +57,16 @@ class Menu extends Component {
           ${props.children}
         </div>`
       }`
+  }
+}
+
+class MenuOption extends Component {
+  render(props) {
+    return html`<option 
+      data-selected=${props.selected} 
+      onClick=${props.onClick}>
+          ${props.children}
+    </option>`
   }
 }
 
@@ -141,44 +151,44 @@ export default class MenuBar extends Component {
       <${Menu} open=${state.open}
         title="View"
         setOpen=${o => this.setOpen(o)}>
-        <option 
+        <${MenuOption} 
           onClick=${() => this.setTidiness("untidy")}
-          data-selected=${props.tidiness == "untidy"}>
+          selected=${props.tidiness == "untidy"}>
             Show All Blocks
-        </option>
-        <option 
+        <//>
+        <${MenuOption} 
           onClick=${() => this.setTidiness("tidy")}
-          data-selected=${props.tidiness == "tidy"}>
+          selected=${props.tidiness == "tidy"}>
             Merge Unless Constaints Change
-        </option>
-        <option 
+        <//>
+        <${MenuOption} 
           onClick=${() => this.setTidiness("very-tidy")}
-          data-selected=${props.tidiness == "very-tidy"}>
+          selected=${props.tidiness == "very-tidy"}>
             Merge Unless Branching Occurs
-        </option>
+        <//>
       <//>
       <${Menu} open=${state.open}
         title="Prune"
         setOpen=${o => this.setOpen(o)}>
-        <option onClick=${() => this.prune(noMemoryDiffs)}>
+        <${MenuOption} onClick=${() => this.prune(noMemoryDiffs)}>
             Completed Branches with Identical Memory
-        </option>
-        <option onClick=${() => this.prune(noRegisterDiffs)}>
+        <//>
+        <${MenuOption} onClick=${() => this.prune(noRegisterDiffs)}>
             Completed Branches with Identical Register Contents 
-        </option>
-        <option onClick=${() => this.prune(noStdDiffs)}>
+        <//>
+        <${MenuOption} onClick=${() => this.prune(noStdDiffs)}>
             Completed Branches with Identical Stdout/Stderr
-        </option>
-        <option onClick=${() => this.prune(noErrors)}>
+        <//>
+        <${MenuOption} onClick=${() => this.prune(noErrors)}>
             All Completed (Error-free) Branches
-        </option>
+        <//>
       <//>
       <${Menu} open=${state.open}
         title="Layout"
         setOpen=${o => this.setOpen(o)}>
-        <option onClick=${() => this.resetLayout()}>
+        <${MenuOption} onClick=${() => this.resetLayout()}>
             Reset
-        </option>
+        <//>
       <//>
     </div>`
   }
