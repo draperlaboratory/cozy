@@ -16,7 +16,12 @@
 //   }
 // };
 
-export const diffStyle = [
+export const settings = {
+  showingSimprocs: true,
+  showingSyscalls: true,
+}
+
+export const style = [
   { 
     selector: "node",
     style: {
@@ -27,9 +32,9 @@ export const diffStyle = [
       'background-color': elt => {
         if (elt.data().error) {
           return "#facdcd"
-        } else if (elt.data().simprocs.length > 0) {
+        } else if (elt.data().simprocs.length > 0 && settings.showingSimprocs) {
           return '#f7be6d'
-        } else if (elt.data().has_syscall) {
+        } else if (elt.data().has_syscall && settings.showingSyscalls) {
           return '#add8e6'
         } else {
           return '#ededed'
@@ -80,6 +85,10 @@ export const diffStyle = [
         }
       },
     }
+  },
+  {
+    selector: 'node.simprocs',
+    style: { 'border-color': '#f7be6d' }
   },
   {
     selector: 'node.availablePath',

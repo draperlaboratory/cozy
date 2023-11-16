@@ -166,6 +166,17 @@ export default class MenuBar extends Component {
           selected=${props.tidiness == "very-tidy"}>
             Merge Unless Branching Occurs
         <//>
+        <hr/>
+        <${MenuOption} 
+            onClick=${props.toggleSyscalls}
+            selected=${props.showingSyscalls}>
+            Show Syscalls
+        <//>
+        <${MenuOption} 
+            onClick=${props.toggleSimprocs}
+            selected=${props.showingSimprocs}>
+            Show SimProcedure calls
+        <//>
       <//>
       <${Menu} open=${state.open}
         title="Prune"

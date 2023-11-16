@@ -5,7 +5,7 @@ import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from './focusMixin.js';
-import { diffStyle } from './diffStyle.js';
+import * as GraphStyle from './graphStyle.js' ;
 import { tidyGraph, removeBranch } from './graph-tidy.js';
 
 const standardLayout = { name: 'breadthfirst', directed: true, spacingFactor: 2 }
@@ -17,6 +17,8 @@ class App extends Component {
     this.state = {
       status: null, // idle
       tidiness: "untidy", // we're not yet tidying anything
+      showingSyscalls: true, // we start with syscalls visible
+      showingSimprocs: true, // we start with SimProcedure calls visible
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -109,6 +111,24 @@ class App extends Component {
     this.setState({ status: null })
   }
 
+  toggleSyscalls() {
+    this.setState(oldState => {
+      GraphStyle.settings.showingSyscalls = !oldState.showingSyscalls;
+      this.cy1.cy.style().update()
+      this.cy2.cy.style().update()
+      return {showingSyscalls: !oldState.showingSyscalls}
+    })
+  }
+
+  toggleSimprocs() {
+    this.setState(oldState => {
+      GraphStyle.settings.showingSimprocs = !oldState.showingSimprocs;
+      this.cy1.cy.style().update()
+      this.cy2.cy.style().update()
+      return {showingSimprocs: !oldState.showingSimprocs}
+    })
+  }
+
   async handleDrop(ev, ref) {
     ev.stopPropagation()
     ev.preventDefault()
@@ -132,7 +152,7 @@ class App extends Component {
 
   mountToCytoscape(raw, ref) {
     const cy = cytoscape({
-      style: diffStyle,
+      style: GraphStyle.style,
       elements: raw.elements
     })
 
@@ -180,7 +200,9 @@ class App extends Component {
     // turn off manual graph dragging
     node.ungrabify()
 
-    //mouseover handling
+    // add methods for actively querying display features
+
+    // mouseover handling
     node.on('mouseout', () => {
       cy.container().style.cursor = "default"
     })
@@ -268,13 +290,20 @@ class App extends Component {
   }
 
   render(_props, state) {
+    // TODO I could get rid of a lot of lambdas here if I properly bound "this"
+    // in some of these methods
     return html`
       <${Tooltip} ref=${this.tooltip}/>
       <${MenuBar} 
         setTidiness=${level => this.startRender(() => this.setTidiness(level))}
         prune=${relation => this.prune(relation)}
         resetLayout=${() => this.resetLayout()}
-        tidiness=${state.tidiness}/>
+        tidiness=${state.tidiness}
+        showingSyscalls=${state.showingSyscalls}
+        showingSimprocs=${state.showingSimprocs}
+        toggleSyscalls=${() => this.toggleSyscalls()}
+        toggleSimprocs=${() => this.toggleSimprocs()}
+      />
       <div id="main-view">
         <div 
           onMouseEnter=${() => this.tooltip.current.clearTooltip()} 
