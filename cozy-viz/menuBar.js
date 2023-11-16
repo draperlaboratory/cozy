@@ -1,6 +1,7 @@
 import { computePosition } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.5.1/+esm';
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
+import { Status, Tidiness } from './cozy-data.js'
 
 // this should be mounted and unmounted rather than toggled; adding and removing
 // the event-listener for closing the menu should be part of the mount/unmount
@@ -26,6 +27,7 @@ class Menu extends Component {
   }
 
   toggleOpen() {
+    if (!this.props.enabled) return
     if (this.props.open != this.props.title) {
       this.props.setOpen(this.props.title)
     } else {
@@ -40,6 +42,7 @@ class Menu extends Component {
       backgroundColor: "#e1e1e1"
     }
     const menuStyle = {
+      color: props.enabled ? "black" : "#ccc",
       backgroundColor: props.open === props.title 
         ? "#e1e1e1" 
         : "white"
@@ -148,22 +151,24 @@ export default class MenuBar extends Component {
     return html`<div id="menubar"
         onMousedown=${ev => this.handleLocalClick(ev)}
       >
-      <${Menu} open=${state.open}
+      <${Menu} 
+        enabled=${props.status === Status.idle}
+        open=${state.open}
         title="View"
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} 
-          onClick=${() => this.setTidiness("untidy")}
-          selected=${props.tidiness == "untidy"}>
+          onClick=${() => this.setTidiness(Tidiness.untidy)}
+          selected=${props.tidiness == Tidiness.untidy}>
             Show All Blocks
         <//>
         <${MenuOption} 
-          onClick=${() => this.setTidiness("tidy")}
-          selected=${props.tidiness == "tidy"}>
+          onClick=${() => this.setTidiness(Tidiness.tidy)}
+          selected=${props.tidiness == Tidiness.tidy}>
             Merge Unless Constaints Change
         <//>
         <${MenuOption} 
-          onClick=${() => this.setTidiness("very-tidy")}
-          selected=${props.tidiness == "very-tidy"}>
+          onClick=${() => this.setTidiness(Tidiness.veryTidy)}
+          selected=${props.tidiness == Tidiness.veryTidy}>
             Merge Unless Branching Occurs
         <//>
         <hr/>
@@ -178,7 +183,9 @@ export default class MenuBar extends Component {
             Show SimProcedure calls
         <//>
       <//>
-      <${Menu} open=${state.open}
+      <${Menu} 
+        enabled=${props.status === Status.idle}
+        open=${state.open}
         title="Prune"
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} onClick=${() => this.prune(noMemoryDiffs)}>
@@ -194,7 +201,9 @@ export default class MenuBar extends Component {
             All Completed (Error-free) Branches
         <//>
       <//>
-      <${Menu} open=${state.open}
+      <${Menu} 
+        enabled=${props.status === Status.idle}
+        open=${state.open}
         title="Layout"
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} onClick=${() => this.resetLayout()}>

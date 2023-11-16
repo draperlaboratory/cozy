@@ -211,7 +211,7 @@ button:disabled {
   background-color: #facdcd
 }
 
-#render-indicator {
+#status-indicator {
   position: absolute;
   bottom:0px;
   right: 0px;

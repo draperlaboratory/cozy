@@ -165,7 +165,7 @@ export default class Tooltip extends Component {
             Stderr
           </button>`
         }
-        ${this.state.node?.data().simprocs.length > 0 && html`
+        ${this.state.node?.data().simprocs?.length > 0 && html`
           <button 
             data-highlighted=${state.mode == "simprocs"} 
             onClick=${() => this.setView("simprocs")}>

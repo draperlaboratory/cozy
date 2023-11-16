@@ -32,7 +32,7 @@ export const style = [
       'background-color': elt => {
         if (elt.data().error) {
           return "#facdcd"
-        } else if (elt.data().simprocs.length > 0 && settings.showingSimprocs) {
+        } else if (elt.data().simprocs?.length > 0 && settings.showingSimprocs) {
           return '#f7be6d'
         } else if (elt.data().has_syscall && settings.showingSyscalls) {
           return '#add8e6'

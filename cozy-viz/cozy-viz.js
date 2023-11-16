@@ -7,16 +7,23 @@ import MenuBar from './menuBar.js';
 import { focusMixin } from './focusMixin.js';
 import * as GraphStyle from './graphStyle.js' ;
 import { tidyGraph, removeBranch } from './graph-tidy.js';
+import { Status, Tidiness } from './cozy-data.js'
 
-const standardLayout = { name: 'breadthfirst', directed: true, spacingFactor: 2 }
+const standardLayout = { 
+  name: 'breadthfirst', 
+  directed: true, 
+  spacingFactor: 2 
+}
+
 
 class App extends Component {
 
   constructor() {
     super();
+    // TODO: using magic strings here, should do this with a proper Symbol() enum object
     this.state = {
-      status: null, // idle
-      tidiness: "untidy", // we're not yet tidying anything
+      status: Status.unloaded, // awaiting graph data
+      tidiness: Tidiness.untidy, // we're not yet tidying anything
       showingSyscalls: true, // we start with syscalls visible
       showingSimprocs: true, // we start with SimProcedure calls visible
     }
@@ -65,7 +72,7 @@ class App extends Component {
 
   handleClick(ev) {
     //bail out if graphs are not available
-    if (!this.cy1.cy || !this.cy2.cy) {
+    if (this.state.status == Status.unloaded) {
       alert("Please load both graphs before attempting comparison.")
       return
     }
@@ -104,7 +111,7 @@ class App extends Component {
     // refocus all foci, and reset viewport
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
-    this.setState({ status: null })
+    this.setState({ status: Status.idle })
   }
 
   tidy(opts) {
@@ -117,7 +124,7 @@ class App extends Component {
     // remove all foci, and reset viewport
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
-    this.setState({ status: null })
+    this.setState({ status: Status.idle })
   }
 
   toggleSyscalls() {
@@ -201,7 +208,11 @@ class App extends Component {
     // stow graph data in reference
     ref.cy = cy
     ref.orig = JSON.stringify(cy.json())
-    this.setState({ status: null })
+    this.setState({ 
+      status: !this.cy1.cy || !this.cy2.cy 
+        ? Status.unloaded 
+        : Status.idle
+    })
   }
 
   initializeNode(node, cy) {
@@ -229,7 +240,7 @@ class App extends Component {
   }
 
   startRender(method) {
-    this.setState({ status: "rendering" }, method)
+    this.setState({ status: Status.rendering }, method)
   }
 
   batch(cb) {
@@ -245,12 +256,12 @@ class App extends Component {
     // render
     await new Promise(r => setTimeout(r, 50))
     switch (tidiness) {
-      case "untidy": {
+      case Tidiness.untidy: {
         this.refresh()
         break;
       }
-      case "tidy": {
-        if (this.state.tidiness == "very-tidy") {
+      case Tidiness.tidy: {
+        if (this.state.tidiness == Tidiness.veryTidy) {
           // if we're already very tidy, we need to refresh and then merge nodes
           // from there.
           this.batch(() => {
@@ -261,7 +272,7 @@ class App extends Component {
         else this.tidy({})
         break;
       }
-      case "very-tidy": {
+      case Tidiness.veryTidy: {
         this.batch(() => {
           this.refresh()
           this.tidy({ mergeConstraints: true })
@@ -269,7 +280,7 @@ class App extends Component {
         break;
       }
     }
-    this.setState({ tidiness, status: null })
+    this.setState({ tidiness, status: Status.idle })
   }
 
   resetLayout() {
@@ -312,6 +323,7 @@ class App extends Component {
         prune=${this.prune}
         resetLayout=${this.resetLayout}
         tidiness=${state.tidiness}
+        status=${state.status}
         showingSyscalls=${state.showingSyscalls}
         showingSimprocs=${state.showingSimprocs}
         toggleSyscalls=${this.toggleSyscalls}
@@ -338,7 +350,7 @@ class App extends Component {
       <${DiffPanel} 
         onMouseEnter=${() => this.tooltip.current.clearTooltip()} 
         ref=${this.diffPanel}/>
-      ${state.status == "rendering" && html`<span id="render-indicator">rendering...</span>`}
+      ${state.status == Status.rendering && html`<span id="status-indicator">rendering...</span>`}
     `
   }
 }
