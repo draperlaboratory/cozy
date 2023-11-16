@@ -19,36 +19,21 @@
 export const settings = {
   showingSimprocs: true,
   showingSyscalls: true,
+  showingErrors: true,
 }
 
 export const style = [
   { 
     selector: "node",
     style: {
-      // 'background-image': (ele) => { return makeSvg(ele).svg },
-      // 'width': (ele) => { return makeSvg(ele).width},
-      // 'height': (ele) => { return makeSvg(ele).height},
       'shape': 'round-rectangle',
-      'background-color': elt => {
-        if (elt.data().error) {
-          return "#facdcd"
-        } else if (elt.data().simprocs?.length > 0 && settings.showingSimprocs) {
-          return '#f7be6d'
-        } else if (elt.data().has_syscall && settings.showingSyscalls) {
-          return '#add8e6'
-        } else {
-          return '#ededed'
-        }
-      },
+      'background-color': '#ededed',
       'border-color': '#ccc',
-      'border-width': elt => {
-        if (elt.outgoers().length == 0 && !elt.data().error) {
-          return '5px'
-        } else {
-          return '0px'
-        }
-      }
     },
+  },
+  { 
+    selector: "[[outdegree = 0]][!error]",
+    style: { 'border-width': '5px' },
   },
   {
     selector: 'edge',
@@ -57,7 +42,6 @@ export const style = [
       'line-color': '#ccc',
       'target-arrow-color': '#ccc',
       'target-arrow-shape': 'triangle',
-      // 'arrow-scale': '2',
       'curve-style': 'bezier'
     }
   },
@@ -69,26 +53,37 @@ export const style = [
       'target-arrow-color': '#666',
       'target-arrow-shape': 'triangle',
       'z-compound-depth' : 'top',
-      // 'arrow-scale': '2',
       'curve-style': 'bezier'
     }
   },
   {
     selector: 'node.pathHighlight',
-    style: {
-      'border-width':'0px',
-      'background-color': (elt) => {
-        if (elt.data().error) {
-          return "#d00"
-        } else {
-          return '#666'
-        }
-      },
+    style: { 'background-color': '#666' }
+  },
+  {
+    selector: 'node[?has_syscall]',
+    style: { 'background-color': () => settings.showingSyscalls
+      ? '#add8e6'
+      : '#ededed'
     }
   },
   {
-    selector: 'node.simprocs',
-    style: { 'border-color': '#f7be6d' }
+    selector: 'node[simprocs.length > 0]',
+    style: { 'background-color': () => settings.showingSimprocs
+      ? '#f7be6d'
+      : '#ededed'
+    }
+  },
+  {
+    selector: 'node[?error]',
+    style: { 'background-color': "#facdcd" }
+  },
+  {
+    selector: 'node.pathHighlight[?error]',
+    style: {
+      'border-width':'0px',
+      'background-color': "#d00"
+    }
   },
   {
     selector: 'node.availablePath',

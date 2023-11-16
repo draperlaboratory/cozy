@@ -10,7 +10,7 @@ import { Status, Tidiness } from './cozy-data.js'
 class Menu extends Component {
   constructor() {
     super()
-    this.button= createRef()
+    this.button = createRef()
     this.options = createRef()
   }
 
