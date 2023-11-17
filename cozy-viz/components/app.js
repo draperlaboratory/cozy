@@ -210,8 +210,8 @@ export default class App extends Component {
     cy.on('click', ev => {
       if (!ev.target.group) {
         this.batch(() => {
-          this.cy1.cy.blur()
-          this.cy2.cy.blur()
+          this.cy1.cy?.blur()
+          this.cy2.cy?.blur()
           this.diffPanel.current.resetBothFoci()
           this.tooltip.current.clearTooltip()
         })
@@ -257,11 +257,11 @@ export default class App extends Component {
   }
 
   batch(cb) {
-    this.cy1.cy.startBatch()
-    this.cy2.cy.startBatch()
+    this.cy1.cy?.startBatch()
+    this.cy2.cy?.startBatch()
     cb()
-    this.cy1.cy.endBatch()
-    this.cy2.cy.endBatch()
+    this.cy1.cy?.endBatch()
+    this.cy2.cy?.endBatch()
   }
 
   async setTidiness(tidiness) {
