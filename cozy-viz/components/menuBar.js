@@ -1,7 +1,8 @@
 import { computePosition } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.5.1/+esm';
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
-import { Status, Tidiness } from './cozy-data.js'
+import { Status, Tidiness } from '../data/cozy-data.js'
+import Colors from '../data/colors.js'
 
 // this should be mounted and unmounted rather than toggled; adding and removing
 // the event-listener for closing the menu should be part of the mount/unmount
@@ -96,6 +97,13 @@ function noStdDiffs(leaf, other) {
   else return noErrors(leaf,other)
 }
 
+function MenuBadge(props) {
+  return html`<svg width="10" height="10">
+    <rect x="1" y="1" rx="2" ry="2" width="8" height="8"
+    style="fill:${props.color}" />
+  </svg>`
+}
+
 export default class MenuBar extends Component {
   constructor() {
     super()
@@ -175,17 +183,17 @@ export default class MenuBar extends Component {
         <${MenuOption} 
             onClick=${props.toggleSyscalls}
             selected=${props.showingSyscalls}>
-            Show Syscalls
+            <${MenuBadge} color=${Colors.focusedSyscallNode}/> Show Syscalls
         <//>
         <${MenuOption} 
             onClick=${props.toggleSimprocs}
             selected=${props.showingSimprocs}>
-            Show SimProcedure calls
+            <${MenuBadge} color=${Colors.focusedSimprocNode}/> Show SimProcedure calls
         <//>
         <${MenuOption} 
             onClick=${props.toggleErrors}
             selected=${props.showingErrors}>
-            Show Errors
+            <${MenuBadge} color=${Colors.focusedErrorNode}/> Show Errors
         <//>
       <//>
       <${Menu} 

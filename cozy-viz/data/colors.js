@@ -8,6 +8,8 @@ const Colors = {
   simprocNode: '#f7be6d',
   errorNode: "#facdcd",
   focusedErrorNode: "#d00",
+  focusedSyscallNode: "#00ade6",
+  focusedSimprocNode: "#f79000",
 }
 
 export default Colors

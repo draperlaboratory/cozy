@@ -1,4 +1,4 @@
-import Colors from "./colors.js"
+import Colors from "../data/colors.js"
 
 export const settings = {
   showingSimprocs: true,
