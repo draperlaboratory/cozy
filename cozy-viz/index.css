@@ -126,14 +126,9 @@ button:disabled {
 #asmViewLeft, #asmViewRight {
   margin: 1em 0 0 1vw;
   z-index:2;
-}
-
-#asmViewRight {
   width:49vw;
-}
-
-#asmViewLeft {
-  width:49vw;
+  overflow-x:hidden;
+  text-overflow: ellipsis;
 }
 
 #diff-panel {
