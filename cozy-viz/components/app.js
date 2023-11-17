@@ -178,6 +178,7 @@ export default class App extends Component {
   }
 
   mountToCytoscape(raw, ref) {
+    if (ref.cy) ref.cy.destroy()
     const cy = cytoscape({
       style: GraphStyle.style,
       elements: raw.elements
@@ -344,13 +345,14 @@ export default class App extends Component {
         toggleErrors=${this.toggleErrors}
       />
       <div id="main-view">
+        <span id="labelLeft">prepatch</span>
+        <span id="labelRight">postpatch</span>
         <div 
           onMouseEnter=${this.clearTooltip} 
           onDragover=${this.handleDragover}
           onDragleave=${this.handleDragleave}
           onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy1))} 
           ref=${this.cy1} id="cy1">
-            <span id="labelLeft">prepatch</span>
         </div>
         <div 
           onMouseEnter=${this.clearTooltip} 
@@ -358,7 +360,6 @@ export default class App extends Component {
           onDragleave=${this.handleDragleave}
           onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy2))}
           ref=${this.cy2} id="cy2">
-            <span id="labelRight">postpatch</span>
         </div>
       </div>
       <${DiffPanel} 
