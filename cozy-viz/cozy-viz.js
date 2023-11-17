@@ -20,12 +20,12 @@ class App extends Component {
 
   constructor() {
     super();
-    // TODO: using magic strings here, should do this with a proper Symbol() enum object
     this.state = {
       status: Status.unloaded, // awaiting graph data
       tidiness: Tidiness.untidy, // we're not yet tidying anything
       showingSyscalls: true, // we start with syscalls visible
       showingSimprocs: true, // we start with SimProcedure calls visible
+      showingErrors: true, // we start with errors visible
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -37,6 +37,7 @@ class App extends Component {
     this.handleDragover = this.handleDragover.bind(this)
     this.clearTooltip = this.clearTooltip.bind(this)
     this.resetLayout = this.resetLayout.bind(this)
+    this.toggleErrors = this.toggleErrors.bind(this)
     this.toggleSyscalls = this.toggleSyscalls.bind(this)
     this.toggleSimprocs = this.toggleSimprocs.bind(this)
 
@@ -127,6 +128,7 @@ class App extends Component {
     this.setState({ status: Status.idle })
   }
 
+  // TODO DRY
   toggleSyscalls() {
     this.setState(oldState => {
       GraphStyle.settings.showingSyscalls = !oldState.showingSyscalls;
@@ -142,6 +144,15 @@ class App extends Component {
       this.cy1.cy.style().update()
       this.cy2.cy.style().update()
       return {showingSimprocs: !oldState.showingSimprocs}
+    })
+  }
+
+  toggleErrors() {
+    this.setState(oldState => {
+      GraphStyle.settings.showingErrors = !oldState.showingErrors;
+      this.cy1.cy.style().update()
+      this.cy2.cy.style().update()
+      return {showingErrors: !oldState.showingErrors}
     })
   }
 
@@ -326,8 +337,10 @@ class App extends Component {
         status=${state.status}
         showingSyscalls=${state.showingSyscalls}
         showingSimprocs=${state.showingSimprocs}
+        showingErrors=${state.showingErrors}
         toggleSyscalls=${this.toggleSyscalls}
         toggleSimprocs=${this.toggleSimprocs}
+        toggleErrors=${this.toggleErrors}
       />
       <div id="main-view">
         <div 

@@ -22,6 +22,11 @@ export const settings = {
   showingErrors: true,
 }
 
+//Cytoscape doesn't have specificity - last matching selector wins.
+//
+//There's a bit more logic here depending on that rule than would be ideal, but
+//it seems like it's best for performance to bake everything into the
+//stylesheet rather than trying to change the styling rules on the fly
 export const style = [
   { 
     selector: "node",
@@ -68,6 +73,13 @@ export const style = [
     }
   },
   {
+    selector: 'node.pathHighlight[?has_syscall]',
+    style: { 'background-color': () => settings.showingSyscalls
+      ? '#add8e6'
+      : '#666'
+    }
+  },
+  {
     selector: 'node[simprocs.length > 0]',
     style: { 'background-color': () => settings.showingSimprocs
       ? '#f7be6d'
@@ -75,14 +87,26 @@ export const style = [
     }
   },
   {
+    selector: 'node.pathHighlight[simprocs.length > 0]',
+    style: { 'background-color': () => settings.showingSimprocs
+      ? '#f7be6d'
+      : '#666'
+    }
+  },
+  {
     selector: 'node[?error]',
-    style: { 'background-color': "#facdcd" }
+    style: { 'background-color': () => settings.showingErrors
+      ? "#facdcd" 
+      : "#ededed"
+    }
   },
   {
     selector: 'node.pathHighlight[?error]',
     style: {
       'border-width':'0px',
-      'background-color': "#d00"
+      'background-color': () => settings.showingErrors
+      ? "#d00" 
+      : "#666"
     }
   },
   {

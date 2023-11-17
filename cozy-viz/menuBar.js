@@ -182,6 +182,11 @@ export default class MenuBar extends Component {
             selected=${props.showingSimprocs}>
             Show SimProcedure calls
         <//>
+        <${MenuOption} 
+            onClick=${props.toggleErrors}
+            selected=${props.showingErrors}>
+            Show Errors
+        <//>
       <//>
       <${Menu} 
         enabled=${props.status === Status.idle}
