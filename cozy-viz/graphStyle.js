@@ -1,20 +1,4 @@
-// const makeSvg = (ele) => {
-//   const parser = new DOMParser();
-//   const theText = ele.data().contents;
-//   const width = 400
-//   const height = Math.min(400, theText.split("\n").length * 15 + 80)
-//   let svgText =
-//     `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg><svg xmlns='http://www.w3.org/2000/svg' version='1.1' width='${width}' height='${height}'>
-//     <foreignObject x="20" y="20" width="${width}" height="${height}">
-//     <pre style="font-family:monospace" xmlns="http://www.w3.org/1999/xhtml">${theText}</pre>
-//     </foreignObject>
-//     </svg>`;
-//   return {
-//     svg: 'data:image/svg+xml;utf8,' + encodeURIComponent(parser.parseFromString(svgText, 'text/xml').documentElement.outerHTML),
-//     height,
-//     width
-//   }
-// };
+import Colors from "./colors.js"
 
 export const settings = {
   showingSimprocs: true,
@@ -32,8 +16,8 @@ export const style = [
     selector: "node",
     style: {
       'shape': 'round-rectangle',
-      'background-color': '#ededed',
-      'border-color': '#ccc',
+      'background-color': Colors.defaultNode,
+      'border-color': Colors.defaultBorder,
     },
   },
   { 
@@ -44,8 +28,8 @@ export const style = [
     selector: 'edge',
     style: {
       'width': 3,
-      'line-color': '#ccc',
-      'target-arrow-color': '#ccc',
+      'line-color': Colors.defaultEdge,
+      'target-arrow-color': Colors.defaultEdge,
       'target-arrow-shape': 'triangle',
       'curve-style': 'bezier'
     }
@@ -54,8 +38,8 @@ export const style = [
     selector: 'edge.pathHighlight',
     style: {
       'width': 3,
-      'line-color': '#666',
-      'target-arrow-color': '#666',
+      'line-color': Colors.focusedEdge,
+      'target-arrow-color': Colors.focusedEdge,
       'target-arrow-shape': 'triangle',
       'z-compound-depth' : 'top',
       'curve-style': 'bezier'
@@ -63,41 +47,41 @@ export const style = [
   },
   {
     selector: 'node.pathHighlight',
-    style: { 'background-color': '#666' }
+    style: { 'background-color': Colors.focusedNode }
   },
   {
     selector: 'node[?has_syscall]',
     style: { 'background-color': () => settings.showingSyscalls
-      ? '#add8e6'
-      : '#ededed'
+      ? Colors.syscallNode
+      : Colors.defaultNode
     }
   },
   {
     selector: 'node.pathHighlight[?has_syscall]',
     style: { 'background-color': () => settings.showingSyscalls
-      ? '#add8e6'
-      : '#666'
+      ? Colors.syscallNode
+      : Colors.focusedNode
     }
   },
   {
     selector: 'node[simprocs.length > 0]',
     style: { 'background-color': () => settings.showingSimprocs
-      ? '#f7be6d'
-      : '#ededed'
+      ? Colors.simprocNode
+      : Colors.defaultNode
     }
   },
   {
     selector: 'node.pathHighlight[simprocs.length > 0]',
     style: { 'background-color': () => settings.showingSimprocs
-      ? '#f7be6d'
-      : '#666'
+      ? Colors.simprocNode
+      : Colors.focusedNode
     }
   },
   {
     selector: 'node[?error]',
     style: { 'background-color': () => settings.showingErrors
-      ? "#facdcd" 
-      : "#ededed"
+      ? Colors.errorNode
+      : Colors.defaultNode
     }
   },
   {
@@ -105,15 +89,15 @@ export const style = [
     style: {
       'border-width':'0px',
       'background-color': () => settings.showingErrors
-      ? "#d00" 
-      : "#666"
+      ? Colors.focusedErrorNode
+      : Colors.focusedNode
     }
   },
   {
     selector: 'node.availablePath',
     style: {
       'border-width':'5px',
-      'border-color': '#666'
+      'border-color': Colors.focusedNode
     }
   },
 ]
