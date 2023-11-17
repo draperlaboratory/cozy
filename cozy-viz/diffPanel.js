@@ -49,6 +49,15 @@ export default class DiffPanel extends Component {
       rightFocus})
   }
 
+  resetBothFoci() {
+    this.setState({
+      leftFocus:null,
+      rightFocus:null,
+      rightAssemblyDiff:null,
+      leftAssemblyDiff:null, 
+      })
+  }
+
   diffAssemblyWith(leftFocus,rightFocus) {
     const leftLines = leftFocus.data().assembly.split('\n')
     const rightLines = rightFocus.data().assembly.split('\n')

@@ -211,6 +211,7 @@ class App extends Component {
         this.batch(() => {
           this.cy1.cy.blur()
           this.cy2.cy.blur()
+          this.diffPanel.current.resetBothFoci()
           this.tooltip.current.clearTooltip()
         })
       }
