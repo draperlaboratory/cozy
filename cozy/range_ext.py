@@ -27,3 +27,51 @@ def intersect_range(range_a: range, range_b: range) -> range:
     :rtype: range
     """
     return range(max(range_a[0], range_b[0]), min(range_a[-1], range_b[-1]) + 1)
+
+def subtract_range(range_a: range, range_b: range) -> list[range]:
+    if range_a.start == range_a.stop:
+        return []
+    elif range_b.start == range_b.stop:
+        return [range_a]
+    elif range_a[-1] < range_b[0] or range_b[-1] < range_a[0]:
+        return [range_a]
+    elif range_b[0] <= range_a[0] and range_a[-1] <= range_b[-1]:
+        return []
+    elif range_a[0] < range_b[0] and range_b[-1] < range_a[-1]:
+        return [range(range_a[0], range_b[0]), range(range_b[-1] + 1, range_a[-1] + 1)]
+    elif range_a[0] < range_b[0]:
+        return [range(range_a[0], range_b[0])]
+    else:
+        return [range(range_b[-1] + 1, range_a[-1] + 1)]
+
+def subtract_range_lists(ranges_a: list[range], ranges_b: list[range]) -> list[range]:
+    ret = ranges_a
+    for rb in ranges_b:
+        ranges_a_prime = []
+        for ra in ret:
+            ranges_a_prime.extend(subtract_range(ra, rb))
+        ret = ranges_a_prime
+    return ret
+
+def test():
+    for a in range(-5, 6):
+        for b in range(-5, 6):
+            for c in range(-5, 6):
+                for d in range(-5, 6):
+                    if a <= b and c <= d:
+                        range_a = range(a, b)
+                        range_b = range(c, d)
+                        expect = set(range_a) - set(range_b)
+                        lst = subtract_range(range_a, range_b)
+                        if len(lst) > 0:
+                            res = set.union(*[set(r) for r in lst])
+                        else:
+                            res = {}
+                        if frozenset(expect) != frozenset(res):
+                            print(range_a, range_b)
+                            print(expect)
+                            print(res)
+                            return
+    print("Passed!")
+
+print(subtract_range_lists([range(0,5), range(3,10)],[range(2,6),range(10,20)]))

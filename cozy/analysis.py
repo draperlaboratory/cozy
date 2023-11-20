@@ -64,7 +64,7 @@ class StateDiff:
                    ignore_addrs: collections.abc.Iterable[range] | None = None,
                    compute_mem_diff=True,
                    compute_reg_diff=True) -> (
-            tuple[dict[int, tuple[claripy.ast.Base, claripy.ast.Base]], dict[str, tuple[claripy.ast.Base, claripy.ast.Base]]] | None):
+            tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.Base, claripy.ast.Base]]] | None):
         """
         Compares two states to find differences in memory. This function will return None if the two states have non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are different between the two. This function is based off of angr.analyses.congruency_check.CongruencyCheck().compare_states, but has been customized for our purposes. Note that this function may use memoization to enhance performance.
 
@@ -171,8 +171,8 @@ class StateDiff:
             #if ignore_addrs is not None:
             #    range_ext.remove_range_list(diff_addrs_old, ignore_addrs)
 
-            diff_addrs = set(sl.globals['mem_writes'].keys())
-            diff_addrs.update(sr.globals['mem_writes'].keys())
+            diff_addr_ranges: list[range] = list(sl.globals['mem_writes'].keys())
+            diff_addr_ranges.extend(sr.globals['mem_writes'].keys())
 
             # Note that diffs does not necessarily contain the addresses of the program data itself,
             # which is what we would expect. Testing with angr showed that the page(s) containing the
@@ -181,19 +181,20 @@ class StateDiff:
             # In any case it is probably a good idea to remove any patched addresses just in case
             # the state's memory actually contains them
             if ignore_addrs is not None:
-                range_ext.remove_range_list(diff_addrs, ignore_addrs)
+                ignore_addrs_lst = list(ignore_addrs)
+                diff_addr_ranges = range_ext.subtract_range_lists(diff_addr_ranges, ignore_addrs_lst)
 
             # Loop over all the address that could possibly be different and save the ones that are actually different
-            for addr in diff_addrs:
-                byte_left = sl.memory.load(addr, 1)
-                byte_right = sr.memory.load(addr, 1)
-                if byte_left is not byte_right:
-                    if joint_solver.satisfiable(extra_constraints=[byte_left != byte_right]):
+            for addr_range in diff_addr_ranges:
+                bytes_left = sl.memory.load(addr_range.start, len(addr_range))
+                bytes_right = sr.memory.load(addr_range.start, len(addr_range))
+                if bytes_left is not bytes_right:
+                    if joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right]):
                         # It is possible that there is a symbolic value stored in memory.
                         # Here we want to simplify this with respect to the joint constraints
-                        simpl_byte_left = claripy_ext.simplify_kb(byte_left, joint_solver.constraints)
-                        simpl_byte_right = claripy_ext.simplify_kb(byte_right, joint_solver.constraints)
-                        ret_mem_diff[addr] = (simpl_byte_left, simpl_byte_right)
+                        simpl_bytes_left = claripy_ext.simplify_kb(bytes_left, joint_solver.constraints)
+                        simpl_bytes_right = claripy_ext.simplify_kb(bytes_right, joint_solver.constraints)
+                        ret_mem_diff[addr_range] = (simpl_bytes_left, simpl_bytes_right)
 
         # Loop over all the registers that could possibly be different and save the ones that are actually different
         ret_reg_diff = dict()
@@ -340,7 +341,7 @@ class PairComparison:
 
     :ivar SingletonState state_left: Information pertaining specifically to the pre-patched state being compared.
     :ivar SingletonState state_right: Information pertaining specificially to the post-patched state being compared.
-    :ivar dict[int, tuple[claripy.ast.Base, claripy.ast.Base]] mem_diff: Maps memory addresses to pairs of claripy ASTs, where the left element of the tuple is the data in memory for state_left, and the right element of the tuple is what was found in memory for state_right. Only memory locations that are different are saved in this dict.
+    :ivar dict[range, tuple[claripy.ast.Base, claripy.ast.Base]] mem_diff: Maps memory addresses to pairs of claripy ASTs, where the left element of the tuple is the data in memory for state_left, and the right element of the tuple is what was found in memory for state_right. Only memory locations that are different are saved in this dict.
     :ivar dict[str, tuple[claripy.ast.Base, claripy.ast.Base]] reg_diff: Similar to mem_diff, except that the dict is keyed by register names. Note that some registers may be subparts of another. For example in x64, EAX is a subregister of RAX.
     :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value determined the write address.
     """
@@ -348,7 +349,7 @@ class PairComparison:
     def __init__(self,
                  state_left: SingletonState,
                  state_right: SingletonState,
-                 mem_diff: dict[int, tuple[claripy.ast.Base, claripy.ast.Base]],
+                 mem_diff: dict[range, tuple[claripy.ast.Base, claripy.ast.Base]],
                  # TODO: Expose the subregister structure somewhere
                  reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]],
                  mem_diff_ip: dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]]):
@@ -506,9 +507,9 @@ class ComparisonResults:
                         (mem_diff, reg_diff) = diff
 
                         mem_diff_ip = {
-                            addr: (
-                            state_pre.globals['mem_writes'].get(addr), state_post.globals['mem_writes'].get(addr))
-                            for addr in mem_diff.keys()
+                            addr_range: (
+                            state_pre.globals['mem_writes'].get(addr_range), state_post.globals['mem_writes'].get(addr_range))
+                            for addr_range in mem_diff.keys()
                         }
 
                         comparison = PairComparison(

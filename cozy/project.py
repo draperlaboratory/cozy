@@ -68,11 +68,11 @@ def _on_mem_write(state):
     ip_frozenset = frozenset([state.ip])
     if start_addrs is not None and length is not None:
         for st_addr in start_addrs:
-            for addr in range(st_addr, st_addr + length):
-                if len(start_addrs) > 1 and addr in mem_writes:
-                    mem_writes[addr] = mem_writes[addr].union(ip_frozenset)
-                else:
-                    mem_writes[addr] = ip_frozenset
+            write_range = range(st_addr, st_addr + length)
+            if len(start_addrs) > 1 and write_range in mem_writes:
+                mem_writes[write_range] = mem_writes[write_range].union(ip_frozenset)
+            else:
+                mem_writes[write_range] = ip_frozenset
     state.globals['mem_writes'] = mem_writes
 
 # A session is a particular run of a project, consisting of attached directives
