@@ -40,6 +40,7 @@ export default class App extends Component {
     this.toggleErrors = this.toggleErrors.bind(this)
     this.toggleSyscalls = this.toggleSyscalls.bind(this)
     this.toggleSimprocs = this.toggleSimprocs.bind(this)
+    this.getJSON = this.getJSON.bind(this)
 
     window.app = this
   }
@@ -113,6 +114,10 @@ export default class App extends Component {
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
     this.setState({ status: Status.idle })
+  }
+
+  getJSON() {
+    return [this.cy1.orig, this.cy2.orig]
   }
 
   tidy(opts) {
@@ -343,6 +348,7 @@ export default class App extends Component {
         toggleSyscalls=${this.toggleSyscalls}
         toggleSimprocs=${this.toggleSimprocs}
         toggleErrors=${this.toggleErrors}
+        getJSON=${this.getJSON}
       />
       <div id="main-view">
         <span id="labelLeft">prepatch</span>

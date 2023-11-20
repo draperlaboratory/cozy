@@ -155,10 +155,34 @@ export default class MenuBar extends Component {
     this.setOpen(null)
   }
 
+  saveFile(data) {
+    const filename = prompt("please provide a filename")
+
+    var blob = new Blob([data], {type: 'text/json'}),
+    a = document.createElement('a')
+
+    a.download = filename
+    a.href = window.URL.createObjectURL(blob)
+    a.dataset.downloadurl = ['text/json', a.download, a.href].join(':')
+    a.dispatchEvent(new MouseEvent("click"))
+  }
+
   render(props, state) {
     return html`<div id="menubar"
         onMousedown=${ev => this.handleLocalClick(ev)}
       >
+      <${Menu} 
+        enabled=${props.status === Status.idle}
+        open=${state.open}
+        title="Files"
+        setOpen=${o => this.setOpen(o)}>
+        <${MenuOption} onClick=${() => this.saveFile(props.getJSON()[0])}>
+            Save Pre Graph
+        <//>
+        <${MenuOption} onClick=${() => this.saveFile(props.getJSON()[1])}>
+            Save Post Graph
+        <//>
+      <//>
       <${Menu} 
         enabled=${props.status === Status.idle}
         open=${state.open}
