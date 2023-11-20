@@ -1,5 +1,4 @@
 from collections.abc import Iterator
-from collections.abc import Callable
 
 import claripy
 from angr import SimState
@@ -14,12 +13,13 @@ from .functools_ext import *
 from . import range_ext
 import sys
 import collections.abc
-from .project import TerminatedResult, AssertFailed
+from .project import RunResult, AssertFailed
 
 
 class StateTag(Enum):
     TERMINATED_STATE = 0
     ERROR_STATE = 1
+    ASSERT_FAILED_STATE = 2
 
 # Given a state, returns a range of addresses that were used as part of the stack but are no longer
 # valid stack locations. This will happen if the stack grows, then shrinks.
@@ -48,7 +48,7 @@ def _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range
 
 class StateDiff:
     """
-    StateDiff encapsulates the memoized state used by the difference method. This class is used internally by ComparisonResults and is typically not for external use.
+    StateDiff encapsulates the memoized state used by the difference method. This class is used internally by Comparison and is typically not for external use.
     """
 
     def __init__(self, use_memoized_binary_search=True):
@@ -389,7 +389,7 @@ class PairComparison:
                 for (conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right) in
                 concrete_results]
 
-class ComparisonResults:
+class Comparison:
     """
     This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible state in the other execution tree. In most scenarios there will be no orphaned states.
 
@@ -398,14 +398,14 @@ class ComparisonResults:
     :ivar dict[SimState, SingletonState] orphans_right_lookup: maps post-patched orphaned states to singleton state information
     """
 
-    def __init__(self, pre_patched: TerminatedResult, post_patched: TerminatedResult, ignore_addrs: list[range] | None = None,
+    def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
                  ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False,
                  compare_std_err=False, use_memoized_binary_search=True):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
 
-        :param project.TerminatedResult pre_patched: The pre-patched state bundle
-        :param project.TerminatedResult post_patched: The post-patched state bundle
+        :param project.RunResult pre_patched: The pre-patched state bundle
+        :param project.RunResult post_patched: The post-patched state bundle
         :param list[range] | None ignore_addrs: A list of addresses ranges to ignore when comparing memory.
         :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
         :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
@@ -425,11 +425,15 @@ class ComparisonResults:
         self.orphans_right_lookup: dict[SimState, SingletonState] = dict()
 
         singleton_state_cache: dict[SimState, SingletonState] = dict()
-        def get_singleton_state(state_info: SimState | ErrorRecord, state_id: int) -> SingletonState:
+        def get_singleton_state(state_info: SimState | ErrorRecord | AssertFailed, state_id: int) -> SingletonState:
             if isinstance(state_info, ErrorRecord):
                 error_info = state_info.error
                 state: SimState = state_info.state
                 state_tag = StateTag.ERROR_STATE
+            elif isinstance(state_info, AssertFailed):
+                error_info = state_info.assertion.info_str
+                state: SimState = state_info.failure_state
+                state_tag = StateTag.ASSERT_FAILED_STATE
             else:
                 error_info = None
                 state: SimState = state_info
@@ -454,13 +458,15 @@ class ComparisonResults:
 
         memoized_diff = StateDiff(use_memoized_binary_search=use_memoized_binary_search)
 
-        def compare(states_pre_patched: list[SimState] | list[ErrorRecord],
-                    states_post_patched: list[SimState] | list[ErrorRecord],
-                    orphans_pre: dict[int, SimState] | dict[int, ErrorRecord],
-                    orphans_post: dict[int, SimState] | dict[int, ErrorRecord]):
-            def unwrap_sim_state(state_info: SimState | ErrorRecord) -> SimState:
+        def compare(states_pre_patched: list[SimState] | list[ErrorRecord] | list[AssertFailed],
+                    states_post_patched: list[SimState] | list[ErrorRecord] | list[AssertFailed],
+                    orphans_pre: dict[int, SimState] | dict[int, ErrorRecord] | dict[int, AssertFailed],
+                    orphans_post: dict[int, SimState] | dict[int, ErrorRecord] | dict[int, AssertFailed]):
+            def unwrap_sim_state(state_info: SimState | ErrorRecord | AssertFailed) -> SimState:
                 if isinstance(state_info, ErrorRecord):
                     return state_info.state
+                elif isinstance(state_info, AssertFailed):
+                    return state_info.failure_state
                 else:
                     return state_info
 
@@ -479,11 +485,11 @@ class ComparisonResults:
 
             for (i, state_pre_info) in enumerate(states_pre_patched):
                 state_pre = unwrap_sim_state(state_pre_info)
-                if isinstance(state_pre_info, ErrorRecord):
+                if isinstance(state_pre_info, ErrorRecord) or isinstance(state_pre_info, AssertFailed):
                     is_terminated_comparison = False
                 for (j, state_post_info) in enumerate(states_post_patched):
                     state_post: SimState = unwrap_sim_state(state_post_info)
-                    if isinstance(state_post_info, ErrorRecord):
+                    if isinstance(state_post_info, ErrorRecord) or isinstance(state_post_info, AssertFailed):
                         is_terminated_comparison = False
 
                     if ignore_invalid_stack:
@@ -506,8 +512,8 @@ class ComparisonResults:
                         (mem_diff, reg_diff) = diff
 
                         mem_diff_ip = {
-                            addr: (
-                            state_pre.globals['mem_writes'].get(addr), state_post.globals['mem_writes'].get(addr))
+                            addr: (state_pre.globals['mem_writes'].get(addr),
+                                   state_post.globals['mem_writes'].get(addr))
                             for addr in mem_diff.keys()
                         }
 
@@ -519,19 +525,30 @@ class ComparisonResults:
 
                         self._add_pair(comparison)
 
-        orphans_pre: dict[int, SimState] = {i: state for (i, state) in enumerate(pre_patched.deadended)}
-        orphans_post: dict[int, SimState] = {i: state for (i, state) in enumerate(post_patched.deadended)}
-        orphans_pre_errored: dict[int, ErrorRecord] = {i: error_record for (i, error_record) in
-                                                       enumerate(pre_patched.errored)}
-        orphans_post_errored: dict[int, ErrorRecord] = {i: error_record for (i, error_record) in
-                                                        enumerate(post_patched.errored)}
+        orphans_pre: dict[int, SimState] = dict(enumerate(pre_patched.deadended))
+        orphans_post: dict[int, SimState] = dict(enumerate(post_patched.deadended))
+        orphans_pre_errored: dict[int, ErrorRecord] = dict(enumerate(pre_patched.errored))
+        orphans_post_errored: dict[int, ErrorRecord] = dict(enumerate(post_patched.errored))
+        orphans_pre_assert: dict[int, AssertFailed] = dict(enumerate(pre_patched.asserts_failed))
+        orphans_post_assert : dict[int, AssertFailed] = dict(enumerate(post_patched.asserts_failed))
 
-        compare(pre_patched.deadended, post_patched.deadended, orphans_pre, orphans_post)
-        compare(pre_patched.errored, post_patched.deadended, orphans_pre_errored, orphans_post)
-        compare(pre_patched.deadended, post_patched.errored, orphans_pre, orphans_post_errored)
-        compare(pre_patched.errored, post_patched.errored, orphans_pre_errored, orphans_post_errored)
+        state_bundles_pre = [
+            (pre_patched.deadended, orphans_pre),
+            (pre_patched.errored, orphans_pre_errored),
+            (pre_patched.asserts_failed, orphans_pre_assert)
+        ]
 
-        def add_orphans(orphans_dict: dict[int, SimState] | dict[int, ErrorRecord], add_orphan):
+        state_bundles_post = [
+            (post_patched.deadended, orphans_post),
+            (post_patched.errored, orphans_post_errored),
+            (post_patched.asserts_failed, orphans_post_assert)
+        ]
+
+        for (pre_patched_states, pre_orphans_dict) in state_bundles_pre:
+            for (post_patched_states, post_orphans_dict) in state_bundles_post:
+                compare(pre_patched_states, post_patched_states, pre_orphans_dict, post_orphans_dict)
+
+        def add_orphans(orphans_dict: dict[int, SimState] | dict[int, ErrorRecord] | dict[int, AssertFailed], add_orphan):
             # These states that are orphans did not have any compatible states
             for (i, orphan_state) in orphans_dict.items():
                 add_orphan(get_singleton_state(orphan_state, i))
@@ -540,6 +557,8 @@ class ComparisonResults:
         add_orphans(orphans_post, self._add_orphan_right)
         add_orphans(orphans_pre_errored, self._add_orphan_left)
         add_orphans(orphans_post_errored, self._add_orphan_right)
+        add_orphans(orphans_pre_assert, self._add_orphan_left)
+        add_orphans(orphans_post_assert, self._add_orphan_right)
 
     def _add_pair(self, pair_comp: PairComparison):
         """
@@ -775,11 +794,11 @@ class ComparisonResults:
 
         return output
 
-class ErrorResults:
+class ErroredInfo:
     """
-    This class is for getting results about errored states, which can be done with only a single TerminatedResult.
+    This class is for getting results about errored states, which can be done with only a single RunResult.
     """
-    def __init__(self, result: TerminatedResult):
+    def __init__(self, errored_states: list[ErrorRecord]):
         """
         Constructor for ErrorResults
 
@@ -789,12 +808,23 @@ class ErrorResults:
         stdout_fileno = sys.stdout.fileno()
         stderr_fileno = sys.stderr.fileno()
 
-        for (i, error_record) in enumerate(result.errored):
+        for (i, error_record) in enumerate(errored_states):
             self.errored_lookup[error_record.state] = SingletonState(
                 error_record.state,
                 error_record.state.posix.dumps(stdout_fileno),
                 error_record.state.posix.dumps(stderr_fileno),
                 i, StateTag.ERROR_STATE, error_record.error)
+
+    @staticmethod
+    def from_run_result(result: RunResult) -> 'ErroredInfo':
+        """
+        Creates an ErroredInfo object from a RunResult, passing the errored field to the constructor.
+
+        :param RunResult result: The result for which we wish to analyze any associated errored states.
+        :return: An ErroredInfo object which contains information about the errored states.
+        :rtype: ErroredInfo
+        """
+        return ErroredInfo(result.errored)
 
     def get_errored_singleton(self, state: SimState) -> SingletonState:
         """
@@ -839,29 +869,74 @@ class ErrorResults:
             output += "\n"
         return output
 
-class AssertFailedResults:
-    def __init__(self, assert_failed: AssertFailed):
-        self.assert_failed = assert_failed
-        self.singleton_state = SingletonState(assert_failed.failure_state, None, None, 0, StateTag.ERROR_STATE)
+class AssertFailedInfo:
+    """
+    This class is for getting results about assertion failed states, which can be done with only a single RunResult.
+
+    :ivar list[SingletonState] singleton_states: Information about the assertion failed state.
+    :ivar list[AssertFailed] asserts_failed: The assertions that failed
+    """
+    def __init__(self, asserts_failed: list[AssertFailed]):
+        """
+        Constructor for AssertFailedInfo. This constructor will create a SingletonState for each failed assertion.
+
+        :param list[AssertFailed] asserts_failed: The assertions that we wish to analyze and report on.
+        """
+        self.asserts_failed = asserts_failed
+        stdout_fileno = sys.stdout.fileno()
+        stderr_fileno = sys.stderr.fileno()
+        self.singleton_states = [
+            SingletonState(assert_failed.failure_state,
+                           assert_failed.failure_state.posix.dumps(stdout_fileno),
+                           assert_failed.failure_state.posix.dumps(stderr_fileno),
+                           i, StateTag.ASSERT_FAILED_STATE,
+                           error_info=assert_failed.assertion.info_str)
+            for (i, assert_failed) in enumerate(asserts_failed)
+        ]
+
+    @staticmethod
+    def from_run_result(result: RunResult) -> 'AssertFailedInfo':
+        """
+        Creates an AssertFailedInfo object from a RunResult, passing the asserts_failed field to the constructor.
+
+        :param RunResult result: The result for which we wish to analyze any associated assertions.
+        :return: An AssertFailedInfo object which contains information about the failed assertions.
+        :rtype: AssertFailedInfo
+        """
+        return AssertFailedInfo(result.asserts_failed)
 
     def report(self, args: any, concrete_arg_mapper: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
-        output = "Assert for address {} was triggered: {}\n".format(hex(self.assert_failed.assertion.addr), str(self.assert_failed.cond))
-        if self.assert_failed.assertion.info_str is not None:
-            output += self.assert_failed.assertion.info_str + "\n"
-        concrete_inputs = self.singleton_state.concrete_examples(args, num_examples)
-        output += "Here are {} concrete input(s) for this particular assertion:\n".format(len(concrete_inputs))
-        for (i, concrete_input) in enumerate(concrete_inputs):
-            if concrete_arg_mapper is not None:
-                concrete_args = concrete_arg_mapper(concrete_input.args)
-            else:
-                concrete_args = concrete_input.args
-            output += "{}.\n".format(i + 1)
-            output += "\t{}\n".format(str(concrete_args))
-            if len(concrete_input.vprints) > 0:
-                output += "Virtual prints:\n"
-                for (pdirective, conc_print_val) in concrete_input.vprints:
-                    if pdirective.concrete_mapper is not None:
-                        conc_print_val = pdirective.concrete_mapper(conc_print_val)
-                    output += "{}: {}\n".format(pdirective.info_str, conc_print_val)
-        output += "\n"
-        return output
+        """
+        Creates a human readable report about a list of failed assertions.
+
+        :param any args: The arguments to concretize
+        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed state.
+        :return: The report as a string
+        :rtype: str
+        """
+        if len(self.asserts_failed) == 0:
+            return "No asserts triggered"
+        else:
+            output = ""
+            for (assert_failed, singleton_state) in zip(self.asserts_failed, self.singleton_states):
+                output += "Assert for address {} was triggered: {}\n".format(hex(assert_failed.assertion.addr), str(assert_failed.cond))
+                if assert_failed.assertion.info_str is not None:
+                    output += assert_failed.assertion.info_str + "\n"
+                concrete_inputs = singleton_state.concrete_examples(args, num_examples)
+                output += "Here are {} concrete input(s) for this particular assertion:\n".format(len(concrete_inputs))
+                for (i, concrete_input) in enumerate(concrete_inputs):
+                    if concrete_arg_mapper is not None:
+                        concrete_args = concrete_arg_mapper(concrete_input.args)
+                    else:
+                        concrete_args = concrete_input.args
+                    output += "{}.\n".format(i + 1)
+                    output += "\t{}\n".format(str(concrete_args))
+                    if len(concrete_input.vprints) > 0:
+                        output += "Virtual prints:\n"
+                        for (pdirective, conc_print_val) in concrete_input.vprints:
+                            if pdirective.concrete_mapper is not None:
+                                conc_print_val = pdirective.concrete_mapper(conc_print_val)
+                            output += "{}: {}\n".format(pdirective.info_str, conc_print_val)
+                output += "\n\n"
+            return output

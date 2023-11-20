@@ -43,5 +43,5 @@ def concrete_mapper(args):
     return (args[0], primitives.from_twos_comp(args[1], 32))
 
 args = (arg0, arg1)
-comparison_results = analysis.ComparisonResults(pre_patched, post_patched)
+comparison_results = analysis.Comparison(pre_patched, post_patched)
 print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))

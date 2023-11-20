@@ -24,9 +24,13 @@ def run(sess: cozy.project.Session):
 
     return sess.run(arg0, cache_intermediate_states=True)
 
-prepatched = run(proj_prepatched.session("rover_process"))
-postpatched = run(proj_postpatched.session("rover_process"))
+prepatched_results = run(proj_prepatched.session("rover_process"))
+postpatched_results = run(proj_postpatched.session("rover_process"))
 
-cozy.execution_graph.compare_and_viz(proj_prepatched, proj_postpatched, prepatched, postpatched,
-                                         args={"temp": temp, "cmd": cmd},
-                                         num_examples=2, open_browser=True)
+comparison = cozy.analysis.Comparison(prepatched_results, postpatched_results)
+
+cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
+                                          prepatched_results, postpatched_results,
+                                          comparison,
+                                          args={"temp": temp, "cmd": cmd},
+                                          num_examples=2, open_browser=True)

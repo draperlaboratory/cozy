@@ -49,14 +49,11 @@ def run_pre_patched():
 
     args = construct_args(sess)
     run_results = sess.run(*args)
-    if isinstance(run_results, AssertFailed):
-        print(analysis.AssertFailedResults(run_results).report(args))
-    else:
-        print("No asserts triggered!")
+    print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
 
     sess = proj.session('my_fun')
     args = construct_args(sess)
-    return (sess.run(*args, cache_intermediate_states=dump_execution_graphs), proj)
+    return (proj, sess.run(*args, cache_intermediate_states=dump_execution_graphs))
 
 # The patched function is the same as the original, except it has an if statement
 # to check if the input argument is NULL
@@ -84,30 +81,27 @@ def run_post_patched():
     sess.add_directives(*directives)
     args = construct_args(sess)
     run_results = sess.run(*args)
-    if isinstance(run_results, AssertFailed):
-        print(analysis.AssertFailedResults(run_results).report(args))
-    else:
-        print("No asserts triggered!")
+    print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
 
     sess = proj.session('my_fun')
     args = construct_args(sess)
-    return (sess.run(*args, cache_intermediate_states=dump_execution_graphs), proj)
+    return (proj, sess.run(*args, cache_intermediate_states=dump_execution_graphs))
 
 print("Running pre-patched.")
-(pre_patched, pre_proj) = run_pre_patched()
+(pre_proj, pre_patched) = run_pre_patched()
 
 print("There are {} deadended states and {} errored states for the pre-patch run.".format(len(pre_patched.deadended), len(pre_patched.errored)))
 
 print("\nRunning post-patch.")
-(post_patched, post_proj) = run_post_patched()
+(post_proj, post_patched) = run_post_patched()
 
 print("There are {} deadended states and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.errored)))
 
 args = (arg0,)
-comparison_results = analysis.ComparisonResults(pre_patched, post_patched)
+comparison_results = analysis.Comparison(pre_patched, post_patched)
 
 if (dump_execution_graphs):
-    execution_graph.compare_and_dump(pre_proj, post_proj, pre_patched, post_patched, "null_pre.json", "null_post.json", args=args, num_examples=2)
+    execution_graph.dump_comparison(pre_proj, post_proj, pre_patched, post_patched, comparison_results, "null_pre.json", "null_post.json", args=args, num_examples=2)
 
 print("\nComparison Results:\n")
 print(comparison_results.report(args))

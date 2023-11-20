@@ -181,19 +181,17 @@ Let's invoke the prepatched my_fun with arg0 as the symbolic input via the
 :py:meth:`~cozy.project.Session.run` method::
 
     run_result = sess_prepatched.run(arg0)
-    run_result
+    run_result.assertion_triggered()
 
-In the console we see that run_result is an AssertFailed object,
-indicating that the assertion was triggered::
-
-    <cozy.project.AssertFailed object at 0x7f93e8dde010>
+The :py:meth:`~cozy.project.RunResult.assertion_triggered` method informs us here that an assertion
+was triggered.
 
 To view a report on what went wrong with the assertion, let's create
-a :py:class:`cozy.analysis.AssertFailedResults` object, then call its
-:py:meth:`~cozy.analysis.AssertFailedResults.report` method to get
+a :py:class:`cozy.analysis.AssertFailedInfo` object, then call its
+:py:meth:`~cozy.analysis.AssertFailedInfo.report` method to get
 the report as a human readable string::
 
-    assertion_results = cozy.analysis.AssertFailedResults(run_result)
+    assertion_results = cozy.analysis.AssertFailedInfo.from_run_result(run_result)
     print(assertion_results.report([arg0]))
 
 Which prints off the human readable report::
@@ -218,18 +216,18 @@ that no NULL dereference occurs in the postpatch::
             info_str="Dereferencing null pointer"
         )
     sess_postpatched.add_directives(mem_write_okay_postpatched)
-    sess_postpatched.run()
+    run_result = sess_postpatched.run()
+    run_result.assertion_triggered()
 
-In the console we see that we got a :py:class:`~cozy.project.TerminatedResult`,
+In the console we see that we got False from :py:meth:`~cozy.project.RunResult.assertion_triggered`,
 indicating that no assertions were triggered.
 
 ======================
 Making the Comparisons
 ======================
 
-To compare two program executions, we need two :py:class:`cozy.project.TerminatedResult` objects.
-In the previous execution of the pre-patched program, we received an :py:class:`cozy.project.AssertFailed` object
-as output, so let's create fresh sessions and re-run without any directives attached. This time we will make use of
+To compare two program executions, we need two :py:class:`cozy.project.RunResult` objects.
+Let's create fresh sessions and re-run without any directives attached. This time we will make use of
 :py:func:`primitive.sym_ptr_constraints` to generate the constraints instead of creating them manually::
 
     sess_prepatched = proj_prepatched.session("my_fun")
@@ -254,13 +252,13 @@ This prints the following messages::
     There are 1 deadended states and 0 errored states for the pre-patch run.
     There are 2 deadended states and 0 errored states for the post-patch run.
 
-We can now make a comparison between these two terminated results. Constructing a ComparisonResults object is used to do
+We can now make a comparison between these two terminated results. Constructing a Comparison object is used to do
 the comparison computation::
 
-    comparison_results = cozy.analysis.ComparisonResults(prepatched_result, postpatched_result)
+    comparison_results = cozy.analysis.Comparison(prepatched_result, postpatched_result)
 
-To view a human readable report, we can now call the :py:meth:`cozy.analysis.ComparisonResults.report` method, which
-will convert the :py:class:`~cozy.analysis.ComparisonResults` to a human readable summary::
+To view a human readable report, we can now call the :py:meth:`cozy.analysis.Comparison.report` method, which
+will convert the :py:class:`~cozy.analysis.Comparison` to a human readable summary::
 
     args = (arg0,)
     print(comparison_results.report(args))
