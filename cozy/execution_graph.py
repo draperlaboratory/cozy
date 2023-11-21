@@ -4,7 +4,7 @@ import json
 import sys
 from angr.block import Block
 from collections.abc import Callable
-from .project import Project, TerminatedResult
+from .project import Project, RunResult
 from . import analysis
 from .server import start_viz_server
 
@@ -13,14 +13,14 @@ def _serialize_diff(diff):
         diff[k] = [str(v1),str(v2)]
     return diff
 
-
-def compare_and_dump(proj_a: Project, proj_b: Project,
-                     rslt_a: TerminatedResult, rslt_b: TerminatedResult, 
-                     file_name_a: str, file_name_b: str, 
-                     concrete_arg_mapper: Callable [[any], any] | None = None, 
-                     compare_memory: bool = True, compare_registers: bool = True,
-                     include_vex: bool = False,
-                     args: any = [], num_examples: int = 0):
+def dump_comparison(proj_a: Project, proj_b: Project,
+                    rslt_a: RunResult, rslt_b: RunResult,
+                    comparison_results: analysis.Comparison,
+                    file_name_a: str, file_name_b: str,
+                    concrete_arg_mapper: Callable [[any], any] | None = None,
+                    include_vex: bool = False, include_simprocs: bool = False,
+                    flag_syscalls: bool = False,
+                    args: any = [], num_examples: int = 0) -> None:
     """
     Generates and saves JSON data for Cozy-Viz.
 
@@ -29,8 +29,9 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
 
     :param Project proj_a: The project associated with the first execuction.
     :param Project proj_b: The project associated with the second execuction.
-    :param TerminatedResult rslt_a: The result of the first execution.
-    :param TerminatedResult rslt_b: The result of the second execution.
+    :param RunResult rslt_a: The result of the first execution.
+    :param RunResult rslt_b: The result of the second execution.
+    :param analysis.Comparison comparison_results: The comparison we wish to dump.
     :param str file_name_a: The filename for the JSON serializing the first execution
     :param str file_name_b: The filename for the JSON serializing the second execution
     :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
@@ -38,14 +39,12 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
         return string. Some examples of this function include converting an integer
         to a negative number due to use of two's complement, or slicing off parts of
         the argument based on another part of the input arguments. Default None.
-    :param bool, optional compare_memory: whether to, for each pair of
-        corresponding dead-end states, compare memory contents and include any
-        significant differences in the JSON. Default True.
-    :param bool, optional compare_registers: whether to, for each pair of
-        corresponding dead-end states, compare register contents and include
-        any differences in the JSON. Default True.
     :param bool, optional include_vex: whether to, for each SimState, generate the
         corresponding VEX IR and include the result in the JSON. Default False.
+    :param bool, optional include_simprocs: whether to, for each SimState, flag any
+        SimProcedure locations occurring in the corrsponding basic block. Default False.
+    :param bool, optional include_simprocs: whether to include a listing of
+        SimProcedures called in each basic block. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -53,12 +52,12 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
     :param int, optional num_examples: The number of concrete examples to
         generate and incorporate into the JSON, for each dead-end state. Default 0.
     """
-    g_a, g_b = generate_comparison(proj_a, proj_b, rslt_a, rslt_b,
-         concrete_arg_mapper=concrete_arg_mapper,
-         compare_memory=compare_memory, 
-         compare_registers=compare_registers,
-         include_vex=include_vex,
-         args=args, num_examples=num_examples)
+    g_a, g_b = _generate_comparison(proj_a, proj_b, rslt_a, rslt_b, comparison_results,
+                                    concrete_arg_mapper=concrete_arg_mapper,
+                                    include_vex=include_vex,
+                                    include_simprocs=include_simprocs,
+                                    flag_syscalls=flag_syscalls,
+                                    args=args, num_examples=num_examples)
     def write_graph(g, file_name):
         data = json.dumps(nx.cytoscape_data(g))
         with open(file_name, "w") as f:
@@ -66,14 +65,15 @@ def compare_and_dump(proj_a: Project, proj_b: Project,
     write_graph(g_a, file_name_a)
     write_graph(g_b, file_name_b)
 
-def compare_and_viz(proj_a: Project, proj_b: Project,
-                    rslt_a: TerminatedResult, rslt_b: TerminatedResult, 
-                    concrete_arg_mapper: Callable [[any], any] | None = None, 
-                    compare_memory: bool = True, compare_registers: bool = True,
-                    include_vex: bool = False,
-                    args: any = [], num_examples: int = 0,
-                    open_browser=False, port=8080
-                    ):
+def visualize_comparison(proj_a: Project, proj_b: Project,
+                         rslt_a: RunResult, rslt_b: RunResult,
+                         comparison_results: analysis.Comparison,
+                         concrete_arg_mapper: Callable [[any], any] | None = None,
+                         include_vex: bool = False, include_simprocs: bool = False,
+                         flag_syscalls: bool = False,
+                         args: any = [], num_examples: int = 0,
+                         open_browser=False, port=8080
+                         ):
     """
     Generates and visualizes JSON data for Cozy-Viz.
 
@@ -82,21 +82,18 @@ def compare_and_viz(proj_a: Project, proj_b: Project,
 
     :param Project proj_a: The project associated with the first execuction.
     :param Project proj_b: The project associated with the second execuction.
-    :param TerminatedResult rslt_a: The result of the first execution.
-    :param TerminatedResult rslt_b: The result of the second execution.
+    :param RunResult rslt_a: The result of the first execution.
+    :param RunResult rslt_b: The result of the second execution.
+    :param analysis.Comparison comparison_results: The comparison we wish to dump.
     :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
         post-process concretized versions of args before they are added to the
         return string. Some examples of this function include converting an integer
         to a negative number due to use of two's complement, or slicing off parts of
         the argument based on another part of the input arguments. Default None.
-    :param bool, optional compare_memory: whether to, for each pair of
-        corresponding dead-end states, compare memory contents and include any
-        significant differences in the JSON. Default True.
-    :param bool, optional compare_registers: whether to, for each pair of
-        corresponding dead-end states, compare register contents and include
-        any differences in the JSON. Default True.
     :param bool, optional include_vex: whether to, for each SimState, generate the
         corresponding VEX IR and include the result in the JSON. Default False.
+    :param bool, optional include_simprocs: whether to include a listing of
+        SimProcedures called in each basic block. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -107,21 +104,22 @@ def compare_and_viz(proj_a: Project, proj_b: Project,
         comparison data loaded. Default False.
     :param int, optional port: The port to serve cozy-viz on. Default 8080.
     """
-    g_a, g_b = generate_comparison(proj_a, proj_b, rslt_a, rslt_b,
-         concrete_arg_mapper=concrete_arg_mapper,
-         compare_memory=compare_memory, 
-         compare_registers=compare_registers,
-         include_vex=include_vex,
-         args=args, num_examples=num_examples)
+    g_a, g_b = _generate_comparison(proj_a, proj_b, rslt_a, rslt_b, comparison_results,
+                                    concrete_arg_mapper=concrete_arg_mapper,
+                                    include_vex=include_vex,
+                                    flag_syscalls=flag_syscalls,
+                                    include_simprocs = include_simprocs,
+                                    args=args, num_examples=num_examples)
     start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)), open_browser=open_browser, port=port)
 
 # TODO might want to have a class for proj/rslt/name triples or something
-def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
-                        TerminatedResult, rslt_b: TerminatedResult,
-                        concrete_arg_mapper: Callable [[any], any] | None = None,
-                        compare_memory: bool = True, compare_registers: bool = True,
-                        include_vex: bool = False,
-                        args: any = [], num_examples: int = 0):
+def _generate_comparison(proj_a: Project, proj_b: Project,
+                         rslt_a: RunResult, rslt_b: RunResult,
+                         comparison_results: analysis.Comparison,
+                         concrete_arg_mapper: Callable [[any], any] | None = None,
+                         include_vex: bool = False, include_simprocs: bool = False,
+                         flag_syscalls: bool = False,
+                         args: any = [], num_examples: int = 0) -> tuple[nx.DiGraph, nx.DiGraph]:
     """
     Generates JSON data for Cozy-Viz.
 
@@ -130,21 +128,17 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
 
     :param Project proj_a: The project associated with the first execuction.
     :param Project proj_b: The project associated with the second execuction.
-    :param TerminatedResult rslt_a: The result of the first execution.
-    :param TerminatedResult rslt_b: The result of the second execution.
+    :param RunResult rslt_a: The result of the first execution.
+    :param RunResult rslt_b: The result of the second execution.
     :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
         post-process concretized versions of args before they are added to the
         return string. Some examples of this function include converting an integer
         to a negative number due to use of two's complement, or slicing off parts of
         the argument based on another part of the input arguments. Default None.
-    :param bool, optional compare_memory: whether to, for each pair of
-        corresponding dead-end states, compare memory contents and include any
-        significant differences in the JSON. Default True.
-    :param bool, optional compare_registers: whether to, for each pair of
-        corresponding dead-end states, compare register contents and include
-        any differences in the JSON. Default True.
     :param bool, optional include_vex: whether to, for each SimState, generate the
         corresponding VEX IR and include the result in the JSON. Default False.
+    :param bool, optional include_simprocs: whether to include a listing of
+        SimProcedures called in each basic block. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -160,14 +154,6 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
     eg_b = ExecutionGraph(proj_b,rslt_b)
     g_a = eg_a.reconstruct_bbl_addr_graph()
     g_b = eg_b.reconstruct_bbl_addr_graph()
-    comparison_results = analysis.ComparisonResults(rslt_a,rslt_b,
-                                                    compare_memory=compare_memory,
-                                                    compare_registers=compare_registers,
-                                                    # We extract std[out|err] below.
-                                                    # But maybe we should get it from
-                                                    # the analysis
-                                                    compare_std_err=False,
-                                                    compare_std_out=False)
     leaves_a = [v for (v, d) in g_a.out_degree() if d == 0]
     leaves_b = [v for (v, d) in g_b.out_degree() if d == 0]
     for na in leaves_a:
@@ -178,9 +164,8 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
         state_a = g_a.nodes[na]["state"]
         for nb in leaves_b:
             state_b = g_b.nodes[nb]["state"]
-            comp = comparison_results.pairs.get((state_a, state_b))
-            if comp is not None:
-
+            if comparison_results.is_compatible(state_a, state_b):
+                comp = comparison_results.get_comparison(state_a, state_b)
                 concretion = comp.concrete_examples(args, num_examples=num_examples)
                 g_a.nodes[na]["compatibilities"][nb] = {
                         "memdiff": _serialize_diff(comp.mem_diff),
@@ -199,6 +184,9 @@ def generate_comparison(proj_a: Project, proj_b: Project, rslt_a:
     def stringify_attrs(eg, g):
         for (n, attr) in g.nodes.items():
             if include_vex: attr['vex'] = attr["contents"].vex._pp_str() or "*"
+            # FIXME: inefficient, we'll be running this many times for each basic block. 
+            if include_simprocs: attr['simprocs'] = eg._list_simprocs(attr["contents"]) or []
+            if flag_syscalls: attr['has_syscall'] = eg._has_syscall(attr["contents"]) or False
             attr['contents'] = eg._get_bbl_asm(attr["contents"]) or "*"
             attr['constraints'] = list(map(str, attr["constraints"])) or "*"
             del attr['state']
@@ -217,9 +205,9 @@ class ExecutionGraph:
     executed project session.
     
     :ivar Project proj: the project associated with the execution.
-    :ivar TerminatedResult result: the result of the execution.
+    :ivar RunResult result: the result of the execution.
     """
-    def __init__(self, proj: Project, result: TerminatedResult):
+    def __init__(self, proj: Project, result: RunResult):
         self.proj = proj
         # TODO: if graph of states becomes too expensive, switch to graph of histories
         self.graph = nx.DiGraph()
@@ -258,6 +246,41 @@ class ExecutionGraph:
                     ).render(formatting={})
         except:
             return "*"
+
+    def _list_simprocs(self, b : Block):
+        # FIXME Need to document return type idiomatically, indicate possible None return
+        """
+        An internal method which lists SimProcedure calls occuring in a block
+
+        :param Block b: the block to scan
+        """
+        try:
+            addr = b.addr - 1 if b.thumb else b.addr
+            procs = self.proj.angr_proj._sim_procedures
+            sim_procs = []
+            for a in range(addr, addr + b.size):
+                if a in procs:
+                    name = procs[a].display_name or print(procs[a])
+                    home = procs[a].library_name
+
+                    sim_procs.append(name + (" from " + home if home else ""))
+            return sim_procs
+        except:
+            return None
+
+    def _has_syscall(self, b : Block):
+        # FIXME Need to indicate possible None return
+        """
+        An internal method which checks whether the jumpkind of a Block is
+        a syscall.
+
+        :param Block b: the relevant Block
+        :return bool: Whether the jumpkind is a syscall
+        """
+        try:
+            return b.vex.jumpkind.startswith("Ijk_Sys")
+        except:
+            return None
 
     def reconstruct_bbl_addr_graph(self):
         """

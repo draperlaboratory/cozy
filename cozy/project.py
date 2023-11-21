@@ -8,28 +8,7 @@ from cle import Backend
 
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
 
-class RunResult:
-    """
-    Base class for a result of running a :py:class:`~cozy.project.Session`.
-
-    :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
-    """
-    def __init__(self, assume_warnings: list[tuple[Assume, SimState]]):
-        self.assume_warnings = assume_warnings
-
-class TerminatedResult(RunResult):
-    """
-    This class is used for storing the results of running a session where all states either terminated or ended in an error.
-
-    :ivar list[SimState] deadended: States that reached normal termination.
-    :ivar list[ErrorRecord] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
-    """
-    def __init__(self, deadended: list[SimState], errored: list[ErrorRecord], assume_warnings: list[tuple[Assume, SimState]]):
-        super().__init__(assume_warnings)
-        self.deadended = deadended
-        self.errored = errored
-
-class AssertFailed(RunResult):
+class AssertFailed:
     """
     This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
 
@@ -37,11 +16,34 @@ class AssertFailed(RunResult):
     :ivar claripy.ast.bool cond: The condition that caused the assertion to trigger
     :ivar SimState failure_state: The state that was created to test the assertion.
     """
-    def __init__(self, assertion: Assert, cond: claripy.ast.bool, failure_state: SimState, assume_warnings: list[tuple[Assume, SimState]]):
-        super().__init__(assume_warnings)
+    def __init__(self, assertion: Assert, cond: claripy.ast.bool, failure_state: SimState):
         self.cond = cond
         self.assertion = assertion
         self.failure_state = failure_state
+
+class RunResult:
+    """
+    This class is used for storing the results of running a session.
+
+    :ivar list[SimState] deadended: States that reached normal termination.
+    :ivar list[ErrorRecord] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
+    :ivar list[AssertFailed] asserts_failed: States where an assertion was able to be falsified.
+    :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
+    """
+    def __init__(self, deadended: list[SimState], errored: list[ErrorRecord], asserts_failed: list[AssertFailed], assume_warnings: list[tuple[Assume, SimState]]):
+        self.deadended = deadended
+        self.errored = errored
+        self.asserts_failed = asserts_failed
+        self.assume_warnings = assume_warnings
+
+    def assertion_triggered(self) -> bool:
+        """
+        Returns True if there were any assertions triggered during this run.
+
+        :return: True if there were assertions triggered.
+        :rtype: bool
+        """
+        return len(self.asserts_failed) > 0
 
 # This on_mem_write is designed to be attached as a breakpoint that is triggered
 # whenever memory is written. This hook simply logs the current instruction pointer
@@ -168,7 +170,7 @@ class Session:
         for state in states:
             state.history.custom_constraints = state.solver.constraints
 
-    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> AssertFailed | TerminatedResult:
+    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> RunResult:
         """
         Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.
 
@@ -177,7 +179,7 @@ class Session:
         :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will be cached, which is required for performing memoized binary search when diffing states.
         :param int | None ret_addr: What address to return to if calling as a function
         :return: The result of running this session.
-        :rtype: AssertFailed | TerminatedResult
+        :rtype: RunResult
         """
 
         # TODO: Figure out if we can safely remove this restriction. Initial tests seem to suggest that
@@ -229,6 +231,7 @@ class Session:
         simgr = self.proj.angr_proj.factory.simulation_manager(state, veritesting=False)
 
         assume_warnings: list[tuple[Assume, SimState]] = []
+        asserts_failed: list[AssertFailed] = []
 
         if len(self.directives) > 0:
             addrs_to_directive = {}
@@ -270,7 +273,8 @@ class Session:
                                 state_cpy = found_state.copy()
                                 state_cpy.add_constraints(~cond)
                                 if state_cpy.satisfiable():
-                                    return AssertFailed(directive, cond, state_cpy, assume_warnings)
+                                    asserts_failed.append(AssertFailed(directive, cond, state_cpy))
+                                    prune_states.add(found_state)
                             elif isinstance(directive, VirtualPrint):
                                 if 'virtual_prints' in found_state.globals:
                                     accum_prints = found_state.globals['virtual_prints'].copy()
@@ -311,7 +315,7 @@ class Session:
                 if cache_constraints:
                     self._save_constraints(simgr.active)
 
-        return TerminatedResult(simgr.deadended, simgr.errored, assume_warnings)
+        return RunResult(simgr.deadended, simgr.errored, asserts_failed, assume_warnings)
 
 class Project:
     """

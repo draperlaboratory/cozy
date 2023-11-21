@@ -100,11 +100,10 @@ def run(sess, use_assert, cache_intermediate_states=False):
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
     result = sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=cache_intermediate_states)
 
-    if isinstance(result, AssertFailed):
-        print(cozy.analysis.AssertFailedResults(result).report({"size": size, "totalram": totalram}))
-        return None
-    else:
-        return result
+    if use_assert:
+        print(cozy.analysis.AssertFailedInfo.from_run_result(result).report({"size": size, "totalram": totalram}))
+
+    return result
 
 def run_prepatched():
     def run_with_assert():
@@ -137,9 +136,7 @@ def run_postpatched():
     def run_with_assert():
         print("Running postpatched with assertion that size <= totalram...")
         sess = proj_postpatched.session(onMessageLength_mangled)
-        ret = run(sess, True, cache_intermediate_states=True)
-        if ret is not None:
-            print("No asserts triggered!")
+        return run(sess, True, cache_intermediate_states=True)
 
     def run_without_assert():
         sess = proj_postpatched.session(onMessageLength_mangled)
@@ -165,33 +162,39 @@ def run_evil():
     return sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=True)
 
 
-pre_patched = run_prepatched()
-attempted_patch = run_attempted_patch()
-post_patched = run_postpatched()
-evil = run_evil()
+pre_patched_results = run_prepatched()
+attempted_patch_results = run_attempted_patch()
+post_patched_results = run_postpatched()
+evil_results = run_evil()
 
 if input("Would you like to visualize the pre-patch vs attempted patch? (y/n)") == "y":
-    comparison_results = cozy.analysis.ComparisonResults(pre_patched, attempted_patch, [])
+    comparison_results = cozy.analysis.Comparison(pre_patched_results, attempted_patch_results)
     print("\nComparison Results, pre-patch vs attempted patch:\n")
     print(comparison_results.report({"size": size, "totalram": totalram}))
-    cozy.execution_graph.compare_and_viz(proj_prepatched, proj_attempted_patch, pre_patched, attempted_patch,
-                                         args={"size": size, "totalram": totalram},
-                                         num_examples=2, open_browser=True)
+    cozy.execution_graph.visualize_comparison(proj_prepatched, proj_attempted_patch,
+                                              pre_patched_results, attempted_patch_results,
+                                              comparison_results,
+                                              args={"size": size, "totalram": totalram},
+                                              num_examples=2, open_browser=True)
 elif input("Would you like to visualize the pre-patch vs the post-patch? (y/n)") == "y":
-    comparison_results = cozy.analysis.ComparisonResults(pre_patched, post_patched, [])
+    comparison_results = cozy.analysis.Comparison(pre_patched_results, post_patched_results)
 
     print("\nComparison Results, pre-patch vs post-patch:\n")
     print(comparison_results.report({"size": size, "totalram": totalram}))
 
-    cozy.execution_graph.compare_and_viz(proj_prepatched, proj_postpatched, pre_patched, post_patched,
-                                         args={"size": size, "totalram": totalram},
-                                         num_examples=2, open_browser=True)
+    cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
+                                              pre_patched_results, post_patched_results,
+                                              comparison_results,
+                                              args={"size": size, "totalram": totalram},
+                                              num_examples=2, open_browser=True)
 elif input("Would you like to compare pre-patch vs evil? (y/n)") == "y":
-    comparison_results = cozy.analysis.ComparisonResults(pre_patched, evil, [])
+    comparison_results = cozy.analysis.Comparison(pre_patched_results, evil_results)
 
     print("\nComparison Results, pre-patch vs evil:\n")
     print(comparison_results.report({"size": size, "totalram": totalram}))
 
-    cozy.execution_graph.compare_and_viz(proj_prepatched, proj_evil, pre_patched, evil,
-                                         args={"size": size, "totalram": totalram},
-                                         num_examples=2, open_browser=True)
+    cozy.execution_graph.visualize_comparison(proj_prepatched, proj_evil,
+                                              pre_patched_results, evil_results,
+                                              comparison_results,
+                                              args={"size": size, "totalram": totalram},
+                                              num_examples=2, open_browser=True)
