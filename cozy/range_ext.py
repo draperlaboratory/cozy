@@ -52,26 +52,3 @@ def subtract_range_lists(ranges_a: list[range], ranges_b: list[range]) -> list[r
             ranges_a_prime.extend(subtract_range(ra, rb))
         ret = ranges_a_prime
     return ret
-
-def test():
-    for a in range(-5, 6):
-        for b in range(-5, 6):
-            for c in range(-5, 6):
-                for d in range(-5, 6):
-                    if a <= b and c <= d:
-                        range_a = range(a, b)
-                        range_b = range(c, d)
-                        expect = set(range_a) - set(range_b)
-                        lst = subtract_range(range_a, range_b)
-                        if len(lst) > 0:
-                            res = set.union(*[set(r) for r in lst])
-                        else:
-                            res = {}
-                        if frozenset(expect) != frozenset(res):
-                            print(range_a, range_b)
-                            print(expect)
-                            print(res)
-                            return
-    print("Passed!")
-
-print(subtract_range_lists([range(0,5), range(3,10)],[range(2,6),range(10,20)]))

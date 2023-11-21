@@ -4,6 +4,8 @@ import claripy
 from angr import SimState
 from enum import Enum
 
+import portion as P
+
 from angr.sim_manager import ErrorRecord
 from angr.state_plugins import SimStateHistory
 from . import claripy_ext
@@ -171,8 +173,8 @@ class StateDiff:
             #if ignore_addrs is not None:
             #    range_ext.remove_range_list(diff_addrs_old, ignore_addrs)
 
-            diff_addr_ranges: list[range] = list(sl.globals['mem_writes'].keys())
-            diff_addr_ranges.extend(sr.globals['mem_writes'].keys())
+            left_mem_writes = sl.globals['mem_writes']
+            right_mem_writes = sl.globals['mem_writes']
 
             # Note that diffs does not necessarily contain the addresses of the program data itself,
             # which is what we would expect. Testing with angr showed that the page(s) containing the
@@ -180,9 +182,17 @@ class StateDiff:
             # ex: state.memory.load(fun_addr, 1)
             # In any case it is probably a good idea to remove any patched addresses just in case
             # the state's memory actually contains them
+
+            # Here we remove the requested intervals from the interval dictionaries
             if ignore_addrs is not None:
-                ignore_addrs_lst = list(ignore_addrs)
-                diff_addr_ranges = range_ext.subtract_range_lists(diff_addr_ranges, ignore_addrs_lst)
+                left_mem_writes = left_mem_writes.copy()
+                right_mem_writes = right_mem_writes.copy()
+                for rng in ignore_addrs:
+                    del left_mem_writes[P.closedopen(rng.start, rng.stop)]
+                    del right_mem_writes[P.closedopen(rng.start, rng.stop)]
+
+            diff_addr_ranges = {range(interval.lower, interval.upper) for interval in left_mem_writes.keys()}
+            diff_addr_ranges.update({range(interval.lower, interval.upper) for interval in right_mem_writes.keys()})
 
             # Loop over all the address that could possibly be different and save the ones that are actually different
             for addr_range in diff_addr_ranges:
@@ -512,9 +522,16 @@ class Comparison:
 
                         (mem_diff, reg_diff) = diff
 
+                        def get_ip_set(interval_dict, r: range):
+                            # Query the interval dictionary for all entries in the desired range, then union
+                            # all of those sets together
+                            ip_sets = [s for (n, s) in interval_dict[P.closedopen(r.start, r.stop)].values()]
+                            return frozenset().union(*ip_sets)
+
                         mem_diff_ip = {
-                            addr_range: (
-                            state_pre.globals['mem_writes'].get(addr_range), state_post.globals['mem_writes'].get(addr_range))
+                            addr_range:
+                                (get_ip_set(state_pre.globals['mem_writes'], addr_range),
+                                 get_ip_set(state_post.globals['mem_writes'], addr_range))
                             for addr_range in mem_diff.keys()
                         }
 

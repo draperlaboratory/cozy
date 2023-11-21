@@ -1,6 +1,8 @@
 import sys
 from collections.abc import Callable
 
+import portion as P
+
 import angr, claripy
 from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord
@@ -48,13 +50,23 @@ class RunResult:
 # This on_mem_write is designed to be attached as a breakpoint that is triggered
 # whenever memory is written. This hook simply logs the current instruction pointer
 # for each written byte in state.globals['mem_writes']
+
+_mem_write_ctr = 0
+
 def _on_mem_write(state):
-    # TODO: Switch from Python dictionary to purely function map/dictionary
-    # data structure for better performance.
+    # We use _mem_write_ctr to stop the IntervalDict from merging together adjacent intervals
+    # For example if we do the following the intervals will be merged:
+    # d = I.IntervalDict()
+    # d[I.closedopen(0,3)] = set()
+    # d[I.closedopen(3,5)] = set()
+    # d
+    # >>> {[0,5): set()}
+    # We want to prevent that from happening
+    global _mem_write_ctr
     if 'mem_writes' in state.globals:
-        mem_writes = dict(state.globals['mem_writes'])
+        mem_writes = state.globals['mem_writes'].copy()
     else:
-        mem_writes = dict()
+        mem_writes = P.IntervalDict()
     sym_start_addr = state.inspect.mem_write_address
     if isinstance(sym_start_addr, claripy.ast.BV):
         if sym_start_addr.concrete:
@@ -70,11 +82,15 @@ def _on_mem_write(state):
     ip_frozenset = frozenset([state.ip])
     if start_addrs is not None and length is not None:
         for st_addr in start_addrs:
-            write_range = range(st_addr, st_addr + length)
-            if len(start_addrs) > 1 and write_range in mem_writes:
-                mem_writes[write_range] = mem_writes[write_range].union(ip_frozenset)
+            write_range = P.closedopen(st_addr, st_addr + length)
+            if len(start_addrs) > 1:
+                existing_ip = [ip_set for (n, ip_set) in mem_writes[write_range].values()]
+                new_ip = ip_frozenset.union(*existing_ip)
+                mem_writes[write_range] = (_mem_write_ctr, new_ip)
+                _mem_write_ctr += 1
             else:
-                mem_writes[write_range] = ip_frozenset
+                mem_writes[write_range] = (_mem_write_ctr, ip_frozenset)
+                _mem_write_ctr += 1
     state.globals['mem_writes'] = mem_writes
 
 # A session is a particular run of a project, consisting of attached directives
