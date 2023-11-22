@@ -9,9 +9,12 @@ from . import analysis
 from .server import start_viz_server
 
 def _serialize_diff(diff):
-    for k,[v1,v2] in diff.items():
-        diff[k] = [str(v1),str(v2)]
-    return diff
+    def convert_key(k) -> str:
+        if isinstance(k, range):
+            return "{} .. {}".format(hex(k.start), hex(k.stop - 1))
+        else:
+            return str(k)
+    return {convert_key(k): (str(v1), str(v2)) for (k, (v1, v2)) in diff.items()}
 
 def dump_comparison(proj_a: Project, proj_b: Project,
                     rslt_a: RunResult, rslt_b: RunResult,
