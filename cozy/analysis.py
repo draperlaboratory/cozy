@@ -66,7 +66,7 @@ class StateDiff:
                    ignore_addrs: collections.abc.Iterable[range] | None = None,
                    compute_mem_diff=True,
                    compute_reg_diff=True) -> (
-            tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.Base, claripy.ast.Base]]] | None):
+            tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None):
         """
         Compares two states to find differences in memory. This function will return None if the two states have non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are different between the two. This function is based off of angr.analyses.congruency_check.CongruencyCheck().compare_states, but has been customized for our purposes. Note that this function may use memoization to enhance performance.
 
@@ -76,7 +76,7 @@ class StateDiff:
         :param bool compute_mem_diff: If this flag is True, then we will diff the memory. If this is false, then the first element of the return tuple will be None.
         :param compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the second element of the return tuple will be None.
         :return: None if the two states are not compatible, otherwise returns a tuple containing the memory and register differences.
-        :rtype: tuple[dict[int, tuple[claripy.ast.Base, claripy.ast.Base]], dict[str, tuple[claripy.ast.Base, claripy.ast.Base]]] | None
+        :rtype: tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None
         """
 
         if self.use_memoized_binary_search:
