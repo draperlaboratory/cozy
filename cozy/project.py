@@ -93,10 +93,18 @@ def _on_mem_write(state):
                 _mem_write_ctr += 1
     state.globals['mem_writes'] = mem_writes
 
-# A session is a particular run of a project, consisting of attached directives
-# (asserts/assumes). You can malloc memory for storage prior to running the session.
-# Once you are ready to run the session, use the run method.
 class Session:
+    """
+    A session is a particular run of a project, consisting of attached directives (asserts/assumes).
+    You can malloc memory for storage prior to running the session.
+    Once you are ready to run the session, use the run method.
+
+    :ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify properties of the state before a run.
+    :ivar Project proj: The Project tied to this session.
+    :ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the session starts in an entry state.
+    :ivar list[Directive] directives: The directives added to this session.
+    :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
+    """
     def __init__(self, proj, start_fun: str | int | None=None):
         """
         Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
@@ -117,10 +125,7 @@ class Session:
 
         # Initialize mutable state related to this session
         self.directives = []
-        self.heap_registered = False
         self.has_run = False
-
-        self.state_strong_refs = []
 
     def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
         """
@@ -141,19 +146,17 @@ class Session:
         :return: A pointer to the allocated memory block.
         :rtype: int
         """
-        if not self.heap_registered:
-            self.state.register_plugin("heap", angr.state_plugins.heap.heap_ptmalloc.SimHeapPTMalloc())
-            self.heap_registered = True
-        return self.state.heap.malloc(num_bytes)
+        return self.state.heap._malloc(num_bytes)
 
-    def store(self, addr: int, data: claripy.ast.bits):
+    def store(self, addr: int, data: claripy.ast.bits, **kwargs):
         """
         Stores data at some address. This method simply forwards the arguments to state.memory.store.
 
         :param int addr: Address to store the data at.
         :param claripy.ast.bits data: The data to store in memory.
+        :param kwargs: Additional keyword arguments to pass to state.memory.store
         """
-        self.state.memory.store(addr, data)
+        self.state.memory.store(addr, data, **kwargs)
 
     def add_directives(self, *directives: Directive) -> None:
         """

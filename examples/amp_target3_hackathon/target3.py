@@ -90,12 +90,12 @@ def run(sess, use_assert, cache_intermediate_states=False):
 
     # The buffer that contains the message we just read. Since we are exploring the path where we successfully read a length, use 4 bytes to store the length
     size_ptr = sess.malloc(0x4)
-    sess.state.memory.store(size_ptr, size, endness=proj_prepatched.angr_proj.arch.memory_endness)
+    sess.store(size_ptr, size, endness=proj_prepatched.angr_proj.arch.memory_endness)
     size_ptr_ptr = sess.malloc(4)
-    sess.state.memory.store(size_ptr_ptr, claripy.BVV(size_ptr, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
+    sess.store(size_ptr_ptr, claripy.BVV(size_ptr, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
     this_obj = sess.malloc(0x100)
     # Set _retry_time_handler to be -1
-    sess.state.memory.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
+    sess.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
 
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
     result = sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=cache_intermediate_states)
@@ -150,13 +150,13 @@ def run_evil():
 
     # The buffer that contains the message we just read. Since we are exploring the path where we successfully read a length, use 4 bytes to store the length
     size_ptr = sess.malloc(0x4)
-    sess.state.memory.store(size_ptr, size, endness=proj_prepatched.angr_proj.arch.memory_endness)
+    sess.store(size_ptr, size, endness=proj_prepatched.angr_proj.arch.memory_endness)
     size_ptr_ptr = sess.malloc(4)
-    sess.state.memory.store(size_ptr_ptr, claripy.BVV(size_ptr, 32),
+    sess.store(size_ptr_ptr, claripy.BVV(size_ptr, 32),
                             endness=proj_prepatched.angr_proj.arch.memory_endness)
     this_obj = sess.malloc(0x100)
     # Set _retry_time_handler to be -1
-    sess.state.memory.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
+    sess.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
 
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
     return sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=True)
