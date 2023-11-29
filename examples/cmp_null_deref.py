@@ -48,12 +48,9 @@ def run_pre_patched():
     sess.add_directives(mem_write_okay)
 
     args = construct_args(sess)
-    run_results = sess.run(*args)
+    run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
     print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
-
-    sess = proj.session('my_fun')
-    args = construct_args(sess)
-    return (proj, sess.run(*args, cache_intermediate_states=dump_execution_graphs))
+    return (proj, run_results)
 
 # The patched function is the same as the original, except it has an if statement
 # to check if the input argument is NULL
@@ -80,22 +77,19 @@ def run_post_patched():
     sess = proj.session('my_fun')
     sess.add_directives(*directives)
     args = construct_args(sess)
-    run_results = sess.run(*args)
+    run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
     print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
-
-    sess = proj.session('my_fun')
-    args = construct_args(sess)
-    return (proj, sess.run(*args, cache_intermediate_states=dump_execution_graphs))
+    return (proj, run_results)
 
 print("Running pre-patched.")
 (pre_proj, pre_patched) = run_pre_patched()
 
-print("There are {} deadended states and {} errored states for the pre-patch run.".format(len(pre_patched.deadended), len(pre_patched.errored)))
+print("There are {} deadended states, {} assert failed states, and {} errored states for the pre-patch run.".format(len(pre_patched.deadended), len(pre_patched.asserts_failed), len(pre_patched.errored)))
 
 print("\nRunning post-patch.")
 (post_proj, post_patched) = run_post_patched()
 
-print("There are {} deadended states and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.errored)))
+print("There are {} deadended states, {} assert failed states, and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.asserts_failed), len(post_patched.errored)))
 
 args = (arg0,)
 comparison_results = analysis.Comparison(pre_patched, post_patched)

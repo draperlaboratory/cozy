@@ -273,6 +273,7 @@ class Session:
                 simgr.move(from_stash='active', to_stash='found', filter_func=lambda state: state.addr in find_addrs)
 
                 prune_states = set()
+                add_states = set()
 
                 for found_state in simgr.found:
                     if found_state.satisfiable():
@@ -288,12 +289,26 @@ class Session:
                                         print(directive.info_str)
                             elif isinstance(directive, Assert):
                                 cond = directive.condition_fun(found_state)
+                                # Split execution into two states: one where the assertion holds and one where it
+                                # doesn't hold
+                                true_branch = found_state.copy()
+                                true_branch.add_constraints(cond)
+                                add_states.add(true_branch)
+
                                 # To check for validity, we need to check that (not cond) is unsatisfiable
-                                state_cpy = found_state.copy()
-                                state_cpy.add_constraints(~cond)
-                                if state_cpy.satisfiable():
-                                    asserts_failed.append(AssertFailed(directive, cond, state_cpy))
-                                    prune_states.add(found_state)
+                                false_branch = found_state.copy()
+                                false_branch.add_constraints(~cond)
+                                if false_branch.satisfiable():
+                                    if cache_intermediate_states:
+                                        self._save_states([false_branch])
+                                    if cache_constraints:
+                                        self._save_constraints([false_branch])
+                                    # If the false branch is satisfiable, add it to the list of failed assert states
+                                    # This essentially halts execution on the false branch
+                                    asserts_failed.append(AssertFailed(directive, cond, false_branch))
+                                    # If false_branch is not satisfiable, then there is no way for the assertion to fail.
+                                # In any case, we should prune out the original state
+                                prune_states.add(found_state)
                             elif isinstance(directive, VirtualPrint):
                                 if 'virtual_prints' in found_state.globals:
                                     accum_prints = found_state.globals['virtual_prints'].copy()
@@ -310,6 +325,9 @@ class Session:
                 # After we are done iterating over the found states, it is now safe to prune the ones that triggered
                 # an error
                 simgr.move(from_stash='found', to_stash='pruned', filter_func=lambda state: state in prune_states)
+
+                for state in add_states:
+                    simgr.found.append(state)
 
                 if cache_intermediate_states:
                     self._save_states(simgr.found)
