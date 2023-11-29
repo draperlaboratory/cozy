@@ -192,6 +192,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
             if flag_syscalls: attr['has_syscall'] = eg._has_syscall(attr["contents"]) or False
             attr['contents'] = eg._get_bbl_asm(attr["contents"]) or "*"
             attr['constraints'] = list(map(str, attr["constraints"])) or "*"
+            if "failed_cond" in attr: attr['failed_cond'] = str(attr["failed_cond"]) or "*"
             del attr['state']
     stringify_attrs(eg_a, g_a)
     stringify_attrs(eg_b, g_b)
@@ -220,8 +221,16 @@ class ExecutionGraph:
             leaves.append(state)
         for error_record in result.errored:
             msg = error_record.error.args[0]
-            self.graph.add_node(error_record.state, error=msg)
-            leaves.append(error_record.state)
+            state = error_record.state
+            self.graph.add_node(state, error=msg)
+            leaves.append(state)
+        for assert_fail_record in result.asserts_failed:
+            cond = assert_fail_record.cond
+            state = assert_fail_record.failure_state
+            assertion_info = assert_fail_record.assertion.info_str or "unlabled assertion"
+            assertion_addr = assert_fail_record.assertion.addr
+            self.graph.add_node(state, assertion_info=assertion_info, assertion_addr=assertion_addr, failed_cond=cond)
+            leaves.append(state)
         for state in leaves:
             target = state
             for hist in reversed(list(state.history.parents)):

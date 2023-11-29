@@ -107,6 +107,19 @@ export default class Tooltip extends Component {
             simproc => html`<div>${simproc}</div>`
           )}</pre>`
       }
+      case "assertion" : {
+        if (this.state.node?.data().assertion_info) {
+          return html`
+          <div>${this.state.node?.data().assertion_info}</div>
+          <pre>
+          Condition: ${this.state.node?.data().failed_cond}<br/>
+          Address: ${this.state.node?.data().assertion_addr}
+          </pre>
+          `
+        } else {
+          return null
+        }
+      }
       default: return null;
     }
   }
@@ -170,6 +183,13 @@ export default class Tooltip extends Component {
             data-highlighted=${state.mode == "simprocs"} 
             onClick=${() => this.setView("simprocs")}>
             SimProcedures
+          </button>`
+        }
+        ${this.state.node?.data().assertion_info && html`
+          <button 
+            data-highlighted=${state.mode == "assertion"} 
+            onClick=${() => this.setView("assertion")}>
+            Assertion
           </button>`
         }
       </div>
