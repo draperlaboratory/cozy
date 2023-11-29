@@ -78,14 +78,14 @@ export const style = [
     }
   },
   {
-    selector: 'node[?error]',
+    selector: 'node[?error], node[?assertion_info]',
     style: { 'background-color': () => settings.showingErrors
       ? Colors.errorNode
       : Colors.defaultNode
     }
   },
   {
-    selector: 'node.pathHighlight[?error]',
+    selector: 'node.pathHighlight[?error], node.pathHighlight[?assertion_info]',
     style: {
       'border-width':'0px',
       'background-color': () => settings.showingErrors
