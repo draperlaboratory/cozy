@@ -48,12 +48,10 @@ def run_pre_patched():
     sess.add_directives(mem_write_okay)
 
     args = construct_args(sess)
-    run_results = sess.run(*args)
+    run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
     print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
 
-    sess = proj.session('my_fun')
-    args = construct_args(sess)
-    return (proj, sess.run(*args, cache_intermediate_states=dump_execution_graphs))
+    return (proj, run_results)
 
 # The patched function is the same as the original, except it has an if statement
 # to check if the input argument is NULL
@@ -80,12 +78,10 @@ def run_post_patched():
     sess = proj.session('my_fun')
     sess.add_directives(*directives)
     args = construct_args(sess)
-    run_results = sess.run(*args)
+    run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
     print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
 
-    sess = proj.session('my_fun')
-    args = construct_args(sess)
-    return (proj, sess.run(*args, cache_intermediate_states=dump_execution_graphs))
+    return (proj, run_results)
 
 print("Running pre-patched.")
 (pre_proj, pre_patched) = run_pre_patched()

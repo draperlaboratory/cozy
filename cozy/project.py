@@ -292,6 +292,10 @@ class Session:
                                 state_cpy = found_state.copy()
                                 state_cpy.add_constraints(~cond)
                                 if state_cpy.satisfiable():
+                                    if cache_intermediate_states:
+                                        self._save_states([state_cpy])
+                                    if cache_constraints:
+                                        self._save_constraints([state_cpy])
                                     asserts_failed.append(AssertFailed(directive, cond, state_cpy))
                                     prune_states.add(found_state)
                             elif isinstance(directive, VirtualPrint):
