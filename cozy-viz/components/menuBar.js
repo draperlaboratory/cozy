@@ -66,11 +66,11 @@ class Menu extends Component {
 
 class MenuOption extends Component {
   render(props) {
-    return html`<option 
+    return html`<div class="option"
       data-selected=${props.selected} 
       onClick=${props.onClick}>
           ${props.children}
-    </option>`
+    </div>`
   }
 }
 

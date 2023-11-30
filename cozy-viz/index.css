@@ -40,16 +40,16 @@ button:disabled {
   font-family:monospace;
 }
 
-#menubar .options-wrapper option {
+#menubar .options-wrapper .option {
   padding:.25em .5em .25em .5em;
 }
 
-#menubar .options-wrapper option:hover {
+#menubar .options-wrapper .option:hover {
   color:white;
   background:black;
 }
 
-#menubar .options-wrapper option[data-selected="true"] {
+#menubar .options-wrapper .option[data-selected="true"] {
   font-weight:bold;
 }
 
@@ -119,6 +119,10 @@ button:disabled {
   max-height:50vh;
   max-width:400px;
   overflow:scroll;
+}
+
+#tooltip-data::-webkit-scrollbar {
+  display:none;
 }
 
 /* Diff panel */
