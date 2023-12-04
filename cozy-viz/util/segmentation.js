@@ -4,7 +4,10 @@ export const segmentationMixin = {
 
   // XXX: It would be possible to memoize on constraints here, but that adds
   // some complexity when the granularity of the graph changes
-  getSegment(node) {
+  // 
+  // The connector is an extra function that we can use to potentially link
+  // segments with different constraints under some conditions
+  getSegment(node, connector) {
     const constraints =  node.data().constraints
 
     // first we ascend to the highest node with the given constraints
@@ -20,7 +23,10 @@ export const segmentationMixin = {
       const lastGen = generations[generations.length - 1]
       const nextGen = lastGen.flatMap(n => 
         n.outgoers('node')
-         .filter(o => constraintsEq(o.data().constraints, constraints))
+         .filter(outgoer => {
+           if (constraintsEq(outgoer.data().constraints, n.data().constraints)) return true
+           if (connector?.(outgoer, n)) return true
+         })
          .toArray()
       )
       if (nextGen.length > 0) generations.push(nextGen)
@@ -38,15 +44,29 @@ export const segmentationMixin = {
     seg.addClass("segmentHighlight")
   },
 
+  // this shows a generalized segment, in which we ignore additional
+  // constraints that don't narrow the pool of compatible nodes on the opposite
+  // side.
+  showCompatibilitySegment(node, cy) {
+    const connector = (n,o) => {
+      const ncompat = this.getLeavesCompatibleWith(n,cy)
+      const ocompat = this.getLeavesCompatibleWith(o,cy)
+      return ncompat.size == ocompat.size
+    }
+    const seg = this.getSegment(node, connector)
+    this.elements().removeClass("segmentHighlight")
+    seg.addClass("segmentHighlight")
+  },
+
   // gets all leaves in cy compatible with a given
   // node
   getLeavesCompatibleWith(node, cy) {
     const leaves = node.successors().add(node).leaves()
     const ids = leaves.flatMap(leaf => Object.keys(leaf.data().compatibilities))
       .map(s => `#${s}`)
-    const compats = []
+    const compats = new Set()
     for (const id of ids) {
-      compats.push(cy.$(id)[0])
+      compats.add(cy.$(id)[0])
     }
     return compats
   },
@@ -56,7 +76,8 @@ export const segmentationMixin = {
   // each member of leaves
   getMinimalCeiling(leaves) {
     let depth = 1;
-    const canonicalPreds = leaves[0].predecessors('node')
+    const [canonicalLeaf] = leaves
+    const canonicalPreds = canonicalLeaf.predecessors('node')
     while (true) for (const leaf of leaves) {
       // only look up once per loop. Could be much further optimized.
       const preds = leaf.predecessors('node')

@@ -271,7 +271,7 @@ export default class App extends Component {
       if (ref.other.cy) {
         const compats = ref.cy.getLeavesCompatibleWith(node,ref.other.cy)
         ref.cy.showSegment(ev.target)
-        ref.other.cy.showSegment(ref.other.cy.getMinimalCeiling(compats))
+        ref.other.cy.showCompatibilitySegment(ref.other.cy.getMinimalCeiling(compats), ref.cy)
       }
       if (ref.cy.loci && !ev.target.hasClass('pathHighlight')) return;
       this.tooltip.current.attachTo(ev.target)
