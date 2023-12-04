@@ -11,6 +11,7 @@ Welcome to cozy's documentation!
    :caption: Contents:
 
    gettingstarted
+   launchingavisualization
 
 
 

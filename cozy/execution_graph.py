@@ -51,7 +51,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
-        :class:`cozy.analysis.PairComparison`. Default = [].
+        :class:`cozy.analysis.CompatiblePair`. Default = [].
     :param int, optional num_examples: The number of concrete examples to
         generate and incorporate into the JSON, for each dead-end state. Default 0.
     """
@@ -100,7 +100,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
-        :class:`cozy.analysis.PairComparison`. Default [].
+        :class:`cozy.analysis.CompatiblePair`. Default [].
     :param int, optional num_examples: The number of concrete examples to
         generate and incorporate into the JSON, for each dead-end state. Default 0.
     :param bool, optional open_browser: Automatically open cozy-viz with the
@@ -145,7 +145,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
-        :class:`cozy.analysis.PairComparison`. Default = [].
+        :class:`cozy.analysis.CompatiblePair`. Default = [].
     :param int, optional num_examples: The number of concrete examples to
         generate and incorporate into the JSON, for each dead-end state. Default 0.
 
@@ -168,7 +168,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
         for nb in leaves_b:
             state_b = g_b.nodes[nb]["state"]
             if comparison_results.is_compatible(state_a, state_b):
-                comp = comparison_results.get_comparison(state_a, state_b)
+                comp = comparison_results.get_pair(state_a, state_b)
                 concretion = comp.concrete_examples(args, num_examples=num_examples)
                 g_a.nodes[na]["compatibilities"][nb] = {
                         "memdiff": _serialize_diff(comp.mem_diff),
@@ -216,17 +216,18 @@ class ExecutionGraph:
         # TODO: if graph of states becomes too expensive, switch to graph of histories
         self.graph = nx.DiGraph()
         leaves = []
-        for state in result.deadended:
+        for deadended_state in result.deadended:
+            state = deadended_state.state
             self.graph.add_node(state)
             leaves.append(state)
         for error_record in result.errored:
-            msg = error_record.error.args[0]
+            msg = str(error_record.error)
             state = error_record.state
             self.graph.add_node(state, error=msg)
             leaves.append(state)
         for assert_fail_record in result.asserts_failed:
             cond = assert_fail_record.cond
-            state = assert_fail_record.failure_state
+            state = assert_fail_record.state
             assertion_info = assert_fail_record.assertion.info_str or "unlabled assertion"
             assertion_addr = assert_fail_record.assertion.addr
             self.graph.add_node(state, assertion_info=assertion_info, assertion_addr=assertion_addr, failed_cond=cond)

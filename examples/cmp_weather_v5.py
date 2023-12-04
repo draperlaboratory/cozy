@@ -4,7 +4,7 @@ import cozy.analysis as analysis
 import cozy.claripy_ext as claripy_ext
 import cozy.execution_graph as execution_graph
 from cozy.directive import ErrorDirective
-from cozy.project import Project
+from cozy.project import Project, RunResult
 from cozy.constants import *
 import cozy.primitives as primitives
 import angr, claripy
@@ -76,13 +76,13 @@ def run(proj, **kwargs):
     initialize_state(sess)
     return sess.run(**kwargs)
 
-def run_weather_orig(**kwargs):
+def run_weather_orig(**kwargs) -> RunResult:
     return run(proj_orig, **kwargs)
 
-def run_weather_patched_1(**kwargs):
+def run_weather_patched_1(**kwargs) -> RunResult:
     return run(proj_patched_1, **kwargs)
 
-def run_weather_patched_2(**kwargs):
+def run_weather_patched_2(**kwargs) -> RunResult:
     return run(proj_patched_2, **kwargs)
 
 args = ({"latest_data_init": latest_data}, list(zip(vals, num_vals, next_args)))
@@ -111,24 +111,21 @@ print("Running weather-orig")
 weather_orig_states = run_weather_orig(cache_intermediate_states=cache_intermediate_states)
 
 if input("Would you like to view error states for weather-orig? (y/n)") == "y":
-    errored_info = analysis.ErroredInfo.from_run_result(weather_orig_states)
-    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_orig_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 input("Press enter to run weather-patched-1")
 
 print("\nRunning weather-patched-1")
 weather_patched_1_states = run_weather_patched_1(cache_intermediate_states=cache_intermediate_states)
 if input("Would you like to view error states for weather-patched-1? (y/n)") == "y":
-    errored_info = analysis.ErroredInfo.from_run_result(weather_patched_1_states)
-    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_patched_1_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 input("Press enter to run weather-patched-2")
 
 print("\nRunning weather-patched-2")
 weather_patched_2_states = run_weather_patched_2(cache_intermediate_states=cache_intermediate_states)
 if input("Would you like to view error states for weather-patched-2? (y/n)") == "y":
-    errored_info = analysis.ErroredInfo(weather_patched_2_states)
-    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_patched_2_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 if input("Would you like to compare weather-orig and weather-patched-1? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-ORIG and WEATHER-PATCHED-1")

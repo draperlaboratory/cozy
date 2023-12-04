@@ -1,7 +1,7 @@
 import archinfo
 
 import cozy.analysis as analysis
-from cozy.project import Project, AssertFailed
+from cozy.project import Project, AssertFailedState
 from cozy.directive import Assume, Assert
 from cozy.constants import *
 import cozy.primitives as primitives
@@ -45,11 +45,11 @@ def run_pre_patched():
             # Human readable information to show the user
             info_str="Dereferencing null pointer"
         )
-    sess.add_directives(mem_write_okay)
+    #sess.add_directives(mem_write_okay)
 
     args = construct_args(sess)
     run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
-    print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
+    print(run_results.report_asserts_failed(args))
     return (proj, run_results)
 
 # The patched function is the same as the original, except it has an if statement
@@ -78,7 +78,7 @@ def run_post_patched():
     sess.add_directives(*directives)
     args = construct_args(sess)
     run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
-    print(analysis.AssertFailedInfo.from_run_result(run_results).report(args))
+    print(run_results.report_asserts_failed(args))
     return (proj, run_results)
 
 print("Running pre-patched.")
@@ -91,7 +91,7 @@ print("\nRunning post-patch.")
 
 print("There are {} deadended states, {} assert failed states, and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.asserts_failed), len(post_patched.errored)))
 
-args = (arg0,)
+args = [arg0]
 comparison_results = analysis.Comparison(pre_patched, post_patched)
 
 if (dump_execution_graphs):

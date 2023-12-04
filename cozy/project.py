@@ -9,35 +9,24 @@ from angr.sim_manager import ErrorRecord
 from cle import Backend
 
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
-
-class AssertFailed:
-    """
-    This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
-
-    :ivar Assert assertion: The assertion that was triggered.
-    :ivar claripy.ast.bool cond: The condition that caused the assertion to trigger
-    :ivar SimState failure_state: The state that was created to test the assertion.
-    """
-    def __init__(self, assertion: Assert, cond: claripy.ast.bool, failure_state: SimState):
-        self.cond = cond
-        self.assertion = assertion
-        self.failure_state = failure_state
+from .terminal_state import TerminalState, AssertFailedState, ErrorState, DeadendedState
 
 class RunResult:
     """
     This class is used for storing the results of running a session.
 
-    :ivar list[SimState] deadended: States that reached normal termination.
-    :ivar list[ErrorRecord] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
+    :ivar list[DeadendedState] deadended: States that reached normal termination.
+    :ivar list[ErrorState] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
     :ivar list[AssertFailed] asserts_failed: States where an assertion was able to be falsified.
     :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
     """
-    def __init__(self, deadended: list[SimState], errored: list[ErrorRecord], asserts_failed: list[AssertFailed], assume_warnings: list[tuple[Assume, SimState]]):
+    def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState], asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]]):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
         self.assume_warnings = assume_warnings
 
+    @property
     def assertion_triggered(self) -> bool:
         """
         Returns True if there were any assertions triggered during this run.
@@ -46,6 +35,74 @@ class RunResult:
         :rtype: bool
         """
         return len(self.asserts_failed) > 0
+
+    def __str__(self):
+        return "RunResult({} deadended, {} errored, {} asserts_failed, {} assume_warnings)".format(len(self.deadended), len(self.errored), len(self.asserts_failed), len(self.assume_warnings))
+
+    def report_errored(self, args: any, concrete_arg_mapper: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+        """
+        Creates a human readable report about a list of errored states.
+
+        :param any args: The arguments to concretize
+        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+        :return: The report as a string
+        :rtype: str
+        """
+        if len(self.errored) == 0:
+            return "No errored states"
+        else:
+            output = ""
+            for err in self.errored:
+                output += "Error State #{}\n".format(err.state_id)
+                output += "{}\n".format(err.error)
+                concrete_vals_lst = err.concrete_examples(args, num_examples=num_examples)
+                output += "Here are {} concrete input(s):\n".format(len(concrete_vals_lst))
+                for (j, concrete_input) in enumerate(concrete_vals_lst):
+                    if concrete_arg_mapper is not None:
+                        concrete_args = concrete_arg_mapper(concrete_input.args)
+                    else:
+                        concrete_args = concrete_input.args
+                    output += "{}.\n".format(j + 1)
+                    output += "\t{}\n".format(str(concrete_args))
+                output += "\n"
+            return output
+
+    def report_asserts_failed(self, args: any, concrete_arg_mapper: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+        """
+        Creates a human readable report about a list of failed assertions.
+
+        :param any args: The arguments to concretize
+        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed state.
+        :return: The report as a string
+        :rtype: str
+        """
+        if len(self.asserts_failed) == 0:
+            return "No asserts triggered"
+        else:
+            output = ""
+            for state in self.asserts_failed:
+                output += "Assert for address {} was triggered: {}\n".format(hex(state.assertion.addr), str(state.cond))
+                if state.assertion.info_str is not None:
+                    output += state.assertion.info_str + "\n"
+                concrete_inputs = state.concrete_examples(args, num_examples)
+                output += "Here are {} concrete input(s) for this particular assertion:\n".format(len(concrete_inputs))
+                for (i, concrete_input) in enumerate(concrete_inputs):
+                    if concrete_arg_mapper is not None:
+                        concrete_args = concrete_arg_mapper(concrete_input.args)
+                    else:
+                        concrete_args = concrete_input.args
+                    output += "{}.\n".format(i + 1)
+                    output += "\t{}\n".format(str(concrete_args))
+                    if len(concrete_input.vprints) > 0:
+                        output += "Virtual prints:\n"
+                        for (pdirective, conc_print_val) in concrete_input.vprints:
+                            if pdirective.concrete_mapper is not None:
+                                conc_print_val = pdirective.concrete_mapper(conc_print_val)
+                            output += "{}: {}\n".format(pdirective.info_str, conc_print_val)
+                output += "\n\n"
+            return output
 
 # This on_mem_write is designed to be attached as a breakpoint that is triggered
 # whenever memory is written. This hook simply logs the current instruction pointer
@@ -250,7 +307,7 @@ class Session:
         simgr = self.proj.angr_proj.factory.simulation_manager(state, veritesting=False)
 
         assume_warnings: list[tuple[Assume, SimState]] = []
-        asserts_failed: list[AssertFailed] = []
+        asserts_failed: list[AssertFailedState] = []
 
         if len(self.directives) > 0:
             addrs_to_directive = {}
@@ -305,7 +362,8 @@ class Session:
                                         self._save_constraints([false_branch])
                                     # If the false branch is satisfiable, add it to the list of failed assert states
                                     # This essentially halts execution on the false branch
-                                    asserts_failed.append(AssertFailed(directive, cond, false_branch))
+                                    af = AssertFailedState(directive, cond, false_branch, len(asserts_failed))
+                                    asserts_failed.append(af)
                                     # If false_branch is not satisfiable, then there is no way for the assertion to fail.
                                 # In any case, we should prune out the original state
                                 prune_states.add(found_state)
@@ -352,7 +410,10 @@ class Session:
                 if cache_constraints:
                     self._save_constraints(simgr.active)
 
-        return RunResult(simgr.deadended, simgr.errored, asserts_failed, assume_warnings)
+        deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
+        errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
+
+        return RunResult(deadended, errored, asserts_failed, assume_warnings)
 
 class Project:
     """

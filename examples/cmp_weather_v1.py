@@ -69,7 +69,7 @@ def run_weather_1():
         fun_name='scan_temperatures',
         offset=0x4C,
         log_fun=lambda st: st.regs.eax,
-        info_str="Computed Average: ",
+        info_str="Computed Average",
         concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val, 32)
     )
 
@@ -90,7 +90,7 @@ def run_weather_2():
         fun_name='scan_temperatures',
         offset=0x46,
         log_fun=lambda st: st.regs.eax,
-        info_str="Computed Average: ",
+        info_str="Computed Average",
         concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val, 32)
     )
 
@@ -128,24 +128,21 @@ def concrete_mapper(integers_lst):
 print("Running weather-1")
 weather_1_states = run_weather_1()
 if input("Would you like to view error states for weather-1? (y/n)") == "y":
-    errored_info = analysis.ErroredInfo.from_run_result(weather_1_states)
-    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_1_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 input("Press enter to run weather-2")
 
 print("\nRunning weather-2")
 weather_2_states = run_weather_2()
 if input("Would you like to view error states for weather-2? (y/n)") == "y":
-    errored_info = analysis.ErroredInfo.from_run_result(weather_2_states)
-    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_2_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 input("Press enter to run weather-3")
 
 print("\nRunning weather-3")
 weather_3_states = run_weather_3()
 if input("Would you like to view error states for weather-3? (y/n)") == "y":
-    errored_info = analysis.ErroredInfo.from_run_result(weather_3_states)
-    print(errored_info.report(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_3_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
 
 mem_reg_diff = False
 if input("When comparing programs would you like to use memory and registers to perform the diffing? (y/n)") == "y":

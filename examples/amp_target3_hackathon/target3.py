@@ -1,7 +1,7 @@
 import cozy
 import claripy
 import angr
-from cozy.project import AssertFailed
+from cozy.project import AssertFailedState
 from angr.procedures.linux_kernel.sysinfo import sysinfo_ty
 
 onMessageLength_mangled = "_ZN3ros22TransportPublisherLink15onMessageLengthERKN5boost10shared_ptrINS_10ConnectionEEERKNS1_12shared_arrayIhEEjb"
@@ -101,7 +101,7 @@ def run(sess, use_assert, cache_intermediate_states=False):
     result = sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=cache_intermediate_states)
 
     if use_assert:
-        print(cozy.analysis.AssertFailedInfo.from_run_result(result).report({"size": size, "totalram": totalram}))
+        print(result.report_asserts_failed({"size": size, "totalram": totalram}))
 
     return result
 

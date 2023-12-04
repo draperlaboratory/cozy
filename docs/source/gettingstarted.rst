@@ -181,22 +181,21 @@ Let's invoke the prepatched my_fun with arg0 as the symbolic input via the
 :py:meth:`~cozy.project.Session.run` method::
 
     run_result = sess_prepatched.run(arg0)
-    run_result.assertion_triggered()
+    print(run_result)
 
-The :py:meth:`~cozy.project.RunResult.assertion_triggered` method informs us here that an assertion
-was triggered.
+Which prints the following result that informs us that an assertion was triggered::
+
+    RunResult(1 deadended, 0 errored, 1 asserts_failed, 0 assume_warnings)
 
 To view a report on what went wrong with the assertion, let's create
-a :py:class:`cozy.analysis.AssertFailedInfo` object, then call its
-:py:meth:`~cozy.analysis.AssertFailedInfo.report` method to get
-the report as a human readable string::
+a report using the :py:meth:`~cozy.project.RunResult.report_asserts_failed`
+method::
 
-    assertion_results = cozy.analysis.AssertFailedInfo.from_run_result(run_result)
-    print(assertion_results.report([arg0]))
+    print(run_result.report_asserts_failed([arg0]))
 
-Which prints off the human readable report::
+Which prints off the human-readable report::
 
-    Assert for address 0x401179 was triggered: <Bool num_arg_102_64 != 0x0>
+    Assert for address 0x401179 was triggered: <Bool num_arg_108_64 != 0x0>
     Dereferencing null pointer
     Here are 1 concrete input(s) for this particular assertion:
     1.
@@ -217,10 +216,11 @@ that no NULL dereference occurs in the postpatch::
         )
     sess_postpatched.add_directives(mem_write_okay_postpatched)
     run_result = sess_postpatched.run()
-    run_result.assertion_triggered()
+    print(run_result)
 
-In the console we see that we got False from :py:meth:`~cozy.project.RunResult.assertion_triggered`,
-indicating that no assertions were triggered.
+In the console we see that no assertions were triggered::
+
+    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings)
 
 ======================
 Making the Comparisons
@@ -244,13 +244,13 @@ Now let's run both of our new sessions::
 
 We can inspect the results object to see how many states we are dealing with::
 
-    print("There are {} deadended states and {} errored states for the pre-patch run.".format(len(prepatched_result.deadended), len(prepatched_result.errored)))
-    print("There are {} deadended states and {} errored states for the post-patch run.".format(len(postpatched_result.deadended), len(postpatched_result.errored)))
+    print(prepatched_result)
+    print(postpatched_result)
 
 This prints the following messages::
 
-    There are 1 deadended states and 0 errored states for the pre-patch run.
-    There are 2 deadended states and 0 errored states for the post-patch run.
+    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings)
+    RunResult(2 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings)
 
 We can now make a comparison between these two terminated results. Constructing a Comparison object is used to do
 the comparison computation::
@@ -260,38 +260,47 @@ the comparison computation::
 To view a human readable report, we can now call the :py:meth:`cozy.analysis.Comparison.report` method, which
 will convert the :py:class:`~cozy.analysis.Comparison` to a human readable summary::
 
-    args = (arg0,)
-    print(comparison_results.report(args))
+    print(comparison_results.report([arg0]))
 
 We now see the human readable report
 
 .. code-block:: text
     :linenos:
 
-    STATE PAIR (0, StateTag.TERMINATED_STATE), (0, StateTag.TERMINATED_STATE) are different
+    STATE PAIR (0, DEADENDED_STATE), (0, DEADENDED_STATE) are different
     Memory difference detected for 0,0:
-    {'0x0': (<BV8 42>, <BV8 0>)}
+    {range(0, 4): (<BV32 0x2a000000>, <BV32 0x0>)}
     Instruction pointers for these memory writes:
-    {'0x0': (frozenset({<BV64 0x401179>}), None)}
+    {range(0, 4): (frozenset(), frozenset({<BV64 0x401179>}))}
     Register difference detected for 0,0:
     {'eflags': (<BV64 0x0>, <BV64 0x44>), 'flags': (<BV64 0x0>, <BV64 0x44>), 'rflags': (<BV64 0x0>, <BV64 0x44>)}
     Here are 1 concrete input(s) for this particular state pair:
     1.
-        Input arguments: ('0x0',)
-        Concrete mem diff: {'0x0': ('0x2a', '0x0')}
+        Input arguments: ['0x0']
+        Concrete mem diff: {range(0, 4): ('0x2a000000', '0x0')}
         Concrete reg diff: {'eflags': ('0x0', '0x44'), 'flags': ('0x0', '0x44'), 'rflags': ('0x0', '0x44')}
+
+    STATE PAIR (0, DEADENDED_STATE), (1, DEADENDED_STATE) are different
+    The memory was equal for this state pair
+    Register difference detected for 0,1:
+    {'eflags': (<BV64 0x0>, <BV64 0x4>), 'flags': (<BV64 0x0>, <BV64 0x4>), 'rflags': (<BV64 0x0>, <BV64 0x4>)}
+    Here are 1 concrete input(s) for this particular state pair:
+    1.
+        Input arguments: ['0xc0000000']
+        Concrete reg diff: {'eflags': ('0x0', '0x4'), 'flags': ('0x0', '0x4'), 'rflags': ('0x0', '0x4')}
     There are no prepatched orphans
     There are no postpatched orphans
 
 We can see cozy found a diff between the 0th deadended (terminated) state in the prepatch and the 0th deadended state
 in the postpatched. Together these two states form a state pair, which is displayed on line 1 of the report.
 
-Line 3 displays the memory addresses that are different. Each byte that is different in memory is mapped to
-a tuple containing the symbolic byte at that memory address as a (prepatched, postpatched) tuple.
+Line 3 displays the memory addresses that are different. Contents of memory for written ranges are mapped to
+a tuple containing the symbolic bytes at those addresses as a (prepatched, postpatched) tuple. In this case,
+memory at addresses 0x0 to 0x4 is 0x2a000000 in the prepatched, and 0x0 in the postpatched.
 
-Line 5 tells the instruction pointer the program was at when it wrote to that specific memory address.
+Line 5 tells the instruction pointer the program was at when it wrote to those specific memory address ranges.
 Here we see that the program was at the instruction 0x401179 when it wrote to address 0x0, and the postpatched
-program never wrote to that address (hence the None).
+program never wrote to that address (hence the empty frozenset).
 
 Line 7 gives the symbolic register difference between the states. As we can see, the flags registers
 are different due to the presence of a branch in the postpatched program. As with the memory, each register
@@ -300,6 +309,10 @@ maps to a (prepatched, postpatched) tuple which gives the symbolic contents of t
 Lines 8-12 gives concretized input that will cause the prepatched program to end in the 0th state and
 the postpatched program in its 0th state. The input argument is concretized to 0x0 (aka NULL). Additionally since
 the memory contents and register contents may be symbolic, we provide a concretized version of those as well.
+
+Lines 14-21 tells us that there is another state diff between state pairs (0,1). In this case
+we observe that the only difference is in the flags registers, and that there are no observable
+differences in memory. The concrete input argument for this pair is when the input is non-NULL.
 
 The next lines describe any orphaned states - typically there will be none. An orphaned state is a state in which
 there are no compatible pair states.
