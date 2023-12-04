@@ -16,7 +16,7 @@ export const segmentationMixin = {
 
     // then we descend, assembling the relevant nodes
     let generations = [[target]]
-    while (generations.length < 10) {
+    while (true) {
       const lastGen = generations[generations.length - 1]
       const nextGen = lastGen.flatMap(n => 
         n.outgoers('node')
@@ -36,5 +36,37 @@ export const segmentationMixin = {
     const seg = this.getSegment(node)
     this.elements().removeClass("segmentHighlight")
     seg.addClass("segmentHighlight")
+  },
+
+  // gets all leaves in cy compatible with a given
+  // node
+  getLeavesCompatibleWith(node, cy) {
+    const leaves = node.successors().add(node).leaves()
+    const ids = leaves.flatMap(leaf => Object.keys(leaf.data().compatibilities))
+      .map(s => `#${s}`)
+    const compats = []
+    for (const id of ids) {
+      compats.push(cy.$(id)[0])
+    }
+    return compats
+  },
+
+  // in a preorder, find the greatest element p such that each element of leaves
+  // is > p; i.e the strongest set of constraints implied by the constraints on
+  // each member of leaves
+  getMinimalCeiling(leaves) {
+    let depth = 1;
+    const canonicalPreds = leaves[0].predecessors('node')
+    while (true) for (const leaf of leaves) {
+      // only look up once per loop. Could be much further optimized.
+      const preds = leaf.predecessors('node')
+      if (depth >= preds.length) {
+        return leaf 
+      } else if (preds[preds.length - depth] !== canonicalPreds[canonicalPreds.length - depth]) {
+        return canonicalPreds[canonicalPreds.length - (depth - 1)]
+      } else {
+        depth += 1
+      }
+    }
   }
 }

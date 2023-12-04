@@ -31,6 +31,8 @@ export default class App extends Component {
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
+    this.cy1.other = this.cy2
+    this.cy2.other = this.cy1
     this.tooltip = createRef()
     this.diffPanel = createRef()
 
@@ -217,10 +219,10 @@ export default class App extends Component {
       assembly += leaf.data().contents
       leaf.data().assembly = assembly
     }
-    cy.nodes().map(node => this.initializeNode(node, cy))
+
     cy.on('add', ev => {
       if (ev.target.group() === 'nodes') {
-        this.initializeNode(ev.target, cy)
+        this.initializeNode(ev.target, ref)
       }
     })
 
@@ -239,6 +241,9 @@ export default class App extends Component {
     // stow graph data in reference
     ref.cy = cy
     ref.orig = JSON.stringify(cy.json())
+
+    cy.nodes().map(node => this.initializeNode(node, ref))
+
     this.setState({ 
       status: !this.cy1.cy || !this.cy2.cy 
         ? Status.unloaded 
@@ -246,7 +251,7 @@ export default class App extends Component {
     })
   }
 
-  initializeNode(node, cy) {
+  initializeNode(node, ref) {
 
     // turn off manual graph dragging
     node.ungrabify()
@@ -255,15 +260,20 @@ export default class App extends Component {
 
     // mouseover handling
     node.on('mouseout', () => {
-      cy.container().style.cursor = "default"
+      ref.cy.container().style.cursor = "default"
     })
 
     node.on('mouseover', ev => {
       if (ev.target.outgoers().length == 0) {
-        cy.container().style.cursor = "pointer"
+        ref.cy.container().style.cursor = "pointer"
       }
-      console.log(cy.showSegment(node))
-      if (cy.loci && !ev.target.hasClass('pathHighlight')) return;
+      
+      if (ref.other.cy) {
+        const compats = ref.cy.getLeavesCompatibleWith(node,ref.other.cy)
+        ref.cy.showSegment(ev.target)
+        ref.other.cy.showSegment(ref.other.cy.getMinimalCeiling(compats))
+      }
+      if (ref.cy.loci && !ev.target.hasClass('pathHighlight')) return;
       this.tooltip.current.attachTo(ev.target)
     })
 
