@@ -1,3 +1,5 @@
+import {constraintsEq} from './constraints.js'
+
 // We try to tidy up a given graph by merging non-branching series of nodes into single nodes
 
 export function tidyGraph(graph, opts) {
@@ -6,14 +8,6 @@ export function tidyGraph(graph, opts) {
 
   tidyChildren(root, opts)
 
-}
-
-function constraintsEq(c1, c2) {
-  if (c1.length != c2.length) return false;
-  for (let i = 0; i < c1.length; i++) {
-    if (c1[i] != c2[i]) return false;
-  }
-  return true;
 }
 
 function tidyChildren(node, {mergeConstraints}) {

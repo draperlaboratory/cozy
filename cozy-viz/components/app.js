@@ -6,6 +6,7 @@ import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
+import { segmentationMixin } from '../util/segmentation.js';
 import * as GraphStyle from '../util/graphStyle.js' ;
 import { tidyGraph, removeBranch } from '../util/graph-tidy.js';
 import { Status, Tidiness } from '../data/cozy-data.js'
@@ -204,6 +205,7 @@ export default class App extends Component {
     cy.mount(ref.current)
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
+    Object.assign(cy, segmentationMixin);
     // set layout
     cy.layout(standardLayout).run()
     // Accumulate assembly at leaves
@@ -260,6 +262,7 @@ export default class App extends Component {
       if (ev.target.outgoers().length == 0) {
         cy.container().style.cursor = "pointer"
       }
+      console.log(cy.showSegment(node))
       if (cy.loci && !ev.target.hasClass('pathHighlight')) return;
       this.tooltip.current.attachTo(ev.target)
     })
