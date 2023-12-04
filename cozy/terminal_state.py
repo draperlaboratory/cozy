@@ -99,7 +99,7 @@ class DeadendedState(TerminalState):
         Constructor for DeadendedState
 
         :ivar SimState state: The state that terminated normally.
-        :ivar int state_id: The identifer of the state, determined by its position in the list :py:ivar:`cozy.project.RunResult.deadended`
+        :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
         """
         super().__init__(state, state_id, "DEADENDED_STATE")
 
@@ -117,7 +117,7 @@ class AssertFailedState(TerminalState):
         :param Assert assertion: The assertion that was triggered.
         :param claripy.ast.bool: The condition which if falsified will trigger the assertion.
         :param SimState failure_state: The state that was created to test the assertion.
-        :param int state_id: The identifier of the state, determined by its position in the list :py:ivar:`cozy.project.RunResult.asserts_failed`
+        :param int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.asserts_failed`
         """
         super().__init__(failure_state, state_id, "ASSERT_FAILED_STATE")
         self.cond = cond
@@ -125,7 +125,7 @@ class AssertFailedState(TerminalState):
 
 class ErrorState(TerminalState):
     """
-    This class is used to indicate a state that resulted in an error (either my an execution error or :py:class`~cozy.directive.ErrorDirective`).
+    This class is used to indicate a state that resulted in an error (either my an execution error or :py:class:`~cozy.directive.ErrorDirective`).
 
     :ivar SimError error: The error that was thrown.
     :ivar traceback: The traceback attached to the error.
@@ -135,7 +135,7 @@ class ErrorState(TerminalState):
         Constructor for ErrorState
 
         :param ErrorRecord error_record: The error thrown for this state.
-        :param int state_id: The identifier of the state, determined by it's position in the list :py:ivar:`cozy.project.RunResult.errored`
+        :param int state_id: The identifier of the state, determined by it's position in the list :py:obj:`cozy.project.RunResult.errored`
         """
         super().__init__(error_record.state, state_id, "ERROR_STATE")
         self.error: SimError = error_record.error
