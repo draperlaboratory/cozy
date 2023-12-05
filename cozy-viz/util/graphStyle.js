@@ -4,6 +4,7 @@ export const settings = {
   showingSimprocs: true,
   showingSyscalls: true,
   showingErrors: true,
+  showingAsserts: true,
 }
 
 //Cytoscape doesn't have specificity - last matching selector wins.
@@ -85,7 +86,23 @@ export const style = [
     }
   },
   {
-    selector: 'node.pathHighlight[?error], node.pathHighlight[?assertion_info]',
+    selector: 'node[?assertion_info]',
+    style: { 'background-color': () => settings.showingAsserts
+      ? Colors.assertNode
+      : Colors.defaultNode
+    }
+  },
+  {
+    selector: 'node.pathHighlight[?assertion_info]',
+    style: {
+      'border-width':'0px',
+      'background-color': () => settings.showingAsserts
+      ? Colors.focusedAssertNode
+      : Colors.focusedNode
+    }
+  },
+  {
+    selector: 'node.pathHighlight[?error]',
     style: {
       'border-width':'0px',
       'background-color': () => settings.showingErrors

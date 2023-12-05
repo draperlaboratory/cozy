@@ -26,6 +26,7 @@ export default class App extends Component {
       showingSyscalls: true, // we start with syscalls visible
       showingSimprocs: true, // we start with SimProcedure calls visible
       showingErrors: true, // we start with errors visible
+      showingAsserts: true, // we start with asserts visible
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -40,6 +41,7 @@ export default class App extends Component {
     this.toggleErrors = this.toggleErrors.bind(this)
     this.toggleSyscalls = this.toggleSyscalls.bind(this)
     this.toggleSimprocs = this.toggleSimprocs.bind(this)
+    this.toggleAsserts = this.toggleAsserts.bind(this)
     this.getJSON = this.getJSON.bind(this)
 
     window.app = this
@@ -158,6 +160,15 @@ export default class App extends Component {
       this.cy1.cy.style().update()
       this.cy2.cy.style().update()
       return {showingErrors: !oldState.showingErrors}
+    })
+  }
+
+  toggleAsserts() {
+    this.setState(oldState => {
+      GraphStyle.settings.showingAsserts = !oldState.showingAsserts;
+      this.cy1.cy.style().update()
+      this.cy2.cy.style().update()
+      return {showingAsserts: !oldState.showingAsserts}
     })
   }
 
@@ -345,9 +356,11 @@ export default class App extends Component {
         showingSyscalls=${state.showingSyscalls}
         showingSimprocs=${state.showingSimprocs}
         showingErrors=${state.showingErrors}
+        showingAsserts=${state.showingAsserts}
         toggleSyscalls=${this.toggleSyscalls}
         toggleSimprocs=${this.toggleSimprocs}
         toggleErrors=${this.toggleErrors}
+        toggleAsserts=${this.toggleAsserts}
         getJSON=${this.getJSON}
       />
       <div id="main-view">
