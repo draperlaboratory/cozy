@@ -219,6 +219,11 @@ export default class MenuBar extends Component {
             selected=${props.showingErrors}>
             <${MenuBadge} color=${Colors.focusedErrorNode}/> Show Errors
         <//>
+        <${MenuOption} 
+            onClick=${props.toggleAsserts}
+            selected=${props.showingAsserts}>
+            <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
+        <//>
       <//>
       <${Menu} 
         enabled=${props.status === Status.idle}
