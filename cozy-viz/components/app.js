@@ -268,8 +268,10 @@ export default class App extends Component {
         ref.cy.container().style.cursor = "pointer"
       }
       
+      //this needs to be revised to work at the level of references, rather
+      //than holding on to the old cy
       if (ref.other.cy) {
-        const compats = ref.cy.getLeavesCompatibleWith(node,ref.other.cy)
+        const compats = ref.cy.getLeavesCompatibleWith(node, ref.other.cy)
         ref.cy.showSegment(ev.target)
         ref.other.cy.showCompatibilitySegment(ref.other.cy.getMinimalCeiling(compats), ref.cy)
       }
