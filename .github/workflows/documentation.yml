@@ -20,6 +20,12 @@ jobs:
           pip install sphinx sphinx-autoapi
       - name: Sphinx build
         run: make -C docs html
+      - name: Add cozy-viz to pages deployment
+        run: |
+          DEST=./docs/build/html/cozy-viz/
+          mkdir -p $DEST
+          cp ./cozy-viz/cozy-viz/{index.*,cozy-viz.js} $DEST
+          cp -r ./cozy-viz/cozy-viz/{components,data,util} $DEST
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
