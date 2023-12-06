@@ -42,6 +42,7 @@ export default class App extends Component {
     this.clearTooltip = this.clearTooltip.bind(this)
     this.resetLayout = this.resetLayout.bind(this)
     this.toggleErrors = this.toggleErrors.bind(this)
+    this.toggleView = this.toggleView.bind(this)
     this.toggleSyscalls = this.toggleSyscalls.bind(this)
     this.toggleSimprocs = this.toggleSimprocs.bind(this)
     this.toggleAsserts = this.toggleAsserts.bind(this)
@@ -138,42 +139,22 @@ export default class App extends Component {
     this.setState({ status: Status.idle })
   }
 
-  // TODO DRY
-  toggleSyscalls() {
+  toggleView(type) {
     this.setState(oldState => {
-      GraphStyle.settings.showingSyscalls = !oldState.showingSyscalls;
+      GraphStyle.settings[type] = !oldState[type];
       this.cy1.cy.style().update()
       this.cy2.cy.style().update()
-      return {showingSyscalls: !oldState.showingSyscalls}
+      return {[type]: !oldState[type]}
     })
   }
 
-  toggleSimprocs() {
-    this.setState(oldState => {
-      GraphStyle.settings.showingSimprocs = !oldState.showingSimprocs;
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return {showingSimprocs: !oldState.showingSimprocs}
-    })
-  }
+  toggleSyscalls() { this.toggleView("showingSyscalls") }
 
-  toggleErrors() {
-    this.setState(oldState => {
-      GraphStyle.settings.showingErrors = !oldState.showingErrors;
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return {showingErrors: !oldState.showingErrors}
-    })
-  }
+  toggleSimprocs() { this.toggleView("showingSimprocs") }
 
-  toggleAsserts() {
-    this.setState(oldState => {
-      GraphStyle.settings.showingAsserts = !oldState.showingAsserts;
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return {showingAsserts: !oldState.showingAsserts}
-    })
-  }
+  toggleErrors() { this.toggleView("showingErrors") }
+
+  toggleAsserts() { this.toggleView("showingAsserts") }
 
   async handleDrop(ev, ref) {
     ev.stopPropagation()
