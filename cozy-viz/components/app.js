@@ -6,7 +6,7 @@ import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
-import { segmentationMixin } from '../util/segmentation.js';
+import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js' ;
 import { tidyGraph, removeBranch } from '../util/graph-tidy.js';
 import { Status, Tidiness } from '../data/cozy-data.js'
