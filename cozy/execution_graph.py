@@ -313,10 +313,17 @@ class ExecutionGraph:
             # Assuming utf-8 character encoding, 
             attr['stdout'] = node.posix.dumps(sys.stdout.fileno()).decode('utf-8')
             attr['stderr'] = node.posix.dumps(sys.stderr.fileno()).decode('utf-8')
-            try:
-                attr['contents'] = node.block()
-            except angr.errors.SimEngineError as exc:
+            if node.project.simos.is_syscall_addr(node.addr):
+                # Here we are inside of a syscall implementation. The address that
+                # angr jumps to when it executes a syscall does not actually contain
+                # the code that is executed. Instead a Python hook is executed
+                # to simulate the syscall.
                 attr['contents'] = ""
+            else:
+                try:
+                    attr['contents'] = node.block()
+                except angr.errors.SimEngineError as exc:
+                    attr['contents'] = ""
             attr['constraints'] = node.solver.constraints
         return g
 
