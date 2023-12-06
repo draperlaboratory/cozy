@@ -1,6 +1,21 @@
 # cozy (Comparative Symbolic Evaluation)
 
-*(Formerly known as hungr)*
+cozy is a symbolic execution framework built around angr to enable comparative evaluation.
+The goal of comparative evaluation is to determine the precise changes made by software
+patches, specifically micropatches. cozy is capable of reporting observable changes
+made by a micropatch, specifically to registers, memory and stdout/stderr. The framework
+has the ability to dump diff information in both a textual human-readable report and
+via a browser based rich user interface.
+
+## Documentation
+
+The getting started guide and API reference can be found on our Github pages!:
+
+https://draperlaboratory.github.io/cozy/
+
+## About
+
+cozy is being developed by Draper Laboratory under the [DARPA Assured Micropatching (AMP) program](https://www.darpa.mil/program/assured-micropatching).
 
 ## Build Instructions
 
