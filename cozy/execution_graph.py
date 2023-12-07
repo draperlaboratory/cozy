@@ -173,6 +173,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 g_a.nodes[na]["compatibilities"][nb] = {
                         "memdiff": _serialize_diff(comp.mem_diff),
                         "regdiff": _serialize_diff(comp.reg_diff),
+                        "conc_memdiff": list(map(lambda x: _serialize_diff(x.mem_diff), concretion)),
+                        "conc_regdiff": list(map(lambda x: _serialize_diff(x.reg_diff), concretion)),
                         "conc_args": list(map(lambda x: concrete_arg_mapper(x.args), concretion))
                                      if concrete_arg_mapper is not None 
                                      else list(map(lambda x: x.args, concretion)),
@@ -180,6 +182,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 g_b.nodes[nb]["compatibilities"][na] = {
                         "memdiff": _serialize_diff(comp.mem_diff),
                         "regdiff": _serialize_diff(comp.reg_diff),
+                        "conc_memdiff": list(map(lambda x: _serialize_diff(x.mem_diff), concretion)),
+                        "conc_regdiff": list(map(lambda x: _serialize_diff(x.reg_diff), concretion)),
                         "conc_args": list(map(lambda x: concrete_arg_mapper(x.args), concretion))
                                      if concrete_arg_mapper is not None 
                                      else list(map(lambda x: x.args, concretion)),
