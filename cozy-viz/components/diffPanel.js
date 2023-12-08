@@ -161,38 +161,74 @@ export default class DiffPanel extends Component {
 }
 
 class RegisterDifference extends Component {
-  render(props) {
+
+  constructor() {
+    super();
+    this.state = { view: "symbolic" }
+  }
+
+  setView(view) {
+    this.setState({view})
+  }
+
+  render(props, state) {
     const rightId = props.rightFocus.id()
     const registers = []
-    const rdiffs = props.leftFocus.data().compatibilities[rightId].regdiff
+    const conc_regdiffs = props.leftFocus.data().compatibilities[rightId].conc_regdiff ?? []
+    const rdiffs = state.view === "symbolic"
+      ? props.leftFocus.data().compatibilities[rightId].regdiff
+      : conc_regdiffs[state.view]
     for (const reg in rdiffs) {
       registers.push(html`
         <span class="grid-diff-left">${rdiffs[reg][0]}</span>
         <span class="grid-diff-label">${reg}</span>
         <span class="grid-diff-right">${rdiffs[reg][1]}</span>`)
     }
-    return html`<div id="grid-diff-data"> ${registers.length > 0 
+    return html`<div>
+      <${ConcretionSelector} 
+        view=${state.view} 
+        setView=${view => this.setView(view)} 
+        concretionCount=${conc_regdiffs.length}/>
+      <div id="grid-diff-data"> ${registers.length > 0 
         ? registers
         : html`<span class="no-difference">no register differences detected ✓</span>`
-    }</div>`
+      }</div></div>`
   }
 }
 
 class MemoryDifference extends Component {
-  render(props) {
+
+  constructor() {
+    super();
+    this.state = { view: "symbolic" }
+  }
+
+  setView(view) {
+    this.setState({view})
+  }
+
+  render(props, state) {
     const rightId = props.rightFocus.id()
     const addresses = []
-    const adiffs = props.leftFocus.data().compatibilities[rightId].memdiff
+    const conc_adiffs = props.leftFocus.data().compatibilities[rightId].conc_memdiff ?? []
+    const adiffs = state.view === "symbolic"
+      ? props.leftFocus.data().compatibilities[rightId].memdiff
+      : conc_adiffs[state.view]
     for (const reg in adiffs) {
       addresses.push(html`
         <span class="grid-diff-left">${adiffs[reg][0]}</span>
         <span class="grid-diff-label">${reg}</span>
         <span class="grid-diff-right">${adiffs[reg][1]}</span>`)
     }
-    return html`<div id="grid-diff-data"> ${addresses.length > 0 
+    return html`<div>
+      <${ConcretionSelector} 
+        view=${state.view} 
+        setView=${view => this.setView(view)} 
+        concretionCount=${conc_adiffs.length}/>
+      <div id="grid-diff-data"> ${addresses.length > 0 
         ? addresses
         : html`<span class="no-difference">no memory differences detected ✓</span>`
-    }</div>`
+      }</div></div>`
   }
 }
 
@@ -212,5 +248,26 @@ class Concretions extends Component {
     <div id="concretion-data">
       ${examples}
     </div>`
+  }
+}
+
+class ConcretionSelector {
+  render(props) {
+
+    if (props.concretionCount === 0) return null
+
+    const buttons = [html`<button 
+      data-selected=${props.view == "symbolic"} 
+      onClick=${() => props.setView("symbolic")}
+      >Symbolic</button>`
+    ]
+    for (let i = 0; i < props.concretionCount; i++) {
+      buttons.push(html`<button 
+        data-selected=${props.view == i} 
+        onClick=${() => props.setView(i)}
+        >Example ${i + 1}</button>`
+      )
+    }
+    return html`<div class="subordinate-buttons">${buttons}</div>`
   }
 }
