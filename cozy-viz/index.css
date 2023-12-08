@@ -155,6 +155,17 @@ button:disabled {
   font-weight:bold;
 }
 
+#diff-panel .subordinate-buttons button {
+  padding:.2em;
+  background-color:white;
+  color:black
+}
+
+#diff-panel .subordinate-buttons button[data-selected="true"] {
+  text-decoration:underline;
+  text-decoration-thickness: 2px;
+}
+
 #diff-panel button:disabled {
   color:#999;
 }
@@ -167,6 +178,7 @@ button:disabled {
   display:grid;
   grid-template-columns: 1fr max-content 1fr;
   grid-gap:1em;
+  padding-bottom:1em;
 }
 
 #grid-diff-data .no-difference {
