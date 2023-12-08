@@ -12,9 +12,16 @@ def _serialize_diff(diff):
     def convert_key(k) -> str:
         if isinstance(k, range):
             return "{} .. {}".format(hex(k.start), hex(k.stop - 1))
+        elif isinstance(k, int):
+            return str(hex(k))
         else:
             return str(k)
-    return {convert_key(k): (str(v1), str(v2)) for (k, (v1, v2)) in diff.items()}
+    def convert_val(v) -> str:
+        if isinstance(v, int):
+            return str(hex(v))
+        else:
+            return str(v)
+    return {convert_key(k): (convert_val(v1), convert_val(v2)) for (k, (v1, v2)) in diff.items()}
 
 def dump_comparison(proj_a: Project, proj_b: Project,
                     rslt_a: RunResult, rslt_b: RunResult,
