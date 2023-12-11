@@ -75,10 +75,10 @@ this intersection of sets is nonempty, which means that there is at
 least one concrete input that will cause the program to end in state A
 in the prepatched program and state B in the postpatched program.
 
-Therefore the naive approach is to compare all pairs of deadended states
+Therefore the naive approach is to compare all pairs of terminal states
 from the prepatched and postpatched and check for satisfiability. cozy
-makes an optimization by checking ancestor (ie, nonterminal) states
-and checking for compatibility. cozy is also capable of generating
+makes an optimization by using memoization, so in practice compatibility
+checks over most programs should be fast. cozy is also capable of generating
 concrete examples, which is useful for generating test cases and
 walking through program execution.
 
