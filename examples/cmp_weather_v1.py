@@ -150,15 +150,15 @@ if input("When comparing programs would you like to use memory and registers to 
 
 if input("Would you like to compare weather-1 and weather-2? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-1 and WEATHER-2")
-    comparison_results = analysis.Comparison(weather_1_states, weather_2_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
+    comparison_results = analysis.Comparison(weather_1_states, weather_2_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
 
 if input("Would you like to compare weather-2 and weather-3? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-2 and WEATHER-3")
-    comparison_results = analysis.Comparison(weather_2_states, weather_3_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
+    comparison_results = analysis.Comparison(weather_2_states, weather_3_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
 
 if input("Would you like to compare weather-1 and weather-3? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-1 and WEATHER-3")
-    comparison_results = analysis.Comparison(weather_1_states, weather_3_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff, use_memoized_binary_search=False)
+    comparison_results = analysis.Comparison(weather_1_states, weather_3_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))

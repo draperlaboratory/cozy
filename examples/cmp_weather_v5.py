@@ -129,7 +129,7 @@ if input("Would you like to view error states for weather-patched-2? (y/n)") == 
 
 if input("Would you like to compare weather-orig and weather-patched-1? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-ORIG and WEATHER-PATCHED-1")
-    comparison_results = analysis.Comparison(weather_orig_states, weather_patched_1_states, compare_memory=True, compare_registers=True, use_memoized_binary_search=True)
+    comparison_results = analysis.Comparison(weather_orig_states, weather_patched_1_states, compare_memory=True, compare_registers=True)
     print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
 
     if dump_execution_graphs:

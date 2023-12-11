@@ -43,13 +43,8 @@ class StateDiff:
     StateDiff encapsulates the memoized state used by the difference method. This class is used internally by Comparison and is typically not for external use.
     """
 
-    def __init__(self, use_memoized_binary_search=True):
-        """
-        :param bool use_memoized_binary_search: When use_memoized_binary_search is enabled, the difference algorithm will begin by comparing ancestors of the left and right states rather than the states themselves. This will improve performance in most cases, but will actually degrade performance when all pairs of states are compatible. This is because early exits from difference occur when ancestor states are incompatible.
-        """
-        self._compatible: set[tuple[SimStateHistory, SimStateHistory]] = set()
-        self._incompatible: set[tuple[SimStateHistory, SimStateHistory]] = set()
-        self.use_memoized_binary_search = use_memoized_binary_search
+    def __init__(self):
+        self.cores: list[frozenset[claripy.ast.bool]] = []
 
     def difference(self,
                    sl: SimState, sr: SimState,
@@ -69,63 +64,11 @@ class StateDiff:
         :rtype: tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None
         """
 
-        if self.use_memoized_binary_search:
-            if (sl.history, sr.history) in self._incompatible:
-                return None
-
-            # Begin a binary search to determine at what point two states become incompatible.
-            hist_left = list(sl.history.lineage)
-            hist_right = list(sr.history.lineage)
-
-            def mark_compatible(idx_left, idx_right):
-                sub_hist_left = hist_left[:(idx_left + 1)]
-                sub_hist_right = hist_right[:(idx_right + 1)]
-                for hl in sub_hist_left:
-                    for hr in sub_hist_right:
-                        self._compatible.add((hl, hr))
-
-            def mark_incompatible(idx_left, idx_right):
-                sub_hist_left = hist_left[idx_left:]
-                sub_hist_right = hist_right[idx_right:]
-                for hl in sub_hist_left:
-                    for hr in sub_hist_right:
-                        self._incompatible.add((hl, hr))
-
-            low_left = 0
-            high_left = len(hist_left) - 1
-            mid_left = 0
-            low_right = 0
-            high_right = len(hist_right) - 1
-            mid_right = 0
-
-            while mid_left < (len(hist_left) - 1) or mid_right < (len(hist_right) - 1):
-                mid_left = (high_left + low_left + 1) // 2
-                mid_right = (high_right + low_right + 1) // 2
-
-                if (hist_left[mid_left], hist_right[mid_right]) in self._incompatible:
-                    return None
-                elif (hist_left[mid_left], hist_right[mid_right]) in self._compatible:
-                    low_left = mid_left
-                    low_right = mid_right
-                else:
-                    joint_solver = claripy.Solver()
-                    joint_solver.add(hist_left[mid_left].custom_constraints)
-                    joint_solver.add(hist_right[mid_right].custom_constraints)
-                    joint_solver.simplify()
-
-                    if joint_solver.satisfiable():
-                        mark_compatible(mid_left, mid_right)
-                        low_left = mid_left
-                        low_right = mid_right
-                    else:
-                        mark_incompatible(mid_left, mid_right)
-                        return None
-        else:
-            hist_left = []
-            hist_right = []
-            def mark_compatible(idx_left, idx_right):
-                return None
-            def mark_incompatible(idx_left, idx_right):
+        # If any previously discovered unsat core is a subset of the current constraints, then the current
+        # joint constraints are automatically unsatisfiable.
+        constraints = frozenset(sl.solver.constraints + sr.solver.constraints)
+        for core in self.cores:
+            if core.issubset(constraints):
                 return None
 
         # The reason we are adding constraints from both states is that we
@@ -133,21 +76,17 @@ class StateDiff:
         # angr may generate additional internal constraints as the function is symbolically executed
         # these generated symbols will be fresh. In contrast, the input arguments
         # will be the same symbol for both functions
-        joint_solver = claripy.Solver()
+        joint_solver = claripy.Solver(track=True) # The track parameter is required to generate an unsat core
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
-        # Note: Code profiling has revealed that not using simplify
-        # actually leads to a longer runtime
-        joint_solver.simplify()
 
         # If joint_solver is not satisfiable, that means that the constrained set of possible
         # inputs to the function is the empty set. This means that these two states could not
         # have been reached with a given input, and we can therefore disregard this comparison
         if not (joint_solver.satisfiable()):
-            mark_incompatible(len(hist_left) - 1, len(hist_right) - 1)
+            core = frozenset(joint_solver.unsat_core())
+            self.cores.append(core)
             return None
-
-        mark_compatible(len(hist_left) - 1, len(hist_right) - 1)
 
         ret_mem_diff = dict()
 
@@ -306,7 +245,7 @@ class Comparison:
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
                  ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False,
-                 compare_std_err=False, use_memoized_binary_search=True):
+                 compare_std_err=False):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
 
@@ -318,7 +257,6 @@ class Comparison:
         :param bool compare_registers: If True, then the analysis will compare registers used by the program.
         :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.
         :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
-        :param bool use_memoized_binary_search: If True, then when the analysis compares sets of states it will first try to compare ancestor states in a binary search strategy. For most programs this will speed up comparison. For programs where all states are compatible, expect a slowdown.
         """
 
         if ignore_addrs is None:
@@ -334,7 +272,7 @@ class Comparison:
         self.orphans_left: set[TerminalState] = set(states_pre_patched)
         self.orphans_right: set[TerminalState] = set(states_post_patched)
 
-        memoized_diff = StateDiff(use_memoized_binary_search=use_memoized_binary_search)
+        memoized_diff = StateDiff()
 
         # If ignore_invalid_stack is enabled, then any data that was stored on the stack in the past,
         # but is now invalid due to movement of the stack pointer is ignored
