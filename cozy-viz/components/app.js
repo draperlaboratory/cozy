@@ -203,7 +203,7 @@ export default class App extends Component {
 
     cy.on('add', ev => {
       if (ev.target.group() === 'nodes') {
-        this.initializeNode(ev.target, ref)
+        this.initializeNode(ev.target)
       }
     })
 
@@ -223,7 +223,10 @@ export default class App extends Component {
     ref.cy = cy
     ref.orig = JSON.stringify(cy.json())
 
-    cy.nodes().map(node => this.initializeNode(node, ref))
+    // stow reference data in graph
+    cy.ref = ref
+
+    cy.nodes().map(node => this.initializeNode(node))
 
     this.setState({ 
       status: !this.cy1.cy || !this.cy2.cy 
@@ -232,7 +235,7 @@ export default class App extends Component {
     })
   }
 
-  initializeNode(node, ref) {
+  initializeNode(node) {
 
     // turn off manual graph dragging
     node.ungrabify()
@@ -240,28 +243,30 @@ export default class App extends Component {
     // add methods for actively querying display features
 
     // mouseover handling
-    node.on('mouseout', () => {
-      ref.cy.container().style.cursor = "default"
+    node.on('mouseout', ev => {
+      ev.cy.container().style.cursor = "default"
     })
 
     node.on('mouseover', ev => {
+
+      const otherCy = ev.cy.ref.other.cy
+
       if (ev.target.outgoers().length == 0) {
-        ref.cy.container().style.cursor = "pointer"
+        ev.cy.container().style.cursor = "pointer"
       }
-      
+
       //this needs to be revised to work at the level of references, rather
       //than holding on to the old cy
-      if (ref.other.cy) {
-        const compats = ref.cy.getLeavesCompatibleWith(node, ref.other.cy)
-        ref.cy.showSegment(ev.target)
-        ref.other.cy.showCompatibilitySegment(ref.other.cy.getMinimalCeiling(compats), ref.cy)
+      if (otherCy) {
+        const compats = ev.cy.getLeavesCompatibleWith(node, otherCy)
+        ev.cy.showSegment(ev.target)
+        otherCy.showCompatibilitySegment(ev.cy.getMinimalCeiling(compats), ev.cy)
       }
-      if (ref.cy.loci && !ev.target.hasClass('pathHighlight')) return;
+      if (ev.cy.loci && !ev.target.hasClass('pathHighlight')) return;
       this.tooltip.current.attachTo(ev.target)
     })
 
-    node.leaves().on('click',
-      ev => this.handleClick(ev))
+    node.leaves().on('click', ev => this.handleClick(ev))
   }
 
   startRender(method) {
