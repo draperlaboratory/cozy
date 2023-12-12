@@ -78,6 +78,12 @@ export const style = [
       : Colors.focusedNode
     }
   },
+  { selector: "node.segmentHighlight",
+    style: { 
+      'underlay-color': '#708090',
+      'underlay-opacity': 0.5,
+    }
+  },
   {
     selector: 'node[?error], node[?assertion_info]',
     style: { 'background-color': () => settings.showingErrors

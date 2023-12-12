@@ -6,6 +6,7 @@ import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
+import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js' ;
 import { tidyGraph, removeBranch } from '../util/graph-tidy.js';
 import { Status, Tidiness } from '../data/cozy-data.js'
@@ -30,6 +31,8 @@ export default class App extends Component {
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
+    this.cy1.other = this.cy2
+    this.cy2.other = this.cy1
     this.tooltip = createRef()
     this.diffPanel = createRef()
 
@@ -39,6 +42,7 @@ export default class App extends Component {
     this.clearTooltip = this.clearTooltip.bind(this)
     this.resetLayout = this.resetLayout.bind(this)
     this.toggleErrors = this.toggleErrors.bind(this)
+    this.toggleView = this.toggleView.bind(this)
     this.toggleSyscalls = this.toggleSyscalls.bind(this)
     this.toggleSimprocs = this.toggleSimprocs.bind(this)
     this.toggleAsserts = this.toggleAsserts.bind(this)
@@ -75,14 +79,33 @@ export default class App extends Component {
   }
 
   handleClick(ev) {
+    
     //bail out if graphs are not available
     if (this.state.status == Status.unloaded) {
       alert("Please load both graphs before attempting comparison.")
       return
     }
+
+    // if shift is held, highlight the corresponding segment
+    if (ev.originalEvent.shiftKey) {
+      const otherCy = ev.cy.ref.other.cy
+      if (otherCy) {
+        const compats = ev.cy.getLeavesCompatibleWith(ev.target, otherCy)
+        ev.cy.showSegment(ev.target)
+        otherCy.showCompatibilitySegment(ev.cy.getMinimalCeiling(compats), ev.cy)
+      }
+      return
+    }
+
+    // bail out if we're not a leaf
+    if (ev.target.outgoers().length !== 0) {
+      console.log("outgoers")
+      return
+    }
+
     const isLeft = ev.target.cy() == this.cy1.cy
-    const self = isLeft ? this.cy1.cy : this.cy2.cy
-    const other = isLeft ? this.cy2.cy : this.cy1.cy
+    const self = ev.cy
+    const other = ev.cy.ref.other.cy
     this.tooltip.current.attachTo(ev.target)
     // if the node is already focused, but other nodes are focused as well,
     // we're refining a previous selection. In
@@ -135,42 +158,22 @@ export default class App extends Component {
     this.setState({ status: Status.idle })
   }
 
-  // TODO DRY
-  toggleSyscalls() {
+  toggleView(type) {
     this.setState(oldState => {
-      GraphStyle.settings.showingSyscalls = !oldState.showingSyscalls;
+      GraphStyle.settings[type] = !oldState[type];
       this.cy1.cy.style().update()
       this.cy2.cy.style().update()
-      return {showingSyscalls: !oldState.showingSyscalls}
+      return {[type]: !oldState[type]}
     })
   }
 
-  toggleSimprocs() {
-    this.setState(oldState => {
-      GraphStyle.settings.showingSimprocs = !oldState.showingSimprocs;
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return {showingSimprocs: !oldState.showingSimprocs}
-    })
-  }
+  toggleSyscalls() { this.toggleView("showingSyscalls") }
 
-  toggleErrors() {
-    this.setState(oldState => {
-      GraphStyle.settings.showingErrors = !oldState.showingErrors;
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return {showingErrors: !oldState.showingErrors}
-    })
-  }
+  toggleSimprocs() { this.toggleView("showingSimprocs") }
 
-  toggleAsserts() {
-    this.setState(oldState => {
-      GraphStyle.settings.showingAsserts = !oldState.showingAsserts;
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return {showingAsserts: !oldState.showingAsserts}
-    })
-  }
+  toggleErrors() { this.toggleView("showingErrors") }
+
+  toggleAsserts() { this.toggleView("showingAsserts") }
 
   async handleDrop(ev, ref) {
     ev.stopPropagation()
@@ -204,6 +207,7 @@ export default class App extends Component {
     cy.mount(ref.current)
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
+    Object.assign(cy, segmentationMixin);
     // set layout
     cy.layout(standardLayout).run()
     // Accumulate assembly at leaves
@@ -215,10 +219,10 @@ export default class App extends Component {
       assembly += leaf.data().contents
       leaf.data().assembly = assembly
     }
-    cy.nodes().map(node => this.initializeNode(node, cy))
+
     cy.on('add', ev => {
       if (ev.target.group() === 'nodes') {
-        this.initializeNode(ev.target, cy)
+        this.initializeNode(ev.target)
       }
     })
 
@@ -237,6 +241,12 @@ export default class App extends Component {
     // stow graph data in reference
     ref.cy = cy
     ref.orig = JSON.stringify(cy.json())
+
+    // stow reference data in graph
+    cy.ref = ref
+
+    cy.nodes().map(node => this.initializeNode(node))
+
     this.setState({ 
       status: !this.cy1.cy || !this.cy2.cy 
         ? Status.unloaded 
@@ -244,7 +254,7 @@ export default class App extends Component {
     })
   }
 
-  initializeNode(node, cy) {
+  initializeNode(node) {
 
     // turn off manual graph dragging
     node.ungrabify()
@@ -252,20 +262,22 @@ export default class App extends Component {
     // add methods for actively querying display features
 
     // mouseover handling
-    node.on('mouseout', () => {
-      cy.container().style.cursor = "default"
+    node.on('mouseout', ev => {
+      ev.cy.container().style.cursor = "default"
     })
 
     node.on('mouseover', ev => {
+
+
       if (ev.target.outgoers().length == 0) {
-        cy.container().style.cursor = "pointer"
+        ev.cy.container().style.cursor = "pointer"
       }
-      if (cy.loci && !ev.target.hasClass('pathHighlight')) return;
+
+      if (ev.cy.loci && !ev.target.hasClass('pathHighlight')) return;
       this.tooltip.current.attachTo(ev.target)
     })
 
-    node.leaves().on('click',
-      ev => this.handleClick(ev))
+    node.on('click', ev => this.handleClick(ev))
   }
 
   startRender(method) {
