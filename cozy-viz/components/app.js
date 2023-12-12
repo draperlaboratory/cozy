@@ -79,14 +79,33 @@ export default class App extends Component {
   }
 
   handleClick(ev) {
+    
     //bail out if graphs are not available
     if (this.state.status == Status.unloaded) {
       alert("Please load both graphs before attempting comparison.")
       return
     }
+
+    // if shift is held, highlight the corresponding segment
+    if (ev.originalEvent.shiftKey) {
+      const otherCy = ev.cy.ref.other.cy
+      if (otherCy) {
+        const compats = ev.cy.getLeavesCompatibleWith(ev.target, otherCy)
+        ev.cy.showSegment(ev.target)
+        otherCy.showCompatibilitySegment(ev.cy.getMinimalCeiling(compats), ev.cy)
+      }
+      return
+    }
+
+    // bail out if we're not a leaf
+    if (ev.target.outgoers().length !== 0) {
+      console.log("outgoers")
+      return
+    }
+
     const isLeft = ev.target.cy() == this.cy1.cy
-    const self = isLeft ? this.cy1.cy : this.cy2.cy
-    const other = isLeft ? this.cy2.cy : this.cy1.cy
+    const self = ev.cy
+    const other = ev.cy.ref.other.cy
     this.tooltip.current.attachTo(ev.target)
     // if the node is already focused, but other nodes are focused as well,
     // we're refining a previous selection. In
@@ -249,24 +268,16 @@ export default class App extends Component {
 
     node.on('mouseover', ev => {
 
-      const otherCy = ev.cy.ref.other.cy
 
       if (ev.target.outgoers().length == 0) {
         ev.cy.container().style.cursor = "pointer"
       }
 
-      //this needs to be revised to work at the level of references, rather
-      //than holding on to the old cy
-      if (otherCy) {
-        const compats = ev.cy.getLeavesCompatibleWith(node, otherCy)
-        ev.cy.showSegment(ev.target)
-        otherCy.showCompatibilitySegment(ev.cy.getMinimalCeiling(compats), ev.cy)
-      }
       if (ev.cy.loci && !ev.target.hasClass('pathHighlight')) return;
       this.tooltip.current.attachTo(ev.target)
     })
 
-    node.leaves().on('click', ev => this.handleClick(ev))
+    node.on('click', ev => this.handleClick(ev))
   }
 
   startRender(method) {
