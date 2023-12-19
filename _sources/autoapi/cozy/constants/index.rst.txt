@@ -1,0 +1,19 @@
+:py:mod:`cozy.constants`
+========================
+
+.. py:module:: cozy.constants
+
+
+Module Contents
+---------------
+
+.. py:data:: NULL_PTR
+   :value: 0
+
+   
+
+.. py:data:: INT_SIZE
+   :value: 4
+
+   
+

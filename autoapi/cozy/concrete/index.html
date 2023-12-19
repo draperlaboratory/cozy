@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>cozy.concrete &#8212; cozy 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+    <script src="../../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="cozy.constants" href="../constants/index.html" />
+    <link rel="prev" title="cozy.claripy_ext" href="../claripy_ext/index.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-cozy.concrete">
+<span id="cozy-concrete"></span><h1><a class="reference internal" href="#module-cozy.concrete" title="cozy.concrete"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.concrete</span></code></a><a class="headerlink" href="#module-cozy.concrete" title="Link to this heading">¶</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.concrete.CompatiblePairInput" title="cozy.concrete.CompatiblePairInput"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CompatiblePairInput</span></code></a></p></td>
+<td><p>Stores information about the concretization of a compatible state pair.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.concrete.TerminalStateInput" title="cozy.concrete.TerminalStateInput"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerminalStateInput</span></code></a></p></td>
+<td><p>Stores information about the concretization of a TerminalState.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.concrete._concretize" title="cozy.concrete._concretize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_concretize</span></code></a>(solver, state_bundle[, n])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="cozy.concrete._concretize">
+<span class="sig-prename descclassname"><span class="pre">cozy.concrete.</span></span><span class="sig-name descname"><span class="pre">_concretize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">solver</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_bundle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concrete._concretize" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.concrete.CompatiblePairInput">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.concrete.</span></span><span class="sig-name descname"><span class="pre">CompatiblePairInput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mem_diff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">range</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reg_diff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_vprints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><span class="pre">cozy.directive.VirtualPrint</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_vprints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><span class="pre">cozy.directive.VirtualPrint</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concrete.CompatiblePairInput" title="Link to this definition">¶</a></dt>
+<dd><p>Stores information about the concretization of a compatible state pair.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.</p></li>
+<li><p><strong>mem_diff</strong> (<em>dict</em><em>[</em><em>range</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>int</em><em>]</em><em>]</em>) – Concretized version of memory difference. Each key is a memory address range, and each value is a concretized version of the data stored at that location for the prepatched, postpatched runs.</p></li>
+<li><p><strong>reg_diff</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>int</em><em>]</em><em>]</em>) – Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.</p></li>
+<li><p><strong>left_vprints</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><em>directive.VirtualPrint</em></a><em>, </em><em>any</em><em>]</em><em>]</em>) – Concretized versions of virtual prints made by the prepatched state.</p></li>
+<li><p><strong>right_vprints</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><em>directive.VirtualPrint</em></a><em>, </em><em>any</em><em>]</em><em>]</em>) – Concretized versions of virtual prints made by the postpatched state.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.concrete.TerminalStateInput">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.concrete.</span></span><span class="sig-name descname"><span class="pre">TerminalStateInput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vprints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><span class="pre">cozy.directive.VirtualPrint</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concrete.TerminalStateInput" title="Link to this definition">¶</a></dt>
+<dd><p>Stores information about the concretization of a TerminalState.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.</p></li>
+<li><p><strong>vprints</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><em>directive.VirtualPrint</em></a><em>, </em><em>any</em><em>]</em><em>]</em>) – Concretized virtual prints outputted by the singleton state.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../launchingavisualization.html">Launching a Visualization</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">API Reference</a><ul>
+  <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy</span></code></a><ul>
+      <li>Previous: <a href="../claripy_ext/index.html" title="previous chapter"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.claripy_ext</span></code></a></li>
+      <li>Next: <a href="../constants/index.html" title="next chapter"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.constants</span></code></a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../../../_sources/autoapi/cozy/concrete/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

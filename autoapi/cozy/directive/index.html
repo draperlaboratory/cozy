@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>cozy.directive &#8212; cozy 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+    <script src="../../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="cozy.execution_graph" href="../execution_graph/index.html" />
+    <link rel="prev" title="cozy.constants" href="../constants/index.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-cozy.directive">
+<span id="cozy-directive"></span><h1><a class="reference internal" href="#module-cozy.directive" title="cozy.directive"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.directive</span></code></a><a class="headerlink" href="#module-cozy.directive" title="Link to this heading">¶</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.directive.Directive" title="cozy.directive.Directive"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Directive</span></code></a></p></td>
+<td><p>Abstract base class for all directives.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.directive.Assert" title="cozy.directive.Assert"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Assert</span></code></a></p></td>
+<td><p>An assert directive sets a breakpoint at a certain address. An assert is triggered if there is a concrete input which would cause the assertion condition to be satisfied.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.directive.Assume" title="cozy.directive.Assume"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Assume</span></code></a></p></td>
+<td><p>An assume directive sets a breakpoint at a certain address. An assume simply adds an extra constraint to the state's accumulated constraints before resuming execution. An assume is useful for adding a precondition.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VirtualPrint</span></code></a></p></td>
+<td><p>This directive is used to log some piece of information about the program in a list attached to the state. When execution reaches the desired address, the log function will be called, and the result will be saved inside the state's globals dictionary.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.directive.ErrorDirective" title="cozy.directive.ErrorDirective"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ErrorDirective</span></code></a></p></td>
+<td><p>If the program execution reaches the desired address, the state will be considered to be in an errored state and will be moved to the errored cache. This state will have no further execution.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.directive.Directive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.directive.</span></span><span class="sig-name descname"><span class="pre">Directive</span></span><a class="headerlink" href="#cozy.directive.Directive" title="Link to this definition">¶</a></dt>
+<dd><p>Abstract base class for all directives.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.directive.Assert">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.directive.</span></span><span class="sig-name descname"><span class="pre">Assert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.ast.bool</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.Assert" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cozy.directive.Directive" title="cozy.directive.Directive"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Directive</span></code></a></p>
+<p>An assert directive sets a breakpoint at a certain address. An assert is triggered if there is a concrete input which would cause the assertion condition to be satisfied.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The program address this assert is attached to.</p></li>
+<li><p><strong>condition_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.bool</em><em>]</em>) – When the program reaches the desired address, the SimState will be passed to this function, and an assertion condition should be returned. This is then used internally by the SAT solver, along with the state’s accumulated constraints.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em><em> | </em><em>None</em>) – Human readable label for this assertion, printed to the user if the assert is triggered.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Constructor for an Assert object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The address at which the assert will be triggered.</p></li>
+<li><p><strong>condition_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.bool</em><em>]</em>) – When the program reaches the desired address, the SimState will be passed to this function, and an assertion condition should be returned. This is then used internally by the SAT solver, along with the state’s accumulated constraints.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em><em> | </em><em>None</em>) – Human readable label for this assertion, printed to the user if the assert is triggered.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.directive.Assert.from_fun_offset">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_fun_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.ast.bool</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.Assert.from_fun_offset" title="Link to this definition">¶</a></dt>
+<dd><p>Factory for an Assert object set at a certain offset from a function start.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project</strong> (<a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><em>cozy.project.Project</em></a>) – The project which this assert is attached to. The project is used to compute the address of the assert.</p></li>
+<li><p><strong>str</strong> (<em>fun_name</em>) – The name of the function in which this assert will be located.</p></li>
+<li><p><strong>int</strong> (<em>offset</em>) – The offset into the function in which this assert will be located.</p></li>
+<li><p><strong>condition_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.bool</em><em>]</em>) – When the program reaches the desired address, the SimState will be passed to this function, and an assertion condition should be returned. This is then used internally by the SAT solver, along with the state’s accumulated constraints.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em><em> | </em><em>None</em>) – Human readable label for this assertion, printed to the user if the assert is triggered.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new Assert object at the desired function offset.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#cozy.directive.Assert" title="cozy.directive.Assert">Assert</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.directive.Assume">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.directive.</span></span><span class="sig-name descname"><span class="pre">Assume</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.ast.bool</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.Assume" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cozy.directive.Directive" title="cozy.directive.Directive"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Directive</span></code></a></p>
+<p>An assume directive sets a breakpoint at a certain address. An assume simply adds an extra constraint to the state’s accumulated constraints before resuming execution. An assume is useful for adding a precondition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The program address this assume is attached to.</p></li>
+<li><p><strong>condition_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.bool</em><em>]</em>) – When the program reaches the desired address, the SimState will be passed to this function, and a condition should be returned. This condition is then attached to the state’s set of constraints.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em><em> | </em><em>None</em>) – Human readable label for this assume.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Constructor for an Assume object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The address at which the assume will be triggered.</p></li>
+<li><p><strong>condition_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.bool</em><em>]</em>) – When the program reaches the desired address, the SimState will be passed to this function, and an assumption should be returned. This assumption is attached to the state’s constraints for future execution.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em><em> | </em><em>None</em>) – Human readable label for this assume.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.directive.Assume.from_fun_offset">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_fun_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">condition_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.ast.bool</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.Assume.from_fun_offset" title="Link to this definition">¶</a></dt>
+<dd><p>Factory for an Assume object set at a certain offset from a function start.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project</strong> (<a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><em>cozy.project.Project</em></a>) – The project this assume is attached to.</p></li>
+<li><p><strong>str</strong> (<em>fun_name</em>) – The name of the function in which this assume will be located.</p></li>
+<li><p><strong>int</strong> (<em>offset</em>) – The offset into the function in which this assume will be located.</p></li>
+<li><p><strong>condition_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.bool</em><em>]</em>) – When the program reaches the desired address, the SimState will be passed to this function, and an assumption should be returned. This assumption is attached to the state’s constraints for future execution.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em><em> | </em><em>None</em>) – Human readable label for this assume.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new Assume object at the desired function offset.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#cozy.directive.Assume" title="cozy.directive.Assume">Assume</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.directive.VirtualPrint">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.directive.</span></span><span class="sig-name descname"><span class="pre">VirtualPrint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.ast.Base</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.ast.Base</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Unknown</span> <span class="pre">Virtual</span> <span class="pre">Print:</span> <span class="pre">'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.VirtualPrint" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cozy.directive.Directive" title="cozy.directive.Directive"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Directive</span></code></a></p>
+<p>This directive is used to log some piece of information about the program in a list attached to the state. When execution reaches the desired address, the log function will be called, and the result will be saved inside the state’s globals dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The program address this virutal print is attached to.</p></li>
+<li><p><strong>log_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.Base</em><em>]</em>) – This function takes in the current state and returns a claripy AST which should be logged. This value may be symbolic.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em>) – Human readable label for this virtual print.</p></li>
+<li><p><strong>concrete_mapper</strong> (<em>Callable</em><em>[</em><em>[</em><em>claripy.ast.Base</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – concrete_mapper takes as input a concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to pretty print to negative number. This is where concrete_mapper is useful. In this example concrete_mapper would take a concrete bit vector representing a possible value of EAX and return a Python integer (which can be negative). This is what is shown to the user.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Constructor for a VirtualPrint object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The program address this virutal print is attached to.</p></li>
+<li><p><strong>log_fun</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimState</em><em>]</em><em>, </em><em>claripy.ast.Base</em><em>]</em>) – This function takes in the current state and returns a claripy AST which should be logged. This value may be symbolic.</p></li>
+<li><p><strong>concrete_mapper</strong> (<em>Callable</em><em>[</em><em>[</em><em>claripy.ast.Base</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – concrete_mapper takes as input a concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to pretty print to negative number. This is where concrete_mapper is useful. In this example concrete_mapper would take a concrete bit vector representing a possible value of EAX and return a Python integer (which can be negative). This is what is shown to the user.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em>) – Human readable label for this virtual print.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.directive.VirtualPrint.from_fun_offset">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_fun_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.ast.Base</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.ast.Base</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.VirtualPrint.from_fun_offset" title="Link to this definition">¶</a></dt>
+<dd><p>Factory for VirtualPrint object set at a certain offset from a function start.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project</strong> (<a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><em>cozy.project.Project</em></a>) – The project which this virtual print is attached to. The project is used to compute the address of the virtual print.</p></li>
+<li><p><strong>fun_name</strong> (<em>str</em>) – The name of the function in which this virtual print will be located.</p></li>
+<li><p><strong>offset</strong> (<em>int</em>) – The offset into the function in which this virtual print will be located.</p></li>
+<li><p><strong>concrete_mapper</strong> (<em>Callable</em><em>[</em><em>[</em><em>claripy.ast.Base</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – concrete_mapper takes as input a concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to pretty print to negative number. This is where concrete_mapper is useful. In this example concrete_mapper would take a concrete bit vector representing a possible value of EAX and return a Python integer (which can be negative). This is what is shown to the user.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em>) – Human readable label for this virtual print.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new VirtualPrint object at the desired function offset.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint">VirtualPrint</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.directive.ErrorDirective">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.directive.</span></span><span class="sig-name descname"><span class="pre">ErrorDirective</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.ErrorDirective" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cozy.directive.Directive" title="cozy.directive.Directive"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Directive</span></code></a></p>
+<p>If the program execution reaches the desired address, the state will be considered to be in an errored state and will be moved to the errored cache. This state will have no further execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The program address this error directive is attached to.</p></li>
+<li><p><strong>str</strong> – Human readable information for this error directive.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Constructor for an ErrorDirective object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – The program address this error directive is attached to.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em>) – Human readable information for this error directive.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.directive.ErrorDirective.from_fun_offset">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_fun_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fun_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.directive.ErrorDirective.from_fun_offset" title="Link to this definition">¶</a></dt>
+<dd><p>Factory for ErrorDirective object set at a certain offset from a function start.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project</strong> (<a class="reference internal" href="../project/index.html#cozy.project.Project" title="cozy.project.Project"><em>cozy.project.Project</em></a>) – The project this error directive should be attached to.</p></li>
+<li><p><strong>fun_name</strong> (<em>str</em>) – The name of the function in which this error directive will be located.</p></li>
+<li><p><strong>offset</strong> (<em>int</em>) – The offset into the function in which this error directive will be located.</p></li>
+<li><p><strong>info_str</strong> (<em>str</em><em> | </em><em>None</em>) – Human readable information for this error directive.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new ErrorDirective object at the desired function offset.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#cozy.directive.ErrorDirective" title="cozy.directive.ErrorDirective">ErrorDirective</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../launchingavisualization.html">Launching a Visualization</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">API Reference</a><ul>
+  <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy</span></code></a><ul>
+      <li>Previous: <a href="../constants/index.html" title="previous chapter"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.constants</span></code></a></li>
+      <li>Next: <a href="../execution_graph/index.html" title="next chapter"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.execution_graph</span></code></a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../../../_sources/autoapi/cozy/directive/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

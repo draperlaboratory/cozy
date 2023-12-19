@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Launching a Visualization &#8212; cozy 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="autoapi/index.html" />
+    <link rel="prev" title="Getting Started" href="gettingstarted.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="launching-a-visualization">
+<h1>Launching a Visualization<a class="headerlink" href="#launching-a-visualization" title="Link to this heading">¶</a></h1>
+<p>In this example we will cover adding user defined types to the angr project as well as
+visualizing our results with cozy. We will be using the AMP Hackathon Target 5 binaries,
+which can be found in the examples folder in the cozy repository. There is no source
+code available for these binaries, so some manual inspection of the assembly in your
+preferred reverse engineering tool may be necessary.</p>
+<p>The micropatch bug in the Target 5 demo occurs during conversion of the temperature
+value. Within the function we want replace the following logic:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">int32_t</span> <span class="n">rover_process</span><span class="p">(</span><span class="n">RoverMessage_t</span><span class="o">*</span> <span class="n">msg</span><span class="p">){</span>
+    <span class="o">//</span> <span class="o">...</span>
+    <span class="o">//</span><span class="n">convert</span> <span class="n">Kelvin</span> <span class="n">to</span> <span class="n">Farhenheit</span><span class="o">.</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="p">(</span> <span class="p">(</span><span class="n">temp</span> <span class="o">-</span> <span class="mi">273</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1.8</span> <span class="p">)</span> <span class="o">+</span> <span class="mi">32</span><span class="p">;</span>
+    <span class="o">//</span> <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>With this logic:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">int32_t</span> <span class="n">rover_process</span><span class="p">(</span><span class="n">RoverMessage_t</span><span class="o">*</span> <span class="n">msg</span><span class="p">){</span>
+    <span class="o">//</span> <span class="o">...</span>
+    <span class="o">//</span><span class="n">convert</span> <span class="n">Celsius</span> <span class="n">to</span> <span class="n">Farhenheit</span><span class="o">.</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="p">(</span> <span class="n">temp</span> <span class="o">*</span> <span class="mf">1.8</span> <span class="p">)</span> <span class="o">+</span> <span class="mi">32</span><span class="p">;</span>
+    <span class="o">//</span> <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>To achieve this patch, we replaced the constant 273 in the original binary with 0.</p>
+<p>Let’s get started by making two cozy projects, one for each binary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">proj_prepatched</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s1">&#39;examples/amp_target5_hackathon/gs_data_processor&#39;</span><span class="p">)</span>
+<span class="n">proj_postpatched</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">Project</span><span class="p">(</span><span class="s1">&#39;examples/amp_target5_hackathon/gs_data_processor_draper_patched&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="defining-custom-types">
+<h2>Defining Custom Types<a class="headerlink" href="#defining-custom-types" title="Link to this heading">¶</a></h2>
+<p>Our next task will be to define the structs used by this function. The primary inputs
+to this function is the temperature field and the cmd field. Let’s register these datatypes
+with angr:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rover_data_struct</span> <span class="o">=</span> <span class="n">angr</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">parse_type</span><span class="p">(</span><span class="s1">&#39;struct RoverData_t { int temp; unsigned int cmd; }&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">with_arch</span><span class="p">(</span><span class="n">proj_prepatched</span><span class="o">.</span><span class="n">angr_proj</span><span class="o">.</span><span class="n">arch</span><span class="p">)</span>
+<span class="n">angr</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">register_types</span><span class="p">(</span><span class="n">rover_data_struct</span><span class="p">)</span>
+
+<span class="n">rover_message_struct</span> <span class="o">=</span> <span class="n">angr</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">parse_type</span><span class="p">(</span><span class="s1">&#39;struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">with_arch</span><span class="p">(</span><span class="n">proj_prepatched</span><span class="o">.</span><span class="n">angr_proj</span><span class="o">.</span><span class="n">arch</span><span class="p">)</span>
+<span class="n">angr</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">register_types</span><span class="p">(</span><span class="n">rover_message_struct</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We are now ready to add the type signature of the method we wish to analyze to the cozy project:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">proj_prepatched</span><span class="o">.</span><span class="n">add_prototype</span><span class="p">(</span><span class="s2">&quot;rover_process&quot;</span><span class="p">,</span> <span class="s2">&quot;int rover_process(struct RoverMessage_t *msg)&quot;</span><span class="p">)</span>
+<span class="n">proj_postpatched</span><span class="o">.</span><span class="n">add_prototype</span><span class="p">(</span><span class="s2">&quot;rover_process&quot;</span><span class="p">,</span> <span class="s2">&quot;int rover_process(struct RoverMessage_t *msg)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="comparing-and-visualizing">
+<h2>Comparing and Visualizing<a class="headerlink" href="#comparing-and-visualizing" title="Link to this heading">¶</a></h2>
+<p>Now let’s create two symbolic variables to represent the <code class="docutils literal notranslate"><span class="pre">temp</span></code> and <code class="docutils literal notranslate"><span class="pre">cmd</span></code> fields in the <code class="docutils literal notranslate"><span class="pre">RoverData_t</span></code> struct:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">temp</span> <span class="o">=</span> <span class="n">claripy</span><span class="o">.</span><span class="n">BVS</span><span class="p">(</span><span class="s2">&quot;temp&quot;</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+<span class="n">cmd</span> <span class="o">=</span> <span class="n">claripy</span><span class="o">.</span><span class="n">BVS</span><span class="p">(</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We now define a run function, which will run a prepatched or postpatched session:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="n">sess</span><span class="p">:</span> <span class="n">cozy</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">Session</span><span class="p">):</span>
+    <span class="n">arg0</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">malloc</span><span class="p">(</span><span class="n">rover_message_struct</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">mem</span><span class="p">[</span><span class="n">arg0</span><span class="p">]</span><span class="o">.</span><span class="n">struct</span><span class="o">.</span><span class="n">RoverMessage_t</span><span class="o">.</span><span class="n">packetData</span><span class="o">.</span><span class="n">temp</span> <span class="o">=</span> <span class="n">temp</span><span class="o">.</span><span class="n">reversed</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">mem</span><span class="p">[</span><span class="n">arg0</span><span class="p">]</span><span class="o">.</span><span class="n">struct</span><span class="o">.</span><span class="n">RoverMessage_t</span><span class="o">.</span><span class="n">packetData</span><span class="o">.</span><span class="n">cmd</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">reversed</span>
+
+    <span class="k">return</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">arg0</span><span class="p">,</span> <span class="n">cache_intermediate_states</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this case we are mutating the memory by changing the memory of the angr state before
+cozy runs. In this case we use angr’s API to mutate the temp and cmd fields. Since the
+incoming network packet uses network order endianness, we store <code class="docutils literal notranslate"><span class="pre">temp.reversed</span></code> and
+<code class="docutils literal notranslate"><span class="pre">cmd.reversed</span></code> to swap the endianness. Additionally we set <code class="docutils literal notranslate"><span class="pre">cache_intermediate_states</span></code>
+to True, which is required for the visualization.</p>
+<p>Let’s use our new run function to run the prepatched and postpatched session:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">prepatched_results</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="n">proj_prepatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;rover_process&quot;</span><span class="p">))</span>
+<span class="n">postpatched_results</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="n">proj_postpatched</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s2">&quot;rover_process&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Now we make the comparison between the two RunResult objects:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">comparison</span> <span class="o">=</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">Comparison</span><span class="p">(</span><span class="n">prepatched_results</span><span class="p">,</span> <span class="n">postpatched_results</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>After which we can launch the visualization in our web browser. This should automatically
+open a browser window which visualizes our results:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cozy</span><span class="o">.</span><span class="n">execution_graph</span><span class="o">.</span><span class="n">visualize_comparison</span><span class="p">(</span><span class="n">proj_prepatched</span><span class="p">,</span> <span class="n">proj_postpatched</span><span class="p">,</span>
+                                          <span class="n">prepatched_results</span><span class="p">,</span> <span class="n">postpatched_results</span><span class="p">,</span>
+                                          <span class="n">comparison</span><span class="p">,</span>
+                                          <span class="n">args</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;temp&quot;</span><span class="p">:</span> <span class="n">temp</span><span class="p">,</span> <span class="s2">&quot;cmd&quot;</span><span class="p">:</span> <span class="n">cmd</span><span class="p">},</span>
+                                          <span class="n">num_examples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">open_browser</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Launching a Visualization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#defining-custom-types">Defining Custom Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#comparing-and-visualizing">Comparing and Visualizing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="gettingstarted.html" title="previous chapter">Getting Started</a></li>
+      <li>Next: <a href="autoapi/index.html" title="next chapter">API Reference</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/launchingavisualization.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,223 @@
+:py:mod:`cozy.project`
+======================
+
+.. py:module:: cozy.project
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.project.RunResult
+   cozy.project.Session
+   cozy.project.Project
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.project._on_mem_write
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.project._mem_write_ctr
+
+
+.. py:class:: RunResult(deadended: list[cozy.terminal_state.DeadendedState], errored: list[cozy.terminal_state.ErrorState], asserts_failed: list[cozy.terminal_state.AssertFailedState], assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]])
+
+
+   This class is used for storing the results of running a session.
+
+   :ivar list[DeadendedState] deadended: States that reached normal termination.
+   :ivar list[ErrorState] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
+   :ivar list[AssertFailed] asserts_failed: States where an assertion was able to be falsified.
+   :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
+
+   .. py:property:: assertion_triggered
+      :type: bool
+
+      Returns True if there were any assertions triggered during this run.
+
+      :return: True if there were assertions triggered.
+      :rtype: bool
+
+
+   .. py:method:: __str__()
+
+      Return str(self).
+
+
+   .. py:method:: report_errored(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about a list of errored states.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+      :return: The report as a string
+      :rtype: str
+
+
+   .. py:method:: report_asserts_failed(args: any, concrete_arg_mapper: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about a list of failed assertions.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+.. py:data:: _mem_write_ctr
+   :value: 0
+
+   
+
+.. py:function:: _on_mem_write(state)
+
+
+.. py:class:: Session(proj, start_fun: str | int | None = None)
+
+
+   A session is a particular run of a project, consisting of attached directives (asserts/assumes).
+   You can malloc memory for storage prior to running the session.
+   Once you are ready to run the session, use the run method.
+
+   :ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify properties of the state before a run.
+   :ivar Project proj: The Project tied to this session.
+   :ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the session starts in an entry state.
+   :ivar list[Directive] directives: The directives added to this session.
+   :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
+
+   Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
+
+   .. py:method:: store_fs(filename: str, simfile: angr.SimFile) -> None
+
+      Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments to state.fs.insert.
+
+      :param str filename: The filename of the new file.
+      :param angr.SimFile simfile: The file to make available to the simulated program.
+      :return: None
+      :rtype: None
+
+
+   .. py:method:: malloc(num_bytes: int) -> int
+
+      Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory before the :py:meth:`~cozy.project.Project.run` method is called.
+
+      :param int num_bytes: The number of bytes to allocate.
+      :return: A pointer to the allocated memory block.
+      :rtype: int
+
+
+   .. py:method:: store(addr: int, data: claripy.ast.bits, **kwargs)
+
+      Stores data at some address. This method simply forwards the arguments to state.memory.store.
+
+      :param int addr: Address to store the data at.
+      :param claripy.ast.bits data: The data to store in memory.
+      :param kwargs: Additional keyword arguments to pass to state.memory.store
+
+
+   .. py:method:: add_directives(*directives: cozy.directive.Directive) -> None
+
+      Adds multiple directives to the session.
+
+      :param Directive directives: The directives to add.
+      :return: None
+      :rtype: None
+
+
+   .. py:method:: add_constraints(*constraints: claripy.ast.bool) -> None
+
+      Adds multiple constraints to the session's state.
+
+      :param claripy.ast.bool constraints: The constraints to add
+      :return: None
+      :rtype: None
+
+
+   .. py:method:: _save_states(states)
+
+
+   .. py:method:: _save_constraints(states)
+
+
+   .. py:method:: run(*args: claripy.ast.bits, cache_intermediate_states: bool = False, cache_constraints: bool = True, ret_addr: int | None = None) -> RunResult
+
+      Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.
+
+      :param claripy.ast.bits args: The arguments to pass to the function. angr will utilize the function's type signature to figure out the calling convention to use with the arguments.
+      :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached, preventing their garbage collection. This is required for dumping the execution graph.
+      :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will be cached, which is required for performing memoized binary search when diffing states.
+      :param int | None ret_addr: What address to return to if calling as a function
+      :return: The result of running this session.
+      :rtype: RunResult
+
+
+
+.. py:class:: Project(binary_path: str, fun_prototypes: dict[str | int, str] | None = None)
+
+
+   Represents a project for a single executable
+
+   :ivar angr.Project angr_proj: The angr project created for this cozy project.
+   :ivar dict[str | int, str] fun_prototypes: Maps function names or function addresses to their type signatures.
+
+   Constructor for a project.
+
+   :param str binary_path: The path to the binary to analyze.
+   :param dict[str | int, str] | None fun_prototypes: Initial dictionary that maps function names or addresses to their type signatures. If None is passed, fun_prototypes is initialized to the empty dictionary.
+
+   .. py:method:: object_ranges(obj_filter: collections.abc.Callable[[cle.Backend], bool] | None = None) -> list[range]
+
+      Returns the ranges of the objects stored in the executable (for example: ELF objects). If obj_filter is specified, only objects that pass the filter make it into the return list.
+
+      :param Callable[[Backend], bool] | None obj_filter: Used to filter certain objects from the output list.
+      :return: A list of memory ranges.
+      :rtype: list[range]
+
+
+   .. py:method:: find_symbol_addr(sym_name: str) -> int
+
+      Finds the rebased addressed of a symbol. Functions are the most common symbol type.
+
+      :param str sym_name: The symbol to lookup.
+      :return: The rebased symbol address
+      :rtype: int
+
+
+   .. py:method:: add_prototype(fun: str | int, fun_prototype: str) -> None
+
+      Adds a function prototype to this project.
+
+      :param str | int fun: The function's name or address.
+      :param str fun_prototype: The function's type signature.
+      :return: None
+      :rtype: None
+
+
+   .. py:method:: session(start_fun: str | int | None = None) -> Session
+
+      Returns a new session derived from this project.
+
+      :param str | int | None start_fun: The name or address of the function which this session will start with. If None is specified, then the program will start at the entry point (main function).
+      :return: The fresh session.
+      :rtype: Session
+
+
+

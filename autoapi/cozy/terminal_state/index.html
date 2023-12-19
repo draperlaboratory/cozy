@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>cozy.terminal_state &#8212; cozy 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=4f649999" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=039e1c02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+    <script src="../../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="prev" title="cozy.server" href="../server/index.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-cozy.terminal_state">
+<span id="cozy-terminal-state"></span><h1><a class="reference internal" href="#module-cozy.terminal_state" title="cozy.terminal_state"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.terminal_state</span></code></a><a class="headerlink" href="#module-cozy.terminal_state" title="Link to this heading">¶</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.terminal_state.TerminalState" title="cozy.terminal_state.TerminalState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerminalState</span></code></a></p></td>
+<td><p>Stores information pertaining specifically to a single SimState.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.terminal_state.DeadendedState" title="cozy.terminal_state.DeadendedState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DeadendedState</span></code></a></p></td>
+<td><p>This class is used to indicate that execution terminated normally in the contained state.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.terminal_state.AssertFailedState" title="cozy.terminal_state.AssertFailedState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AssertFailedState</span></code></a></p></td>
+<td><p>This class is used to indicate that execution failed due to an <a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><code class="xref py py-class docutils literal notranslate"><span class="pre">Assert</span></code></a> being satisfiable.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.terminal_state.ErrorState" title="cozy.terminal_state.ErrorState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ErrorState</span></code></a></p></td>
+<td><p>This class is used to indicate a state that resulted in an error (either my an execution error or <a class="reference internal" href="../directive/index.html#cozy.directive.ErrorDirective" title="cozy.directive.ErrorDirective"><code class="xref py py-class docutils literal notranslate"><span class="pre">ErrorDirective</span></code></a>).</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.terminal_state.TerminalState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.terminal_state.</span></span><span class="sig-name descname"><span class="pre">TerminalState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimState</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_type_str</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.terminal_state.TerminalState" title="Link to this definition">¶</a></dt>
+<dd><p>Stores information pertaining specifically to a single SimState.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<em>SimState</em>) – The state we are storing information about.</p></li>
+<li><p><strong>state_id</strong> (<em>int</em>) – The index of this particular state in the corresponding list in RunResult. Note that errored states have separate state_ids from deadended states. Therefore a particular input state here is uniquely identified by the pair (state_id, state_tag), not just state_id by itself.</p></li>
+<li><p><strong>state_type_str</strong> (<em>str</em>) – A string representation of the state’s type</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.terminal_state.TerminalState.std_out">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">std_out</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bytes</span></em><a class="headerlink" href="#cozy.terminal_state.TerminalState.std_out" title="Link to this definition">¶</a></dt>
+<dd><p>The data that has been written to stdout when the program is in this state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Getter<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The data written to stdout</p>
+</dd>
+<dt class="field-even">Type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.terminal_state.TerminalState.std_err">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">std_err</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bytes</span></em><a class="headerlink" href="#cozy.terminal_state.TerminalState.std_err" title="Link to this definition">¶</a></dt>
+<dd><p>The data that has been written to stderr when the program is in this state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Getter<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The data written to stderr</p>
+</dd>
+<dt class="field-even">Type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bytes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.terminal_state.TerminalState.virtual_prints">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">virtual_prints</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint"><span class="pre">cozy.directive.VirtualPrint</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.ast.Base</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#cozy.terminal_state.TerminalState.virtual_prints" title="Link to this definition">¶</a></dt>
+<dd><p>Returns the output of the virtual prints that occurred while reaching this state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Getter<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list of VirtualPrint directives, along with the values they produced.</p>
+</dd>
+<dt class="field-even">Type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[tuple[<a class="reference internal" href="../directive/index.html#cozy.directive.VirtualPrint" title="cozy.directive.VirtualPrint">VirtualPrint</a>, claripy.ast.Base]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.terminal_state.TerminalState.mem_writes">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mem_writes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">portion.IntervalDict</span></em><a class="headerlink" href="#cozy.terminal_state.TerminalState.mem_writes" title="Link to this definition">¶</a></dt>
+<dd><p>The memory writes that occurred while reaching this state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Getter<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An interval dictionary, with the keys being ranges and the values being tuple[int, frozenset[int]]. The first element of the tuple is a unique placeholder, the second element of the tuple are the possible instruction pointer values that wrote to this memory.</p>
+</dd>
+<dt class="field-even">Type<span class="colon">:</span></dt>
+<dd class="field-even"><p>P.IntervalDict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.terminal_state.TerminalState.concrete_examples">
+<span class="sig-name descname"><span class="pre">concrete_examples</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../concrete/index.html#cozy.concrete.TerminalStateInput" title="cozy.concrete.TerminalStateInput"><span class="pre">cozy.concrete.TerminalStateInput</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.terminal_state.TerminalState.concrete_examples" title="Link to this definition">¶</a></dt>
+<dd><p>Concretizes the arguments used to put the program in this singleton state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The input arguments to concretize. This argument may be a Python datastructure, the concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to generate for this singleton state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of concrete inputs that satisfies the constraints attached to the state.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[<a class="reference internal" href="../concrete/index.html#cozy.concrete.TerminalStateInput" title="cozy.concrete.TerminalStateInput">TerminalStateInput</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.terminal_state.DeadendedState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.terminal_state.</span></span><span class="sig-name descname"><span class="pre">DeadendedState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimState</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.terminal_state.DeadendedState" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cozy.terminal_state.TerminalState" title="cozy.terminal_state.TerminalState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerminalState</span></code></a></p>
+<p>This class is used to indicate that execution terminated normally in the contained state.</p>
+<p>Constructor for DeadendedState</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<em>SimState</em>) – The state that terminated normally.</p></li>
+<li><p><strong>state_id</strong> (<em>int</em>) – The identifer of the state, determined by its position in the list <code class="xref py py-obj docutils literal notranslate"><span class="pre">cozy.project.RunResult.deadended</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.terminal_state.AssertFailedState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.terminal_state.</span></span><span class="sig-name descname"><span class="pre">AssertFailedState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">assertion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><span class="pre">cozy.directive.Assert</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cond</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">failure_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimState</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.terminal_state.AssertFailedState" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cozy.terminal_state.TerminalState" title="cozy.terminal_state.TerminalState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerminalState</span></code></a></p>
+<p>This class is used to indicate that execution failed due to an <a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><code class="xref py py-class docutils literal notranslate"><span class="pre">Assert</span></code></a> being satisfiable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>assertion</strong> (<a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><em>Assert</em></a>) – The assertion that was triggered.</p></li>
+<li><p><strong>cond</strong> (<em>claripy.ast.bool</em>) – The condition that caused the assertion to trigger</p></li>
+</ul>
+</dd>
+</dl>
+<p>Constructor for AssertFailedState</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>assertion</strong> (<a class="reference internal" href="../directive/index.html#cozy.directive.Assert" title="cozy.directive.Assert"><em>Assert</em></a>) – The assertion that was triggered.</p></li>
+<li><p><strong>claripy.ast.bool</strong> – The condition which if falsified will trigger the assertion.</p></li>
+<li><p><strong>failure_state</strong> (<em>SimState</em>) – The state that was created to test the assertion.</p></li>
+<li><p><strong>state_id</strong> (<em>int</em>) – The identifier of the state, determined by its position in the list <code class="xref py py-obj docutils literal notranslate"><span class="pre">cozy.project.RunResult.asserts_failed</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.terminal_state.ErrorState">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.terminal_state.</span></span><span class="sig-name descname"><span class="pre">ErrorState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">error_record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.sim_manager.ErrorRecord</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.terminal_state.ErrorState" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cozy.terminal_state.TerminalState" title="cozy.terminal_state.TerminalState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TerminalState</span></code></a></p>
+<p>This class is used to indicate a state that resulted in an error (either my an execution error or <a class="reference internal" href="../directive/index.html#cozy.directive.ErrorDirective" title="cozy.directive.ErrorDirective"><code class="xref py py-class docutils literal notranslate"><span class="pre">ErrorDirective</span></code></a>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>error</strong> (<em>SimError</em>) – The error that was thrown.</p></li>
+<li><p><strong>traceback</strong> – The traceback attached to the error.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Constructor for ErrorState</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>error_record</strong> (<em>ErrorRecord</em>) – The error thrown for this state.</p></li>
+<li><p><strong>state_id</strong> (<em>int</em>) – The identifier of the state, determined by it’s position in the list <code class="xref py py-obj docutils literal notranslate"><span class="pre">cozy.project.RunResult.errored</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../launchingavisualization.html">Launching a Visualization</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">API Reference</a><ul>
+  <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy</span></code></a><ul>
+      <li>Previous: <a href="../server/index.html" title="previous chapter"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.server</span></code></a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../../../_sources/autoapi/cozy/terminal_state/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

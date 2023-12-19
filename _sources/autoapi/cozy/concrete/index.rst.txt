@@ -1,0 +1,52 @@
+:py:mod:`cozy.concrete`
+=======================
+
+.. py:module:: cozy.concrete
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.concrete.CompatiblePairInput
+   cozy.concrete.TerminalStateInput
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.concrete._concretize
+
+
+
+.. py:function:: _concretize(solver, state_bundle, n=1)
+
+
+.. py:class:: CompatiblePairInput(args, mem_diff: dict[range, tuple[int, int]], reg_diff: dict[str, tuple[int, int]], left_vprints: list[tuple[cozy.directive.VirtualPrint, any]], right_vprints: list[tuple[cozy.directive.VirtualPrint, any]])
+
+
+   Stores information about the concretization of a compatible state pair.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[range, tuple[int, int]] mem_diff: Concretized version of memory difference. Each key is a memory address range, and each value is a concretized version of the data stored at that location for the prepatched, postpatched runs.
+   :ivar dict[str, tuple[int, int]] reg_diff: Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.
+   :ivar list[tuple[directive.VirtualPrint, any]] left_vprints: Concretized versions of virtual prints made by the prepatched state.
+   :ivar list[tuple[directive.VirtualPrint, any]] right_vprints: Concretized versions of virtual prints made by the postpatched state.
+
+
+.. py:class:: TerminalStateInput(args, vprints: list[tuple[cozy.directive.VirtualPrint, any]])
+
+
+   Stores information about the concretization of a TerminalState.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar list[tuple[directive.VirtualPrint, any]] vprints: Concretized virtual prints outputted by the singleton state.
+
+

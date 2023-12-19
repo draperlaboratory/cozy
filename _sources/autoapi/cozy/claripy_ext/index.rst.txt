@@ -1,0 +1,39 @@
+:py:mod:`cozy.claripy_ext`
+==========================
+
+.. py:module:: cozy.claripy_ext
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.claripy_ext.twos_comp_range_constraint
+   cozy.claripy_ext.simplify_kb
+
+
+
+.. py:function:: twos_comp_range_constraint(x: claripy.ast.bits, low: int, high: int) -> claripy.ast.Bool
+
+   Generates a constraint which bounds the input argument in range [low, high), assuming a two's complement representation.
+
+   :param clairpy.ast.bits x: The bits to constrain. Typically, this is a symbolic bitvector.
+   :param int low: The lower bound on the range. This number may be negative.
+   :param int high: The upper bound on the range.
+
+
+.. py:function:: simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bits
+
+   Simplifies a claripy AST expression, given some knowledge base (kb) of information
+
+   :param claripy.ast.bits expr: The expression to simplify
+   :param claripy.ast.Bool kb: The knowledge base which is used to simplify the expr. This is typically a series of equalities conjoined together.
+   :return: A simplified version of the input expression, or the original expression if no simplification occurred.
+   :rtype: claripy.ast.bits
+
+
