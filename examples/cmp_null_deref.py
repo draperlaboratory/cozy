@@ -1,7 +1,7 @@
 import archinfo
 
 import cozy.analysis as analysis
-from cozy.project import Project, AssertFailedState
+from cozy.project import Project
 from cozy.directive import Assume, Assert
 from cozy.constants import *
 import cozy.primitives as primitives
