@@ -2,7 +2,8 @@
   "name": "cozy-viz",
   "version": "0.0.0",
   "dependencies": {
-    "esbuild": "^0.19.5"
+    "esbuild": "^0.19.5",
+    "vite": "^5.0.8"
   },
   "scripts": {
     "build": "node ./bundler.mjs"
