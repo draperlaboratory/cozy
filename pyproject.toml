@@ -26,7 +26,7 @@ dependencies = [
 
 [project.urls]
 "Homepage" = "https://github.com/draperlaboratory/cozy"
-"Bug Tracker" = "https://github.com/draperlaboratory/cozy"
+"Bug Tracker" = "https://github.com/draperlaboratory/cozy/issues"
 
 [tool.hatch.build.targets.wheel.force-include]
 "./cozy-viz" = "cozy-viz"
