@@ -1,6 +1,7 @@
 import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.1.0/+esm'
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component } from 'https://unpkg.com/preact@latest?module'
+import { getNodesFromEnds } from '../util/segmentation'
 
 export default class DiffPanel extends Component {
   constructor() {
@@ -12,57 +13,76 @@ export default class DiffPanel extends Component {
 
   toggleMode(mode) {
     if (this.state.mode == mode) {
-      this.setState({mode:null})
+      this.setState({ mode: null })
     } else {
-      this.setState({mode})
+      this.setState({ mode })
     }
   }
 
   setLeftFocus(leftFocus) {
-    this.setState({leftFocus})
+    this.setState({ leftFocus })
     if (this.state.rightFocus) this.diffAssemblyWith(leftFocus, this.state.rightFocus)
   }
 
   setRightFocus(rightFocus) {
-    this.setState({rightFocus})
+    this.setState({ rightFocus })
     if (this.state.leftFocus) this.diffAssemblyWith(this.state.leftFocus, rightFocus)
   }
 
   setBothFoci(leftFocus, rightFocus) {
     this.setState({ leftFocus, rightFocus })
-    this.diffAssemblyWith(leftFocus,rightFocus);
+    this.diffAssemblyWith(leftFocus, rightFocus);
   }
 
   resetLeftFocus(leftFocus) {
     this.setState({
-      rightFocus:null,
-      rightAssemblyDiff:null,
-      leftAssemblyDiff:null, 
-      leftFocus})
+      rightFocus: null,
+      rightAssemblyDiff: null,
+      leftAssemblyDiff: null,
+      leftFocus
+    })
   }
 
   resetRightFocus(rightFocus) {
     this.setState({
-      leftFocus:null,
-      rightAssemblyDiff:null,
-      leftAssemblyDiff:null, 
-      rightFocus})
+      leftFocus: null,
+      rightAssemblyDiff: null,
+      leftAssemblyDiff: null,
+      rightFocus
+    })
   }
 
   resetBothFoci() {
     this.setState({
-      leftFocus:null,
-      rightFocus:null,
-      rightAssemblyDiff:null,
-      leftAssemblyDiff:null, 
-      })
+      leftFocus: null,
+      rightFocus: null,
+      rightAssemblyDiff: null,
+      leftAssemblyDiff: null,
+    })
   }
 
-  diffAssemblyWith(leftFocus,rightFocus) {
-    const leftLines = leftFocus.bot.data().assembly.split('\n')
-    const rightLines = rightFocus.bot.data().assembly.split('\n')
-    const diffs = Diff.diffLines(leftFocus.bot.data().assembly, rightFocus.bot.data().assembly, {
-      comparator(l,r) { return l.substring(6) == r.substring(6) }
+  // should this even be a method?
+  getAssembly(focus) {
+    const segment = getNodesFromEnds(focus.top, focus.bot).reverse()
+    let contents = ""
+    const lines = []
+
+    for (const node of segment) {
+      for (const line of node.data().contents.split('\n')) {
+        contents += line + '\n'
+        lines.push(line)
+      }
+    }
+
+    return { contents, lines }
+  }
+
+  diffAssemblyWith(leftFocus, rightFocus) {
+    const {contents: leftAssembly, lines: leftLines} = this.getAssembly(leftFocus)
+    const {contents: rightAssembly, lines: rightLines} = this.getAssembly(rightFocus)
+
+    const diffs = Diff.diffLines(leftAssembly, rightAssembly, {
+      comparator(l, r) { return l.substring(6) == r.substring(6) }
     })
     let renderedRight = []
     let renderedLeft = []
@@ -101,11 +121,15 @@ export default class DiffPanel extends Component {
   }
 
   getLeftFocusAssembly() {
-    return this.state.leftAssemblyDiff || this.state.leftFocus.bot?.data().assembly
+    if (this.state.leftAssemblyDiff) return this.state.leftAssemblyDiff
+    if (this.state.leftFocus) return this.getAssembly(this.state.leftFocus).contents
+    return null
   }
 
   getRightFocusAssembly() {
-    return this.state.rightAssemblyDiff || this.state.rightFocus.bot?.data().assembly
+    if (this.state.rightAssemblyDiff) return this.state.rightAssemblyDiff
+    if (this.state.rightFocus) return this.getAssembly(this.state.rightFocus).contents
+    return null
   }
 
   render(props, state) {
@@ -153,8 +177,8 @@ export default class DiffPanel extends Component {
       ${state.mode == "memory" && memoryAvailable && html`
           <${MemoryDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
       }
-      ${state.mode == "concretions" && concretionAvailable && 
-          html`<${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+      ${state.mode == "concretions" && concretionAvailable &&
+      html`<${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
       }
       </div>`
   }
@@ -168,7 +192,7 @@ class RegisterDifference extends Component {
   }
 
   setView(view) {
-    this.setState({view})
+    this.setState({ view })
   }
 
   render(props, state) {
@@ -189,7 +213,7 @@ class RegisterDifference extends Component {
         view=${state.view} 
         setView=${view => this.setView(view)} 
         concretionCount=${conc_regdiffs.length}/>
-      <div id="grid-diff-data"> ${registers.length > 0 
+      <div id="grid-diff-data"> ${registers.length > 0
         ? registers
         : html`<span class="no-difference">no register differences detected ✓</span>`
       }</div></div>`
@@ -204,7 +228,7 @@ class MemoryDifference extends Component {
   }
 
   setView(view) {
-    this.setState({view})
+    this.setState({ view })
   }
 
   render(props, state) {
@@ -225,7 +249,7 @@ class MemoryDifference extends Component {
         view=${state.view} 
         setView=${view => this.setView(view)} 
         concretionCount=${conc_adiffs.length}/>
-      <div id="grid-diff-data"> ${addresses.length > 0 
+      <div id="grid-diff-data"> ${addresses.length > 0
         ? addresses
         : html`<span class="no-difference">no memory differences detected ✓</span>`
       }</div></div>`

@@ -58,8 +58,7 @@ export const segmentationMixin = {
     seg.addClass("segmentHighlight")
   },
 
-  // gets all leaves in cy compatible with a given
-  // node
+  // gets all leaves in cy compatible with a given node
   getLeavesCompatibleWith(node, cy) {
     const leaves = node.successors().add(node).leaves()
     const ids = leaves.flatMap(leaf => Object.keys(leaf.data().compatibilities))
@@ -92,5 +91,15 @@ export const segmentationMixin = {
         depth += 1
       }
     }
+  },
+
+
+  // given the top and bottom nodes, return a list of nodes in a segment
+  getNodesFromEnds(top, bottom) {
+    const interval = [bottom]
+    while (interval[interval.length - 1] !== top) {
+      interval.push(interval[interval.length - 1].incomers()[0])
+    }
+    return interval
   }
 }

@@ -210,20 +210,13 @@ export default class App extends Component {
 
     // mount to DOM
     cy.mount(ref.current)
+
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
     Object.assign(cy, segmentationMixin);
+    
     // set layout
     cy.layout(standardLayout).run()
-    // Accumulate assembly at leaves
-    for (const leaf of [...cy.nodes().leaves()]) {
-      let assembly = "";
-      for (const node of leaf.predecessors('node').reverse()) {
-        assembly += node.data().contents + '\n'
-      }
-      assembly += leaf.data().contents
-      leaf.data().assembly = assembly
-    }
 
     cy.on('add', ev => {
       if (ev.target.group() === 'nodes') {
