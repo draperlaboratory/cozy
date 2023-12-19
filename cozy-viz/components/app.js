@@ -106,14 +106,17 @@ export default class App extends Component {
     const isLeft = ev.target.cy() == this.cy1.cy
     const self = ev.cy
     const other = ev.cy.ref.other.cy
+    const selfRoot = ev.cy.nodes().roots()[0]
+    const selfSegment = {top: selfRoot, bot: ev.target}
+
     this.tooltip.current.attachTo(ev.target)
     // if the node is already focused, but other nodes are focused as well,
     // we're refining a previous selection. In
     // this case, we narrow the focus to just the clicked node.
     if (self.loci?.length > 1 && self.loci.includes(ev.target)) {
       self.blur().focus(ev.target)
-      if (isLeft) this.diffPanel.current.setLeftFocus(ev.target)
-      else this.diffPanel.current.setRightFocus(ev.target)
+      if (isLeft) this.diffPanel.current.setLeftFocus(selfSegment)
+      else this.diffPanel.current.setRightFocus(selfSegment)
     }
     // otherwise, we're starting a new selection. In this case, we focus the
     // node and all its compatibilities from the other graph.
@@ -123,11 +126,13 @@ export default class App extends Component {
         .focus(other.nodes().filter(node => +node.data().id in ev.target.data().compatibilities))
       if (Object.keys(ev.target.data().compatibilities).length == 1) {
         const theId = Object.keys(ev.target.data().compatibilities)[0]
-        if (isLeft) this.diffPanel.current.setBothFoci(ev.target, other.nodes(`#${theId}`))
-        else this.diffPanel.current.setBothFoci(other.nodes(`#${theId}`), ev.target)
+        const otherRoot = other.nodes().roots()[0]
+        const otherSegment = {top: otherRoot, bot: other.nodes(`#${theId}`)}
+        if (isLeft) this.diffPanel.current.setBothFoci(selfSegment, otherSegment)
+        else this.diffPanel.current.setBothFoci(otherSegment, selfSegment)
       } else {
-        if (isLeft) this.diffPanel.current.resetLeftFocus(ev.target)
-        else this.diffPanel.current.resetRightFocus(ev.target)
+        if (isLeft) this.diffPanel.current.resetLeftFocus(selfSegment)
+        else this.diffPanel.current.resetRightFocus(selfSegment)
       }
     }
   }

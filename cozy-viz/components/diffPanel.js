@@ -25,7 +25,7 @@ export default class DiffPanel extends Component {
 
   setRightFocus(rightFocus) {
     this.setState({rightFocus})
-    if (this.state.leftFocus) this.diffAssemblyWith(this.state.leftFocus,rightFocus)
+    if (this.state.leftFocus) this.diffAssemblyWith(this.state.leftFocus, rightFocus)
   }
 
   setBothFoci(leftFocus, rightFocus) {
@@ -59,9 +59,9 @@ export default class DiffPanel extends Component {
   }
 
   diffAssemblyWith(leftFocus,rightFocus) {
-    const leftLines = leftFocus.data().assembly.split('\n')
-    const rightLines = rightFocus.data().assembly.split('\n')
-    const diffs = Diff.diffLines(leftFocus.data().assembly, rightFocus.data().assembly, {
+    const leftLines = leftFocus.bot.data().assembly.split('\n')
+    const rightLines = rightFocus.bot.data().assembly.split('\n')
+    const diffs = Diff.diffLines(leftFocus.bot.data().assembly, rightFocus.bot.data().assembly, {
       comparator(l,r) { return l.substring(6) == r.substring(6) }
     })
     let renderedRight = []
@@ -101,21 +101,21 @@ export default class DiffPanel extends Component {
   }
 
   getLeftFocusAssembly() {
-    return this.state.leftAssemblyDiff || this.state.leftFocus?.data().assembly
+    return this.state.leftAssemblyDiff || this.state.leftFocus.bot?.data().assembly
   }
 
   getRightFocusAssembly() {
-    return this.state.rightAssemblyDiff || this.state.rightFocus?.data().assembly
+    return this.state.rightAssemblyDiff || this.state.rightFocus.bot?.data().assembly
   }
 
   render(props, state) {
     const assemblyAvailable = state.leftFocus || state.rightFocus
     const registersAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.data().compatibilities[state.rightFocus.id()].regdiff
+      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].regdiff
     const memoryAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.data().compatibilities[state.rightFocus.id()].memdiff
+      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].memdiff
     const concretionAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.data().compatibilities[state.rightFocus.id()].conc_args
+      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].conc_args
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
       <div>
         <button 
@@ -172,11 +172,11 @@ class RegisterDifference extends Component {
   }
 
   render(props, state) {
-    const rightId = props.rightFocus.id()
+    const rightId = props.rightFocus.bot.id()
     const registers = []
-    const conc_regdiffs = props.leftFocus.data().compatibilities[rightId].conc_regdiff ?? []
+    const conc_regdiffs = props.leftFocus.bot.data().compatibilities[rightId].conc_regdiff ?? []
     const rdiffs = state.view === "symbolic"
-      ? props.leftFocus.data().compatibilities[rightId].regdiff
+      ? props.leftFocus.bot.data().compatibilities[rightId].regdiff
       : conc_regdiffs[state.view]
     for (const reg in rdiffs) {
       registers.push(html`
@@ -208,11 +208,11 @@ class MemoryDifference extends Component {
   }
 
   render(props, state) {
-    const rightId = props.rightFocus.id()
+    const rightId = props.rightFocus.bot.id()
     const addresses = []
-    const conc_adiffs = props.leftFocus.data().compatibilities[rightId].conc_memdiff ?? []
+    const conc_adiffs = props.leftFocus.bot.data().compatibilities[rightId].conc_memdiff ?? []
     const adiffs = state.view === "symbolic"
-      ? props.leftFocus.data().compatibilities[rightId].memdiff
+      ? props.leftFocus.bot.data().compatibilities[rightId].memdiff
       : conc_adiffs[state.view]
     for (const reg in adiffs) {
       addresses.push(html`
@@ -234,9 +234,9 @@ class MemoryDifference extends Component {
 
 class Concretions extends Component {
   render(props) {
-    const rightId = props.rightFocus.id()
+    const rightId = props.rightFocus.bot.id()
     const examples = []
-    const concretions = props.leftFocus.data().compatibilities[rightId].conc_args
+    const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_args
     for (const concretion of concretions) {
       examples.push(html`
         <pre class="concrete-example">${JSON.stringify(concretion, undefined, 2)}</pre>
