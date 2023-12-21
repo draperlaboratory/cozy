@@ -103,7 +103,7 @@ class StateDiff:
             #    range_ext.remove_range_list(diff_addrs_old, ignore_addrs)
 
             left_mem_writes = sl.globals['mem_writes']
-            right_mem_writes = sl.globals['mem_writes']
+            right_mem_writes = sr.globals['mem_writes']
 
             # Note that diffs does not necessarily contain the addresses of the program data itself,
             # which is what we would expect. Testing with angr showed that the page(s) containing the
@@ -313,7 +313,7 @@ class Comparison:
                         return frozenset().union(*ip_sets)
 
                     mem_diff_ip = {
-                        addr_range: (get_ip_set(state_post.mem_writes, addr_range), get_ip_set(state_pre.mem_writes, addr_range))
+                        addr_range: (get_ip_set(state_pre.mem_writes, addr_range), get_ip_set(state_post.mem_writes, addr_range))
                         for addr_range in mem_diff.keys()
                     }
 
