@@ -61,7 +61,53 @@ export default class DiffPanel extends Component {
     })
   }
 
-  // should this even be a method?
+  render(props, state) {
+    const assemblyAvailable = state.leftFocus || state.rightFocus
+    const registersAvailable = state.leftFocus && state.rightFocus &&
+      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].regdiff
+    const memoryAvailable = state.leftFocus && state.rightFocus &&
+      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].memdiff
+    const concretionAvailable = state.leftFocus && state.rightFocus &&
+      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].conc_args
+    return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
+      <div>
+        <button 
+          disabled=${!assemblyAvailable}
+          onClick=${() => this.toggleMode("assembly")}>
+          Assembly
+        </button>
+        <button 
+          disabled=${!memoryAvailable}
+          onClick=${() => this.toggleMode("memory")}>
+          Memory
+        </button>
+        <button disabled=${!registersAvailable}
+          onClick=${() => this.toggleMode("registers")}>
+          Registers
+        </button>
+        <button disabled=${!concretionAvailable}
+          onClick=${() => this.toggleMode("concretions")}>
+          Concretions
+        </button>
+      </div>
+      ${state.mode == "assembly" && assemblyAvailable && html`
+        <${AssemblyDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+      }
+      ${state.mode == "registers" && registersAvailable && html`
+          <${RegisterDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+      }
+      ${state.mode == "memory" && memoryAvailable && html`
+          <${MemoryDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+      }
+      ${state.mode == "concretions" && concretionAvailable &&
+      html`<${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+      }
+      </div>`
+  }
+}
+
+class AssemblyDifference extends Component {
+
   getAssembly(focus) {
     const segment = getNodesFromEnds(focus.top, focus.bot).reverse()
     let contents = ""
@@ -77,9 +123,34 @@ export default class DiffPanel extends Component {
     return { contents, lines }
   }
 
-  diffAssemblyWith(leftFocus, rightFocus) {
-    const {contents: leftAssembly, lines: leftLines} = this.getAssembly(leftFocus)
-    const {contents: rightAssembly, lines: rightLines} = this.getAssembly(rightFocus)
+  getLeftFocusAssembly() {
+    if (this.props.leftFocus) {
+      if (this.props.rightFocus) return this.diffAssembly().left
+      else return this.getAssembly(this.props.leftFocus).contents
+    }
+    return null
+  }
+
+  getRightFocusAssembly() {
+    if (this.props.rightFocus) {
+      if (this.props.leftFocus) return this.diffAssembly().right
+      else return this.getAssembly(this.props.rightFocus).contents
+    }
+    return null
+  }
+
+  diffAssembly() {
+    // simple memoization
+    if (this.prevLeftFocus == this.props.leftFocus && 
+      this.prevRightFocus == this.props.rightFocus) {
+      return {left : this.prevLeftDiff, right: this.prevRightDiff}
+    }
+
+    this.prevLeftFocus = this.props.leftFocus
+    this.prevRightFocus = this.props.rightFocus
+
+    const {contents: leftAssembly, lines: leftLines} = this.getAssembly(this.props.leftFocus)
+    const {contents: rightAssembly, lines: rightLines} = this.getAssembly(this.props.rightFocus)
 
     const diffs = Diff.diffLines(leftAssembly, rightAssembly, {
       comparator(l, r) { return l.substring(6) == r.substring(6) }
@@ -114,73 +185,22 @@ export default class DiffPanel extends Component {
       renderedRight.push(hunkRight)
       renderedLeft.push(hunkLeft)
     }
-    this.setState({
-      leftAssemblyDiff: renderedLeft,
-      rightAssemblyDiff: renderedRight,
-    })
+
+    this.prevLeftDiff = renderedLeft
+    this.prevRightDiff = renderedRight
+
+    return {left : this.prevLeftDiff, right: this.prevRightDiff}
   }
 
-  getLeftFocusAssembly() {
-    if (this.state.leftAssemblyDiff) return this.state.leftAssemblyDiff
-    if (this.state.leftFocus) return this.getAssembly(this.state.leftFocus).contents
-    return null
-  }
-
-  getRightFocusAssembly() {
-    if (this.state.rightAssemblyDiff) return this.state.rightAssemblyDiff
-    if (this.state.rightFocus) return this.getAssembly(this.state.rightFocus).contents
-    return null
-  }
-
-  render(props, state) {
-    const assemblyAvailable = state.leftFocus || state.rightFocus
-    const registersAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].regdiff
-    const memoryAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].memdiff
-    const concretionAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].conc_args
-    return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
-      <div>
-        <button 
-          disabled=${!assemblyAvailable}
-          onClick=${() => this.toggleMode("assembly")}>
-          Assembly
-        </button>
-        <button 
-          disabled=${!memoryAvailable}
-          onClick=${() => this.toggleMode("memory")}>
-          Memory
-        </button>
-        <button disabled=${!registersAvailable}
-          onClick=${() => this.toggleMode("registers")}>
-          Registers
-        </button>
-        <button disabled=${!concretionAvailable}
-          onClick=${() => this.toggleMode("concretions")}>
-          Concretions
-        </button>
-      </div>
-      ${state.mode == "assembly" && assemblyAvailable && html`
-        <div id="asm-diff-data">
-          <pre id="asmViewLeft">
-          ${this.getLeftFocusAssembly()}
-          </pre>
-          <pre id="asmViewRight">
-          ${this.getRightFocusAssembly()}
-          </pre>
-        </div>`
-      }
-      ${state.mode == "registers" && registersAvailable && html`
-          <${RegisterDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
-      }
-      ${state.mode == "memory" && memoryAvailable && html`
-          <${MemoryDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
-      }
-      ${state.mode == "concretions" && concretionAvailable &&
-      html`<${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
-      }
-      </div>`
+  render() {
+    return html` <div id="asm-diff-data">
+      <pre id="asmViewLeft">
+      ${this.getLeftFocusAssembly()}
+      </pre>
+      <pre id="asmViewRight">
+      ${this.getRightFocusAssembly()}
+      </pre>
+    </div>`
   }
 }
 

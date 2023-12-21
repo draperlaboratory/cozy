@@ -94,12 +94,4 @@ export const segmentationMixin = {
   },
 
 
-  // given the top and bottom nodes, return a list of nodes in a segment
-  getNodesFromEnds(top, bottom) {
-    const interval = [bottom]
-    while (interval[interval.length - 1] !== top) {
-      interval.push(interval[interval.length - 1].incomers()[0])
-    }
-    return interval
-  }
 }
