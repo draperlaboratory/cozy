@@ -2,8 +2,8 @@ import angr
 import cozy
 import claripy
 
-proj_prepatched = cozy.project.Project('examples/amp_target5_hackathon/gs_data_processor')
-proj_postpatched = cozy.project.Project('examples/amp_target5_hackathon/gs_data_processor_draper_patched')
+proj_prepatched = cozy.project.Project('test_programs/amp_target5_hackathon/gs_data_processor')
+proj_postpatched = cozy.project.Project('test_programs/amp_target5_hackathon/gs_data_processor_draper_patched')
 
 rover_data_struct = angr.types.parse_type('struct RoverData_t { int temp; unsigned int cmd; }').with_arch(proj_prepatched.angr_proj.arch)
 angr.types.register_types(rover_data_struct)

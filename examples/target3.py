@@ -9,16 +9,16 @@ connectionRead_mangled = "_ZN3ros10Connection4readEjRKN5boost8functionIFvRKNS1_1
 
 onMessageLength_prototype = "void f(void *this, void *conn, void **buffer, unsigned int size, unsigned char success)"
 
-proj_prepatched = cozy.project.Project("libroscpp.so")
+proj_prepatched = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp.so")
 proj_prepatched.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
-proj_attempted_patch = cozy.project.Project("libroscpp_manually_patched.so")
+proj_attempted_patch = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp_manually_patched.so")
 proj_attempted_patch.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
-proj_postpatched = cozy.project.Project("libroscpp_draper_patched.so")
+proj_postpatched = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp_draper_patched.so")
 proj_postpatched.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
-proj_evil = cozy.project.Project("target-3-evil.bin")
+proj_evil = cozy.project.Project("test_programs/amp_target3_hackathon/target-3-evil.bin")
 proj_evil.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
 # size is a symbolic variable that ends up being passed to the onMessageLength function. This symbolic variable
