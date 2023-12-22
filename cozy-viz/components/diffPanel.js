@@ -21,17 +21,14 @@ export default class DiffPanel extends Component {
 
   setLeftFocus(leftFocus) {
     this.setState({ leftFocus })
-    if (this.state.rightFocus) this.diffAssemblyWith(leftFocus, this.state.rightFocus)
   }
 
   setRightFocus(rightFocus) {
     this.setState({ rightFocus })
-    if (this.state.leftFocus) this.diffAssemblyWith(this.state.leftFocus, rightFocus)
   }
 
   setBothFoci(leftFocus, rightFocus) {
     this.setState({ leftFocus, rightFocus })
-    this.diffAssemblyWith(leftFocus, rightFocus);
   }
 
   resetLeftFocus(leftFocus) {
@@ -64,11 +61,11 @@ export default class DiffPanel extends Component {
   render(props, state) {
     const assemblyAvailable = state.leftFocus || state.rightFocus
     const registersAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].regdiff
+      state.leftFocus.bot.data().compatibilities?.[state.rightFocus.bot.id()].regdiff
     const memoryAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].memdiff
+      state.leftFocus.bot.data().compatibilities?.[state.rightFocus.bot.id()].memdiff
     const concretionAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities[state.rightFocus.bot.id()].conc_args
+      state.leftFocus.bot.data().compatibilities?.[state.rightFocus.bot.id()].conc_args
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
       <div>
         <button 
@@ -99,8 +96,8 @@ export default class DiffPanel extends Component {
       ${state.mode == "memory" && memoryAvailable && html`
           <${MemoryDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
       }
-      ${state.mode == "concretions" && concretionAvailable &&
-      html`<${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+      ${state.mode == "concretions" && concretionAvailable && html`
+          <${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
       }
       </div>`
   }

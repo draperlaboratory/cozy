@@ -7,14 +7,14 @@ import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
-import * as GraphStyle from '../util/graphStyle.js' ;
+import * as GraphStyle from '../util/graphStyle.js';
 import { tidyGraph, removeBranch } from '../util/graph-tidy.js';
 import { Status, Tidiness } from '../data/cozy-data.js'
 
-const standardLayout = { 
-  name: 'breadthfirst', 
-  directed: true, 
-  spacingFactor: 2 
+const standardLayout = {
+  name: 'breadthfirst',
+  directed: true,
+  spacingFactor: 2
 }
 
 export default class App extends Component {
@@ -79,62 +79,116 @@ export default class App extends Component {
   }
 
   handleClick(ev) {
-    
+
     //bail out if graphs are not available
     if (this.state.status == Status.unloaded) {
       alert("Please load both graphs before attempting comparison.")
       return
     }
 
-    // if shift is held, highlight the corresponding segment
-    if (ev.originalEvent.shiftKey) {
-      const otherCy = ev.cy.ref.other.cy
-      if (otherCy) {
-        const compats = ev.cy.getLeavesCompatibleWith(ev.target, otherCy)
-        ev.cy.showSegment(ev.target)
-        otherCy.showCompatibilitySegment(ev.cy.getMinimalCeiling(compats), ev.cy)
-      }
-      return
-    }
-
-    // bail out if we're not a leaf
-    if (ev.target.outgoers().length !== 0) {
-      console.log("outgoers")
-      return
-    }
-
     const isLeft = ev.target.cy() == this.cy1.cy
     const self = ev.cy
     const other = ev.cy.ref.other.cy
-    const selfRoot = ev.cy.nodes().roots()[0]
-    const selfSegment = {top: selfRoot, bot: ev.target}
+    // we're selecting just a segment if the shift key is held
+    const segmentSelect = ev.originalEvent.shiftKey
+    // we're refining if we click on an existing locus, there's more than
+    // one such, and we're not switching from a shift to regular click
+    const refining = 
+      self.loci?.includes(ev.target) && 
+      self.loci.length > 1 &&
+      segmentSelect == this.lastSegmentSelect
 
-    this.tooltip.current.attachTo(ev.target)
-    // if the node is already focused, but other nodes are focused as well,
-    // we're refining a previous selection. In
-    // this case, we narrow the focus to just the clicked node.
-    if (self.loci?.length > 1 && self.loci.includes(ev.target)) {
+    this.lastSegmentSelect = segmentSelect
+    
+    // ranges are connected sets of nodes, not necessarily linear
+    let selfRange
+
+    // segments are linear sequences of nodes given by a top and bottom
+    let selfSegment
+
+    if (segmentSelect) {
+      // if we're selecting a segment, choose the corresponding segment
+      selfRange = self.getRangeOf(ev.target)
+      selfSegment = self.rangeToSegment(selfRange)
+      self.blur().focusRange(selfRange)
+    } else {
+      // otherwise, bail out if we're not on a leaf
+      if (ev.target.outgoers().length !== 0) return
+      // and choose the full branch, if we are on a leaf
+      const selfRoot = ev.cy.nodes().roots()[0]
+      selfSegment = { top: selfRoot, bot: ev.target }
+      selfRange = self.segmentToRange(selfSegment)
       self.blur().focus(ev.target)
-      if (isLeft) this.diffPanel.current.setLeftFocus(selfSegment)
-      else this.diffPanel.current.setRightFocus(selfSegment)
     }
-    // otherwise, we're starting a new selection. In this case, we focus the
-    // node and all its compatibilities from the other graph.
-    else {
-      self.blur().focus([ev.target])
-      other.blur()
-        .focus(other.nodes().filter(node => +node.data().id in ev.target.data().compatibilities))
-      if (Object.keys(ev.target.data().compatibilities).length == 1) {
-        const theId = Object.keys(ev.target.data().compatibilities)[0]
-        const otherRoot = other.nodes().roots()[0]
-        const otherSegment = {top: otherRoot, bot: other.nodes(`#${theId}`)}
-        if (isLeft) this.diffPanel.current.setBothFoci(selfSegment, otherSegment)
-        else this.diffPanel.current.setBothFoci(otherSegment, selfSegment)
+
+    // unconditionally focus the clicked segment
+    if (isLeft) this.diffPanel.current.setLeftFocus(selfSegment)
+    else this.diffPanel.current.setRightFocus(selfSegment)
+
+    // if we're not refining, we need to update the focus on the other side
+    if (!refining) {
+      let otherSegment
+      if (segmentSelect) {
+        const compats = self.getLeavesCompatibleWith(ev.target, other)
+        // if we're selecting a segment, get the compatible range and focus it
+        const otherRange = other.getCompatibilityRangeOf(self.getMinimalCeiling(compats), self)
+        other.blur().focusRange(otherRange)
+        if (other.loci.length == 1) {
+          //if there's only one compatibility, introduce a segment
+          otherSegment = other.rangeToSegment(otherRange)
+        }
       } else {
+        // if we're selecting a full branch, get compatible roots and focus those
+        const compatibilities = ev.target.data().compatibilities
+        other
+          .blur()
+          .focus(other.nodes().filter(node => +node.data().id in compatibilities))
+        if (other.loci.length == 1) {
+          // if there's only one compatibility, start a diff
+          const theId = Object.keys(ev.target.data().compatibilities)[0]
+          const otherRoot = other.nodes().roots()[0]
+          otherSegment = { top: otherRoot, bot: other.nodes(`#${theId}`) }
+        }
+      }
+
+      if (otherSegment) {
+        // if we picked out a corresponding segment, focus it.
+        if (isLeft) this.diffPanel.current.setRightFocus(otherSegment)
+        else this.diffPanel.current.setLeftFocus(otherSegment)
+      } else {
+        //otherwise clear the focus
         if (isLeft) this.diffPanel.current.resetLeftFocus(selfSegment)
         else this.diffPanel.current.resetRightFocus(selfSegment)
       }
     }
+
+
+    // if (self.loci?.length > 1 && self.loci.includes(ev.target)) {
+    //   // if the node is already focused, but other nodes are focused as well,
+    //   // we're refining a previous selection. In
+    //   // this case, we narrow the focus to just the clicked node.
+    //   self.blur().focus(ev.target)
+    //   // and pass the segment to the diff panel
+    //   if (isLeft) this.diffPanel.current.setLeftFocus(selfSegment)
+    //   else this.diffPanel.current.setRightFocus(selfSegment)
+    // }
+    // else {
+    //   // otherwise, we're starting a new selection. In this case, we focus the
+    //   // node and all its compatibilities from the other graph.
+    //   self.blur().focus([ev.target])
+    //   other.blur()
+    //     .focus(other.nodes().filter(node => +node.data().id in ev.target.data().compatibilities))
+    //   if (Object.keys(ev.target.data().compatibilities).length == 1) {
+    //     const theId = Object.keys(ev.target.data().compatibilities)[0]
+    //     const otherRoot = other.nodes().roots()[0]
+    //     const otherSegment = { top: otherRoot, bot: other.nodes(`#${theId}`) }
+    //     if (isLeft) this.diffPanel.current.setBothFoci(selfSegment, otherSegment)
+    //     else this.diffPanel.current.setBothFoci(otherSegment, selfSegment)
+    //   } else {
+    //     if (isLeft) this.diffPanel.current.resetLeftFocus(selfSegment)
+    //     else this.diffPanel.current.resetRightFocus(selfSegment)
+    //   }
+    // }
   }
 
   refresh() {
@@ -168,7 +222,7 @@ export default class App extends Component {
       GraphStyle.settings[type] = !oldState[type];
       this.cy1.cy.style().update()
       this.cy2.cy.style().update()
-      return {[type]: !oldState[type]}
+      return { [type]: !oldState[type] }
     })
   }
 
@@ -214,7 +268,7 @@ export default class App extends Component {
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
     Object.assign(cy, segmentationMixin);
-    
+
     // set layout
     cy.layout(standardLayout).run()
 
@@ -245,9 +299,9 @@ export default class App extends Component {
 
     cy.nodes().map(node => this.initializeNode(node))
 
-    this.setState({ 
-      status: !this.cy1.cy || !this.cy2.cy 
-        ? Status.unloaded 
+    this.setState({
+      status: !this.cy1.cy || !this.cy2.cy
+        ? Status.unloaded
         : Status.idle
     })
   }
