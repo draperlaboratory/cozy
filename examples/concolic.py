@@ -64,8 +64,46 @@ def run_target5():
 
     return simgr
 
+def run_target5_generate():
+    proj = angr.Project('test_programs/amp_target5_hackathon/gs_data_processor')
+
+    rover_data_struct = angr.types.parse_type('struct RoverData_t { int temp; unsigned int cmd; }').with_arch(
+        proj.arch)
+    angr.types.register_types(rover_data_struct)
+
+    rover_message_struct = angr.types.parse_type(
+        'struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }').with_arch(proj.arch)
+    angr.types.register_types(rover_message_struct)
+
+    temp = claripy.BVS("temp", 32)
+    cmd = claripy.BVS("cmd", 32)
+
+    addr = proj.loader.find_symbol('rover_process').rebased_addr
+    proto = "int rover_process(struct RoverMessage_t *msg)"
+
+    empty_state = proj.factory.blank_state()
+
+    arg0 = empty_state.heap._malloc(rover_message_struct.size)
+    empty_state.mem[arg0].struct.RoverMessage_t.packetData.temp = temp.reversed
+    empty_state.mem[arg0].struct.RoverMessage_t.packetData.cmd = cmd.reversed
+
+    init_state = proj.factory.call_state(addr, arg0, prototype=proto, base_state=empty_state)
+
+    explorer = cozy.exploration.ConcolicDeferred({cmd, temp})
+    simgr = proj.factory.simulation_manager(init_state)
+    simgr.use_technique(explorer)
+
+    while len(simgr.active) > 0:
+        simgr.explore()
+        print(simgr)
+        explorer.generate_concrete(simgr, {cmd, temp})
+
+    return simgr
+
 print("Running null deref example...")
 run_null_deref()
 print("Running target5 example...")
 run_target5()
+print("Running target5 with autoconcretization...")
+run_target5_generate()
 print("Done")
