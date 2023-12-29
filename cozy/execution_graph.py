@@ -3,6 +3,7 @@ import networkx as nx
 import json
 import sys
 from angr.block import Block
+from angr.sim_state import SimState
 from collections.abc import Callable
 from .project import Project, RunResult
 from . import analysis
@@ -29,7 +30,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                     file_name_a: str, file_name_b: str,
                     concrete_arg_mapper: Callable [[any], any] | None = None,
                     include_vex: bool = False, include_simprocs: bool = False,
-                    flag_syscalls: bool = False,
+                    flag_syscalls: bool = False, include_actions: bool = False,
                     args: any = [], num_examples: int = 0) -> None:
     """
     Generates and saves JSON data for Cozy-Viz.
@@ -55,6 +56,8 @@ def dump_comparison(proj_a: Project, proj_b: Project,
         SimProcedure locations occurring in the corrsponding basic block. Default False.
     :param bool, optional include_simprocs: whether to include a listing of
         SimProcedures called in each basic block. Default False.
+    :param bool, optional include_actions: whether to include logging of
+        read/write operations on memory and registers. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -66,6 +69,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                                     concrete_arg_mapper=concrete_arg_mapper,
                                     include_vex=include_vex,
                                     include_simprocs=include_simprocs,
+                                    include_actions=include_actions,
                                     flag_syscalls=flag_syscalls,
                                     args=args, num_examples=num_examples)
     def write_graph(g, file_name):
@@ -80,7 +84,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
                          comparison_results: analysis.Comparison,
                          concrete_arg_mapper: Callable [[any], any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
-                         flag_syscalls: bool = False,
+                         flag_syscalls: bool = False, include_actions: bool = False,
                          args: any = [], num_examples: int = 0,
                          open_browser=False, port=8080
                          ):
@@ -104,6 +108,8 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
         corresponding VEX IR and include the result in the JSON. Default False.
     :param bool, optional include_simprocs: whether to include a listing of
         SimProcedures called in each basic block. Default False.
+    :param bool, optional include_actions: whether to include logging of
+        read/write operations on memory and registers. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -118,6 +124,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
                                     concrete_arg_mapper=concrete_arg_mapper,
                                     include_vex=include_vex,
                                     flag_syscalls=flag_syscalls,
+                                    include_actions = include_actions,
                                     include_simprocs = include_simprocs,
                                     args=args, num_examples=num_examples)
     start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)), open_browser=open_browser, port=port)
@@ -129,6 +136,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                          concrete_arg_mapper: Callable [[any], any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False,
+                         include_actions: bool = False,
                          args: any = [], num_examples: int = 0) -> tuple[nx.DiGraph, nx.DiGraph]:
     """
     Generates JSON data for Cozy-Viz.
@@ -149,6 +157,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
         corresponding VEX IR and include the result in the JSON. Default False.
     :param bool, optional include_simprocs: whether to include a listing of
         SimProcedures called in each basic block. Default False.
+    :param bool, optional include_actions: whether to include logging of
+        read/write operations on memory and registers. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -196,6 +206,11 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                                      else list(map(lambda x: x.args, concretion)),
                     }
     def stringify_attrs(eg, g):
+        for ((parent_i, child_i), edge_attr) in g.edges.items():
+            child = g.nodes[child_i]["state"]
+            parent = g.nodes[parent_i]["state"]
+            if include_actions:
+                edge_attr['actions'] = eg._list_actions(child,parent)
         for (n, attr) in g.nodes.items():
             if include_vex: attr['vex'] = attr["contents"].vex._pp_str() or "*"
             # FIXME: inefficient, we'll be running this many times for each basic block. 
@@ -306,19 +321,27 @@ class ExecutionGraph:
         except:
             return None
 
+    def _list_actions(self, child: angr.SimState, parent: angr.SimState):
+        # Actions are only recorded in history, not attached to the
+        # SimState where they occurred. So we need to look at the history
+        # of the child to get the actions occuring on the parent
+        #
+        # Different children may have different views of what actions their
+        # parents took - for example if an action includes narrowing
+        # a constraint. So we attach the actions a child associates with
+        # their parent to an edge.
+        return list(map(str,filter(lambda x: x.bbl_addr == child.history.addr, child.history.actions)))
+
     def reconstruct_bbl_addr_graph(self):
         """
         Convert the SimState-decorated graph into a graph decorated with
         integers, carrying symbolic program execution data in the attributes
         `stdout`, `stderr`, `contents` (this holds a basic block),
-        `constraints` and `state`.
+        `constraints`, `actions` (optionally) and `state`.
 
         :return networkx.DiGraph: The resulting graph.
         """
         g = nx.convert_node_labels_to_integers(self.graph, label_attribute='state')
-        for ((parent_i, child_i), edge_attr) in g.edges.items():
-            parent_state = g.nodes[parent_i]['state']
-            child_state = g.nodes[child_i]['state']
         for (node_i, attr) in g.nodes.items():
             node = g.nodes[node_i]['state']
             # Assuming utf-8 character encoding, 
