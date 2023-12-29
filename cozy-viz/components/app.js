@@ -34,7 +34,6 @@ export default class App extends Component {
     this.cy1.other = this.cy2
     this.cy2.other = this.cy1
     this.tooltip = createRef()
-    this.diffPanel = createRef()
 
     this.prune = this.prune.bind(this)
     this.handleDragleave = this.handleDragleave.bind(this)
@@ -122,8 +121,8 @@ export default class App extends Component {
     }
 
     // unconditionally focus the clicked segment
-    if (isLeft) this.diffPanel.current.setLeftFocus(selfSegment)
-    else this.diffPanel.current.setRightFocus(selfSegment)
+    if (isLeft) this.setState({leftFocus: selfSegment})
+    else this.setState({rightFocus: selfSegment})
 
     // if we're not refining, we need to update the focus on the other side
     if (!refining) {
@@ -153,42 +152,14 @@ export default class App extends Component {
 
       if (otherSegment) {
         // if we picked out a corresponding segment, focus it.
-        if (isLeft) this.diffPanel.current.setRightFocus(otherSegment)
-        else this.diffPanel.current.setLeftFocus(otherSegment)
+          if (isLeft) this.setState({rightFocus: otherSegment})
+        else this.setState({leftFocus: otherSegment})
       } else {
         //otherwise clear the focus
-        if (isLeft) this.diffPanel.current.resetLeftFocus(selfSegment)
-        else this.diffPanel.current.resetRightFocus(selfSegment)
+        if (isLeft) this.setState({rightFocus: null, leftFocus: selfSegment})
+        else this.setState({leftFocus:null, rightFocus:selfSegment})
       }
     }
-
-
-    // if (self.loci?.length > 1 && self.loci.includes(ev.target)) {
-    //   // if the node is already focused, but other nodes are focused as well,
-    //   // we're refining a previous selection. In
-    //   // this case, we narrow the focus to just the clicked node.
-    //   self.blur().focus(ev.target)
-    //   // and pass the segment to the diff panel
-    //   if (isLeft) this.diffPanel.current.setLeftFocus(selfSegment)
-    //   else this.diffPanel.current.setRightFocus(selfSegment)
-    // }
-    // else {
-    //   // otherwise, we're starting a new selection. In this case, we focus the
-    //   // node and all its compatibilities from the other graph.
-    //   self.blur().focus([ev.target])
-    //   other.blur()
-    //     .focus(other.nodes().filter(node => +node.data().id in ev.target.data().compatibilities))
-    //   if (Object.keys(ev.target.data().compatibilities).length == 1) {
-    //     const theId = Object.keys(ev.target.data().compatibilities)[0]
-    //     const otherRoot = other.nodes().roots()[0]
-    //     const otherSegment = { top: otherRoot, bot: other.nodes(`#${theId}`) }
-    //     if (isLeft) this.diffPanel.current.setBothFoci(selfSegment, otherSegment)
-    //     else this.diffPanel.current.setBothFoci(otherSegment, selfSegment)
-    //   } else {
-    //     if (isLeft) this.diffPanel.current.resetLeftFocus(selfSegment)
-    //     else this.diffPanel.current.resetRightFocus(selfSegment)
-    //   }
-    // }
   }
 
   refresh() {
@@ -284,7 +255,7 @@ export default class App extends Component {
         this.batch(() => {
           this.cy1.cy?.blur()
           this.cy2.cy?.blur()
-          this.diffPanel.current.resetBothFoci()
+          this.setState({leftFocus: null, rightFocus: null})
           this.tooltip.current.clearTooltip()
         })
       }
@@ -446,8 +417,10 @@ export default class App extends Component {
         </div>
       </div>
       <${DiffPanel} 
+        rightFocus=${state.rightFocus}
+        leftFocus=${state.leftFocus}
         onMouseEnter=${() => this.tooltip.current.clearTooltip()} 
-        ref=${this.diffPanel}/>
+      />
       ${state.status == Status.rendering && html`<span id="status-indicator">rendering...</span>`}
     `
   }

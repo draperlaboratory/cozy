@@ -19,53 +19,14 @@ export default class DiffPanel extends Component {
     }
   }
 
-  setLeftFocus(leftFocus) {
-    this.setState({ leftFocus })
-  }
-
-  setRightFocus(rightFocus) {
-    this.setState({ rightFocus })
-  }
-
-  setBothFoci(leftFocus, rightFocus) {
-    this.setState({ leftFocus, rightFocus })
-  }
-
-  resetLeftFocus(leftFocus) {
-    this.setState({
-      rightFocus: null,
-      rightAssemblyDiff: null,
-      leftAssemblyDiff: null,
-      leftFocus
-    })
-  }
-
-  resetRightFocus(rightFocus) {
-    this.setState({
-      leftFocus: null,
-      rightAssemblyDiff: null,
-      leftAssemblyDiff: null,
-      rightFocus
-    })
-  }
-
-  resetBothFoci() {
-    this.setState({
-      leftFocus: null,
-      rightFocus: null,
-      rightAssemblyDiff: null,
-      leftAssemblyDiff: null,
-    })
-  }
-
   render(props, state) {
-    const assemblyAvailable = state.leftFocus || state.rightFocus
-    const registersAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities?.[state.rightFocus.bot.id()].regdiff
-    const memoryAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities?.[state.rightFocus.bot.id()].memdiff
-    const concretionAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.bot.data().compatibilities?.[state.rightFocus.bot.id()].conc_args
+    const assemblyAvailable = props.leftFocus || props.rightFocus
+    const registersAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].regdiff
+    const memoryAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].memdiff
+    const concretionAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].conc_args
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
       <div>
         <button 
@@ -88,16 +49,16 @@ export default class DiffPanel extends Component {
         </button>
       </div>
       ${state.mode == "assembly" && assemblyAvailable && html`
-        <${AssemblyDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+        <${AssemblyDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "registers" && registersAvailable && html`
-          <${RegisterDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+          <${RegisterDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "memory" && memoryAvailable && html`
-          <${MemoryDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+          <${MemoryDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "concretions" && concretionAvailable && html`
-          <${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+          <${Concretions} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       </div>`
   }
