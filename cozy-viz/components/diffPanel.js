@@ -109,15 +109,18 @@ class AssemblyDifference extends Component {
     const segment = getNodesFromEnds(focus.top, focus.bot).reverse()
     let contents = ""
     const lines = []
+    const ids = []
 
     for (const node of segment) {
+      const id = node.id()
       for (const line of node.data().contents.split('\n')) {
         contents += line + '\n'
         lines.push(line)
+        ids.push(id)
       }
     }
 
-    return { contents, lines }
+    return { contents, lines, ids }
   }
 
   getLeftFocusAssembly() {
@@ -136,6 +139,18 @@ class AssemblyDifference extends Component {
     return null
   }
 
+  highlightNodes(idLeft, idRight) {
+    const cyLeft = this.props.leftFocus.top.cy()
+    const cyRight = this.props.rightFocus.top.cy()
+    cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
+    cyRight.highlight(cyRight.nodes(`#${idRight}`))
+  }
+
+  dimAll() {
+    this.props.leftFocus.top.cy().dim()
+    this.props.rightFocus.top.cy().dim()
+  }
+
   diffAssembly() {
     // simple memoization
     if (this.prevLeftFocus == this.props.leftFocus && 
@@ -146,8 +161,8 @@ class AssemblyDifference extends Component {
     this.prevLeftFocus = this.props.leftFocus
     this.prevRightFocus = this.props.rightFocus
 
-    const {contents: leftAssembly, lines: leftLines} = this.getAssembly(this.props.leftFocus)
-    const {contents: rightAssembly, lines: rightLines} = this.getAssembly(this.props.rightFocus)
+    const {contents: leftAssembly, lines: leftLines, ids: leftIds} = this.getAssembly(this.props.leftFocus)
+    const {contents: rightAssembly, lines: rightLines, ids: rightIds} = this.getAssembly(this.props.rightFocus)
 
     const diffs = Diff.diffLines(leftAssembly, rightAssembly, {
       comparator(l, r) { return l.substring(6) == r.substring(6) }
@@ -157,30 +172,58 @@ class AssemblyDifference extends Component {
     let curLeft = 0
     let curRight = 0
     for (const diff of diffs) {
-      let hunkRight
-      let hunkLeft
       if (diff?.added) {
-        hunkRight = html`<span class="hunkAdded">${diff.value}</span>`
-        hunkLeft = html`<span>${Array(diff.count).fill('\n').join("")}</span>`
-        curRight += diff.count
+        for (const line of diff.value.split('\n')) {
+          if (line == "") continue
+          const closeLeft = curLeft
+          const closeRight = curRight
+          const hunkRight = html`<div
+            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${() => this.dimAll()}
+            class="hunkAdded">${line}</div>`
+          const hunkLeft = html`<div
+            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${() => this.dimAll()}
+          > </div>`
+          curRight++
+          renderedRight.push(hunkRight)
+          renderedLeft.push(hunkLeft)
+        }
       } else if (diff?.removed) {
-        hunkLeft = html`<span class="hunkRemoved">${diff.value}</span>`
-        hunkRight = html`<span>${Array(diff.count).fill('\n').join("")}</span>`
-        curLeft += diff.count
+        for (const line of diff.value.split('\n')) {
+          if (line == "") continue
+          const closeLeft = curLeft
+          const closeRight = curRight
+          const hunkRight = html`<div
+            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${() => this.dimAll()}
+          > </div>`
+          const hunkLeft = html`<div
+            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${() => this.dimAll()}
+            class="hunkRemoved">${line}</div>`
+          curLeft++
+          renderedRight.push(hunkRight)
+          renderedLeft.push(hunkLeft)
+        }
       } else {
-        const leftPiece = []
-        const rightPiece = []
         for (let i = 0; i < diff.count; i++) {
-          leftPiece.push(leftLines[curLeft] + '\n')
-          rightPiece.push(rightLines[curRight] + '\n')
+          const closeLeft = curLeft
+          const closeRight = curRight
+          const hunkRight = html`<div
+            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${() => this.dimAll()}
+          >${rightLines[curRight]}</div>`
+          const hunkLeft = html`<div
+            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${() => this.dimAll()}
+          >${leftLines[curLeft]}</div>`
           curRight++
           curLeft++
+          renderedRight.push(hunkRight)
+          renderedLeft.push(hunkLeft)
         }
-        hunkRight = html`<span>${rightPiece}</span>`
-        hunkLeft = html`<span>${leftPiece}</span>`
       }
-      renderedRight.push(hunkRight)
-      renderedLeft.push(hunkLeft)
     }
 
     this.prevLeftDiff = renderedLeft

@@ -49,6 +49,14 @@ export const focusMixin = {
     return this
   },
 
+  highlight(nodes) {
+    nodes.addClass('temporaryFocus')
+  },
+
+  dim() {
+    this.elements().removeClass('temporaryFocus')
+  },
+
   blur() {
     this.loci = null
 
