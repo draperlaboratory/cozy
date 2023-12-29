@@ -185,7 +185,14 @@ export default class App extends Component {
     // remove all foci, and reset viewport
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
-    this.setState({ status: Status.idle })
+    this.setState({ 
+      status: Status.idle,
+      leftFocus: {... this.state.leftFocus},
+      rightFocus: {... this.state.rightFocus}
+      // we regenerate the focus, 
+      // so that the assembly diff is regenerated, 
+      // so that its lines are properly mapped on to the merged nodes
+    })
   }
 
   toggleView(type) {
@@ -193,7 +200,9 @@ export default class App extends Component {
       GraphStyle.settings[type] = !oldState[type];
       this.cy1.cy.style().update()
       this.cy2.cy.style().update()
-      return { [type]: !oldState[type] }
+      return { 
+        [type]: !oldState[type]
+      }
     })
   }
 
