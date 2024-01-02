@@ -26,7 +26,9 @@ int main (int v) {
     char message2[] = "you're not on branch 2\n";
     write(1, message2, sizeof(message2) - 1);
     if (v < 17) return bv3();
-    char message3[] = "you're on branch 4\n";
+    char message3[] = "you're not on branch 3\n";
     write(1, message3, sizeof(message3) - 1);
+    char message4[] = "you're on the catchall return\n";
+    write(1, message4, sizeof(message3) - 1);
     return 0;
 }
