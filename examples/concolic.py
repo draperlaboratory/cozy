@@ -9,7 +9,7 @@ def run_null_deref():
     arg0 = cozy.primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg').annotate(MultiwriteAnnotation())
     init_state = proj.factory.call_state(proj.loader.find_symbol('my_fun').rebased_addr, arg0, prototype='void f(int *a)')
 
-    explorer = cozy.exploration.ConcolicDeferred({arg0: claripy.BVV(0, 64)})
+    explorer = cozy.exploration.ConcolicSim({arg0: claripy.BVV(0, 64)})
     simgr = proj.factory.simulation_manager(init_state)
     simgr.use_technique(explorer)
     simgr.explore()
@@ -39,7 +39,7 @@ def run_target5():
 
     init_state = proj.factory.call_state(addr, arg0, prototype=proto, base_state=empty_state)
 
-    explorer = cozy.exploration.ConcolicDeferred({cmd: claripy.BVV(0, 32), temp: claripy.BVV(100, 32)})
+    explorer = cozy.exploration.ConcolicSim({cmd: claripy.BVV(0, 32), temp: claripy.BVV(100, 32)})
     simgr = proj.factory.simulation_manager(init_state)
     simgr.use_technique(explorer)
     simgr.explore()
@@ -89,7 +89,7 @@ def run_target5_generate():
 
     init_state = proj.factory.call_state(addr, arg0, prototype=proto, base_state=empty_state)
 
-    explorer = cozy.exploration.ConcolicDeferred({cmd, temp})
+    explorer = cozy.exploration.ConcolicSim({cmd, temp})
     simgr = proj.factory.simulation_manager(init_state)
     simgr.use_technique(explorer)
 

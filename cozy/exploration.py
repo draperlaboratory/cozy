@@ -3,7 +3,7 @@ from angr import ExplorationTechnique, sim_options
 import claripy
 from collections.abc import Callable
 
-class ConcolicDeferred(ExplorationTechnique):
+class ConcolicSim(ExplorationTechnique):
     """
     This class implements concolic execution without using an external emulator
     like QEMU or Unicorn. This class functions by storing a concrete assignment
@@ -22,7 +22,7 @@ class ConcolicDeferred(ExplorationTechnique):
                  deferred_stash="deferred",
                  check_only_recent_constraints=True):
         """
-        ConcolicDeferred constructor
+        ConcolicSim constructor
 
         :param dict[claripy.BVS, claripy.BVV] | set[claripy.BVS] | frozenset[claripy.BVS] concrete_init: Used to\
         initialize the concrete value. If this value is a substitution dictionary, then that dictionary is used as our\
@@ -64,7 +64,7 @@ class ConcolicDeferred(ExplorationTechnique):
             self._generate_concrete(simgr, simgr.active, self._symbols)
             self._symbols = None
 
-    def is_solution(self, constraints: list[claripy.ast.bool]) -> bool:
+    def is_satisfied(self, constraints: list[claripy.ast.bool]) -> bool:
         """
         Substitutes the current concrete input into the constraints, and returns True if the constraints are True after
         the substitution is made.
@@ -94,7 +94,7 @@ class ConcolicDeferred(ExplorationTechnique):
         # in the deferred stash, we can follow execution from the initial states
         # This will probably not be a problem as is_solution should be pretty quick
         simgr.move(from_stash=self.deferred_stash, to_stash='active',
-                   filter_func=lambda s: self.is_solution(s.solver.constraints))
+                   filter_func=lambda s: self.is_satisfied(s.solver.constraints))
 
     def _generate_concrete(self, simgr: angr.SimulationManager, from_stash: list[angr.SimState],
                            symbols: set[claripy.BVS] | frozenset[claripy.BVS],
@@ -141,7 +141,7 @@ class ConcolicDeferred(ExplorationTechnique):
             constraints = [con.ast for con in state.history.recent_constraints]
         else:
             constraints = state.solver.constraints
-        if self.is_solution(constraints):
+        if self.is_satisfied(constraints):
             return None
         else:
             return self.deferred_stash
