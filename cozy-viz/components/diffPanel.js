@@ -1,7 +1,7 @@
 import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.1.0/+esm'
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component } from 'https://unpkg.com/preact@latest?module'
-import { getNodesFromEnds } from '../util/segmentation'
+import { getNodesFromEnds, getEdgesFromEnds } from '../util/segmentation'
 
 export default class DiffPanel extends Component {
   constructor() {
@@ -27,6 +27,7 @@ export default class DiffPanel extends Component {
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].memdiff
     const concretionAvailable = props.leftFocus && props.rightFocus &&
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].conc_args
+    const actionsAvailable = true
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
       <div>
         <button 
@@ -47,6 +48,10 @@ export default class DiffPanel extends Component {
           onClick=${() => this.toggleMode("concretions")}>
           Concretions
         </button>
+        <button disabled=${!actionsAvailable}
+          onClick=${() => this.toggleMode("actions")}>
+          Events
+        </button>
       </div>
       ${state.mode == "assembly" && assemblyAvailable && html`
         <${AssemblyDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
@@ -60,7 +65,47 @@ export default class DiffPanel extends Component {
       ${state.mode == "concretions" && concretionAvailable && html`
           <${Concretions} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
+      ${state.mode == "actions" && actionsAvailable && html`
+          <${ActionDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+      }
       </div>`
+  }
+}
+
+class ActionDifference extends Component {
+  getActions(focus) {
+    const segment = getEdgesFromEnds(focus.top, focus.bot).reverse()
+    let contents = ""
+    const lines = []
+    const ids = []
+
+    for (const edge of segment) {
+      const id = edge.id()
+      for (const line of edge.data().actions) {
+        contents += line + '\n'
+        lines.push(line)
+        ids.push(id)
+      }
+    }
+
+    return { contents, lines, ids }
+  }
+
+  compare(l,r) {
+    // TODO: more fleshed out comparator, case split on action type
+    const [,,...lterms] = l.split(/\s+/);
+    const [,,...rterms] = r.split(/\s+/);
+    return lterms.every((lt, idx) => lt == rterms[idx])
+  }
+
+  render(props) {
+    return html`<${LineDiffView} 
+      leftLines=${props.leftFocus ? this.getActions(props.leftFocus) : null}
+      rightLines=${props.rightFocus ? this.getActions(props.rightFocus) : null}
+      comparator=${(l,r) => this.compare(l,r)}
+      highlight=${(idLeft, idRight) => {}}
+      dim=${() => {}}
+    />`
   }
 }
 
@@ -84,22 +129,6 @@ class AssemblyDifference extends Component {
     return { contents, lines, ids }
   }
 
-  getLeftFocusAssembly() {
-    if (this.props.leftFocus) {
-      if (this.props.rightFocus) return this.diffAssembly().left
-      else return this.getAssembly(this.props.leftFocus).contents
-    }
-    return null
-  }
-
-  getRightFocusAssembly() {
-    if (this.props.rightFocus) {
-      if (this.props.leftFocus) return this.diffAssembly().right
-      else return this.getAssembly(this.props.rightFocus).contents
-    }
-    return null
-  }
-
   highlightNodes(idLeft, idRight) {
     const cyLeft = this.props.leftFocus.top.cy()
     const cyRight = this.props.rightFocus.top.cy()
@@ -112,21 +141,57 @@ class AssemblyDifference extends Component {
     this.props.rightFocus.top.cy().dim()
   }
 
-  diffAssembly() {
+  compare(l,r) {
+    // TODO --- count lines with identical mnemonics and numbers of operands as
+    // the same, and do a word-level diff.
+    const [,lmnemonic,...loperands] = l.split(/\s+/);
+    const [,rmnemonic,...roperands] = r.split(/\s+/);
+    return lmnemonic == rmnemonic && loperands.every((lop, idx) => lop == roperands[idx])
+  }
+
+  render(props) {
+    return html`<${LineDiffView} 
+      leftLines=${props.leftFocus ? this.getAssembly(props.leftFocus) : null}
+      rightLines=${props.rightFocus ? this.getAssembly(props.rightFocus) : null}
+      comparator=${(l, r) => this.compare(l,r)}
+      highlight=${(idLeft, idRight) => this.highlightNodes(idLeft, idRight)}
+      dim=${() => this.dimAll()}
+    />`
+  }
+}
+
+class LineDiffView extends Component {
+  getLeftContents() {
+    if (this.props.leftLines) {
+      if (this.props.rightLines) return this.diffLines().left
+      else return this.props.leftLines.contents
+    }
+    return null
+  }
+
+  getRightContents() {
+    if (this.props.rightLines) {
+      if (this.props.leftLines) return this.diffLines().right
+      else return this.props.rightLines.contents
+    }
+    return null
+  }
+
+  diffLines() {
     // simple memoization
-    if (this.prevLeftFocus == this.props.leftFocus && 
-      this.prevRightFocus == this.props.rightFocus) {
+    if (this.prevLeftLines == this.props.leftLines && 
+      this.prevRightLines == this.props.rightLines) {
       return {left : this.prevLeftDiff, right: this.prevRightDiff}
     }
 
     this.prevLeftFocus = this.props.leftFocus
     this.prevRightFocus = this.props.rightFocus
 
-    const {contents: leftAssembly, lines: leftLines, ids: leftIds} = this.getAssembly(this.props.leftFocus)
-    const {contents: rightAssembly, lines: rightLines, ids: rightIds} = this.getAssembly(this.props.rightFocus)
+    const {contents: leftContents, lines: leftLines, ids: leftIds} = this.props.leftLines
+    const {contents: rightContents, lines: rightLines, ids: rightIds} = this.props.rightLines
 
-    const diffs = Diff.diffLines(leftAssembly, rightAssembly, {
-      comparator(l, r) { return l.substring(6) == r.substring(6) }
+    const diffs = Diff.diffLines(leftContents, rightContents, {
+      comparator: this.props.comparator
     })
     let renderedRight = []
     let renderedLeft = []
@@ -139,12 +204,12 @@ class AssemblyDifference extends Component {
           const closeLeft = curLeft
           const closeRight = curRight
           const hunkRight = html`<div
-            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${() => this.dimAll()}
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
             class="hunkAdded">${line}</div>`
           const hunkLeft = html`<div
-            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${() => this.dimAll()}
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
           > </div>`
           curRight++
           renderedRight.push(hunkRight)
@@ -156,12 +221,12 @@ class AssemblyDifference extends Component {
           const closeLeft = curLeft
           const closeRight = curRight
           const hunkRight = html`<div
-            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${() => this.dimAll()}
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
           > </div>`
           const hunkLeft = html`<div
-            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${() => this.dimAll()}
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
             class="hunkRemoved">${line}</div>`
           curLeft++
           renderedRight.push(hunkRight)
@@ -172,12 +237,12 @@ class AssemblyDifference extends Component {
           const closeLeft = curLeft
           const closeRight = curRight
           const hunkRight = html`<div
-            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${() => this.dimAll()}
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
           >${rightLines[curRight]}</div>`
           const hunkLeft = html`<div
-            onMouseEnter=${() => this.highlightNodes(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${() => this.dimAll()}
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
           >${leftLines[curLeft]}</div>`
           curRight++
           curLeft++
@@ -195,12 +260,8 @@ class AssemblyDifference extends Component {
 
   render() {
     return html` <div id="asm-diff-data">
-      <pre id="asmViewLeft">
-      ${this.getLeftFocusAssembly()}
-      </pre>
-      <pre id="asmViewRight">
-      ${this.getRightFocusAssembly()}
-      </pre>
+      <pre id="asmViewLeft"> ${this.getLeftContents()} </pre>
+      <pre id="asmViewRight"> ${this.getRightContents()}</pre>
     </div>`
   }
 }
