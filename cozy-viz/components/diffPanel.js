@@ -93,11 +93,52 @@ class ActionDifference extends Component {
     return { contents, lines, ids }
   }
 
+  diffWords(leftLine,rightLine) {
+  
+    const lwords = leftLine.split(/\s+/)
+    const rwords = rightLine.split(/\s+/)
+
+    const laddr = lwords.shift()
+    const raddr = rwords.shift()
+
+    const comparison = lwords.map((lw,idx) => rwords[idx] === lw)
+
+  
+    leftLine = lwords
+      .map((w,idx) => comparison[idx] ? `${w} ` : html`<span class="hunkRemoved">${w} </span>`)
+    rightLine = rwords
+      .map((w,idx) => comparison[idx] ? `${w} ` : html`<span class="hunkAdded">${w} </span>`)
+
+    leftLine.unshift(`${laddr} `)
+    rightLine.unshift(`${raddr} `)
+
+    return [leftLine, rightLine]
+  }
+
+  highlightNodes(idLeft, idRight) {
+    const cyLeft = this.props.leftFocus.top.cy()
+    const cyRight = this.props.rightFocus.top.cy()
+    cyLeft.highlight(cyLeft.edges(`#${idLeft}`).source())
+    cyRight.highlight(cyRight.edges(`#${idRight}`).source())
+  }
+
+  dimAll() {
+    this.props.leftFocus.top.cy().dim()
+    this.props.rightFocus.top.cy().dim()
+  }
+
   compare(l, r) {
     // TODO: more fleshed out comparator, case split on action type
-    const [, , ...lterms] = l.split(/\s+/);
-    const [, , ...rterms] = r.split(/\s+/);
-    return lterms.every((lt, idx) => lt == rterms[idx])
+    const [, , laction, ...lterms] = l.split(/\s+/);
+    const [, , raction, ...rterms] = r.split(/\s+/);
+    if (laction === raction) {
+      switch (laction) {
+        case "reg/write:": return lterms[0] == rterms[0] && lterms.length === rterms.length
+        case "reg/read:": return lterms[0] == rterms[0] && lterms.length === rterms.length
+        default: return lterms.length === rterms.length
+      }
+    }
+    return false
   }
 
   format(s) {
@@ -117,9 +158,10 @@ class ActionDifference extends Component {
       leftLines=${props.leftFocus ? this.getActions(props.leftFocus) : null}
       rightLines=${props.rightFocus ? this.getActions(props.rightFocus) : null}
       comparator=${(l, r) => this.compare(l, r)}
-      highlight=${(idLeft, idRight) => { }}
+      diffWords=${(l, r) => this.diffWords(l, r)}
+      highlight=${(idLeft, idRight) => this.highlightNodes(idLeft,idRight)}
       format=${s => this.format(s)}
-      dim=${() => { }}
+      dim=${() => this.dimAll()}
     />`
   }
 }
@@ -262,14 +304,17 @@ class LineDiffView extends Component {
         for (let i = 0; i < diff.count; i++) {
           const closeLeft = curLeft
           const closeRight = curRight
+          let rightLine = this.props.format?.(rightLines[curRight]) || rightLines[curRight]
+          let leftLine = this.props.format?.(leftLines[curLeft]) || leftLines[curLeft];
+          [leftLine,rightLine] = this.props.diffWords?.(leftLine, rightLine) || [leftLine,rightLine]
           const hunkRight = html`<div
             onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
             onMouseLeave=${this.props.dim}
-          >${this.props.format?.(rightLines[curRight]) || rightLines[curRight]}</div>`
+          >${rightLine}</div>`
           const hunkLeft = html`<div
             onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
             onMouseLeave=${this.props.dim}
-          >${this.props.format?.(leftLines[curLeft]) || leftLines[curLeft]}</div>`
+          >${leftLine}</div>`
           curRight++
           curLeft++
           renderedRight.push(hunkRight)
