@@ -57,16 +57,16 @@ export default class DiffPanel extends Component {
         <${AssemblyDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "registers" && registersAvailable && html`
-          <${RegisterDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+        <${RegisterDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "memory" && memoryAvailable && html`
-          <${MemoryDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+        <${MemoryDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "concretions" && concretionAvailable && html`
-          <${Concretions} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+        <${Concretions} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "actions" && actionsAvailable && html`
-          <${ActionDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+        <${ActionDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       </div>`
   }
@@ -91,20 +91,33 @@ class ActionDifference extends Component {
     return { contents, lines, ids }
   }
 
-  compare(l,r) {
+  compare(l, r) {
     // TODO: more fleshed out comparator, case split on action type
-    const [,,...lterms] = l.split(/\s+/);
-    const [,,...rterms] = r.split(/\s+/);
+    const [, , ...lterms] = l.split(/\s+/);
+    const [, , ...rterms] = r.split(/\s+/);
     return lterms.every((lt, idx) => lt == rterms[idx])
+  }
+
+  format(s) {
+    let [,...results] = s.slice(1,-1).split(/\s+/);
+    results = results.map(s => {
+      switch (s) {
+        case "---->>" : return "→"
+        case "<<----" : return "←"
+        default : return s
+      }
+    })
+    return results.join(' ')
   }
 
   render(props) {
     return html`<${LineDiffView} 
       leftLines=${props.leftFocus ? this.getActions(props.leftFocus) : null}
       rightLines=${props.rightFocus ? this.getActions(props.rightFocus) : null}
-      comparator=${(l,r) => this.compare(l,r)}
-      highlight=${(idLeft, idRight) => {}}
-      dim=${() => {}}
+      comparator=${(l, r) => this.compare(l, r)}
+      highlight=${(idLeft, idRight) => { }}
+      format=${s => this.format(s)}
+      dim=${() => { }}
     />`
   }
 }
@@ -141,11 +154,11 @@ class AssemblyDifference extends Component {
     this.props.rightFocus.top.cy().dim()
   }
 
-  compare(l,r) {
+  compare(l, r) {
     // TODO --- count lines with identical mnemonics and numbers of operands as
     // the same, and do a word-level diff.
-    const [,lmnemonic,...loperands] = l.split(/\s+/);
-    const [,rmnemonic,...roperands] = r.split(/\s+/);
+    const [, lmnemonic, ...loperands] = l.split(/\s+/);
+    const [, rmnemonic, ...roperands] = r.split(/\s+/);
     return lmnemonic == rmnemonic && loperands.every((lop, idx) => lop == roperands[idx])
   }
 
@@ -153,7 +166,7 @@ class AssemblyDifference extends Component {
     return html`<${LineDiffView} 
       leftLines=${props.leftFocus ? this.getAssembly(props.leftFocus) : null}
       rightLines=${props.rightFocus ? this.getAssembly(props.rightFocus) : null}
-      comparator=${(l, r) => this.compare(l,r)}
+      comparator=${(l, r) => this.compare(l, r)}
       highlight=${(idLeft, idRight) => this.highlightNodes(idLeft, idRight)}
       dim=${() => this.dimAll()}
     />`
@@ -179,16 +192,16 @@ class LineDiffView extends Component {
 
   diffLines() {
     // simple memoization
-    if (this.prevLeftLines == this.props.leftLines && 
+    if (this.prevLeftLines == this.props.leftLines &&
       this.prevRightLines == this.props.rightLines) {
-      return {left : this.prevLeftDiff, right: this.prevRightDiff}
+      return { left: this.prevLeftDiff, right: this.prevRightDiff }
     }
 
     this.prevLeftFocus = this.props.leftFocus
     this.prevRightFocus = this.props.rightFocus
 
-    const {contents: leftContents, lines: leftLines, ids: leftIds} = this.props.leftLines
-    const {contents: rightContents, lines: rightLines, ids: rightIds} = this.props.rightLines
+    const { contents: leftContents, lines: leftLines, ids: leftIds } = this.props.leftLines
+    const { contents: rightContents, lines: rightLines, ids: rightIds } = this.props.rightLines
 
     const diffs = Diff.diffLines(leftContents, rightContents, {
       comparator: this.props.comparator
@@ -206,7 +219,7 @@ class LineDiffView extends Component {
           const hunkRight = html`<div
             onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
             onMouseLeave=${this.props.dim}
-            class="hunkAdded">${line}</div>`
+            class="hunkAdded">${this.props.format?.(line) || line}</div>`
           const hunkLeft = html`<div
             onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
             onMouseLeave=${this.props.dim}
@@ -227,7 +240,7 @@ class LineDiffView extends Component {
           const hunkLeft = html`<div
             onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
             onMouseLeave=${this.props.dim}
-            class="hunkRemoved">${line}</div>`
+            class="hunkRemoved">${this.props.format?.(line) || line}</div>`
           curLeft++
           renderedRight.push(hunkRight)
           renderedLeft.push(hunkLeft)
@@ -239,11 +252,11 @@ class LineDiffView extends Component {
           const hunkRight = html`<div
             onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
             onMouseLeave=${this.props.dim}
-          >${rightLines[curRight]}</div>`
+          >${this.props.format?.(rightLines[curRight]) || rightLines[curRight]}</div>`
           const hunkLeft = html`<div
             onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
             onMouseLeave=${this.props.dim}
-          >${leftLines[curLeft]}</div>`
+          >${this.props.format?.(leftLines[curLeft]) || leftLines[curLeft]}</div>`
           curRight++
           curLeft++
           renderedRight.push(hunkRight)
@@ -255,7 +268,7 @@ class LineDiffView extends Component {
     this.prevLeftDiff = renderedLeft
     this.prevRightDiff = renderedRight
 
-    return {left : this.prevLeftDiff, right: this.prevRightDiff}
+    return { left: this.prevLeftDiff, right: this.prevRightDiff }
   }
 
   render() {
