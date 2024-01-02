@@ -27,7 +27,9 @@ export default class DiffPanel extends Component {
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].memdiff
     const concretionAvailable = props.leftFocus && props.rightFocus &&
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].conc_args
-    const actionsAvailable = true
+    const actionsAvailable = 
+      props.rightFocus?.top.outgoers("edge")?.[0].data()?.actions.length > 0 ||
+      props.leftFocus?.top.outgoers("edge")?.[0].data()?.actions.length
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
       <div>
         <button 
@@ -177,7 +179,11 @@ class LineDiffView extends Component {
   getLeftContents() {
     if (this.props.leftLines) {
       if (this.props.rightLines) return this.diffLines().left
-      else return this.props.leftLines.contents
+      const lines = this.props.leftLines.contents
+      return lines
+        .split('\n')
+        .map(line => this.props.format?.(line) || line)
+        .join('\n')
     }
     return null
   }
@@ -185,7 +191,14 @@ class LineDiffView extends Component {
   getRightContents() {
     if (this.props.rightLines) {
       if (this.props.leftLines) return this.diffLines().right
-      else return this.props.rightLines.contents
+      else {
+        const lines = this.props.rightLines.contents
+        return lines
+          .split('\n')
+          .map(line => this.props.format?.(line) || line)
+          .join('\n')
+          .trim()
+      }
     }
     return null
   }
@@ -273,8 +286,8 @@ class LineDiffView extends Component {
 
   render() {
     return html` <div id="asm-diff-data">
-      <pre id="asmViewLeft"> ${this.getLeftContents()} </pre>
-      <pre id="asmViewRight"> ${this.getRightContents()}</pre>
+      <pre id="asmViewLeft">${this.getLeftContents()}</pre>
+      <pre id="asmViewRight">${this.getRightContents()}</pre>
     </div>`
   }
 }
