@@ -1,7 +1,7 @@
 import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.1.0/+esm'
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component } from 'https://unpkg.com/preact@latest?module'
-import { getNodesFromEnds, getEdgesFromEnds } from '../util/segmentation'
+import { getNodesFromEnds, getEdgesFromEnds } from '../util/segmentation.js'
 
 export default class DiffPanel extends Component {
   constructor() {
