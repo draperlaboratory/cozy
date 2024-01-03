@@ -93,6 +93,17 @@ class ActionDifference extends Component {
     return { contents, lines, ids }
   }
 
+  hunkFormat(hunk, className) {
+    const terminator = hunk.slice(-1)
+    if (terminator === '>') {
+      const newHunk = hunk.slice(0,hunk.length - 1)
+      return html`<span class=${className}>${newHunk}</span>${terminator} `
+    } else {
+      return html`<span class=${className}>${hunk}</span> `
+    }
+
+  }
+
   diffWords(leftLine,rightLine) {
   
     const lwords = leftLine.split(/\s+/)
@@ -102,12 +113,11 @@ class ActionDifference extends Component {
     const raddr = rwords.shift()
 
     const comparison = lwords.map((lw,idx) => rwords[idx] === lw)
-
   
     leftLine = lwords
-      .map((w,idx) => comparison[idx] ? `${w} ` : html`<span class="hunkRemoved">${w} </span>`)
+      .map((w,idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w,"hunkRemoved"))
     rightLine = rwords
-      .map((w,idx) => comparison[idx] ? `${w} ` : html`<span class="hunkAdded">${w} </span>`)
+      .map((w,idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w,"hunkAdded"))
 
     leftLine.unshift(`${laddr} `)
     rightLine.unshift(`${raddr} `)
