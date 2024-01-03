@@ -170,7 +170,13 @@ class Session:
 
         self.start_fun = start_fun
 
-        state_options = {angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS, angr.options.SYMBOLIC_WRITE_ADDRESSES}
+        state_options = {
+                angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, 
+                angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS, 
+                angr.options.SYMBOLIC_WRITE_ADDRESSES,
+                angr.options.TRACK_MEMORY_ACTIONS,
+                angr.options.TRACK_REGISTER_ACTIONS,
+            }
 
         # Create the initial state
         if start_fun is None:
