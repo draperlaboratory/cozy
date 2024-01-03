@@ -1,6 +1,7 @@
 import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.1.0/+esm'
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component } from 'https://unpkg.com/preact@latest?module'
+import { getNodesFromEnds, getEdgesFromEnds } from '../util/segmentation'
 
 export default class DiffPanel extends Component {
   constructor() {
@@ -12,110 +13,23 @@ export default class DiffPanel extends Component {
 
   toggleMode(mode) {
     if (this.state.mode == mode) {
-      this.setState({mode:null})
+      this.setState({ mode: null })
     } else {
-      this.setState({mode})
+      this.setState({ mode })
     }
-  }
-
-  setLeftFocus(leftFocus) {
-    this.setState({leftFocus})
-    if (this.state.rightFocus) this.diffAssemblyWith(leftFocus, this.state.rightFocus)
-  }
-
-  setRightFocus(rightFocus) {
-    this.setState({rightFocus})
-    if (this.state.leftFocus) this.diffAssemblyWith(this.state.leftFocus,rightFocus)
-  }
-
-  setBothFoci(leftFocus, rightFocus) {
-    this.setState({ leftFocus, rightFocus })
-    this.diffAssemblyWith(leftFocus,rightFocus);
-  }
-
-  resetLeftFocus(leftFocus) {
-    this.setState({
-      rightFocus:null,
-      rightAssemblyDiff:null,
-      leftAssemblyDiff:null, 
-      leftFocus})
-  }
-
-  resetRightFocus(rightFocus) {
-    this.setState({
-      leftFocus:null,
-      rightAssemblyDiff:null,
-      leftAssemblyDiff:null, 
-      rightFocus})
-  }
-
-  resetBothFoci() {
-    this.setState({
-      leftFocus:null,
-      rightFocus:null,
-      rightAssemblyDiff:null,
-      leftAssemblyDiff:null, 
-      })
-  }
-
-  diffAssemblyWith(leftFocus,rightFocus) {
-    const leftLines = leftFocus.data().assembly.split('\n')
-    const rightLines = rightFocus.data().assembly.split('\n')
-    const diffs = Diff.diffLines(leftFocus.data().assembly, rightFocus.data().assembly, {
-      comparator(l,r) { return l.substring(6) == r.substring(6) }
-    })
-    let renderedRight = []
-    let renderedLeft = []
-    let curLeft = 0
-    let curRight = 0
-    for (const diff of diffs) {
-      let hunkRight
-      let hunkLeft
-      if (diff?.added) {
-        hunkRight = html`<span class="hunkAdded">${diff.value}</span>`
-        hunkLeft = html`<span>${Array(diff.count).fill('\n').join("")}</span>`
-        curRight += diff.count
-      } else if (diff?.removed) {
-        hunkLeft = html`<span class="hunkRemoved">${diff.value}</span>`
-        hunkRight = html`<span>${Array(diff.count).fill('\n').join("")}</span>`
-        curLeft += diff.count
-      } else {
-        const leftPiece = []
-        const rightPiece = []
-        for (let i = 0; i < diff.count; i++) {
-          leftPiece.push(leftLines[curLeft] + '\n')
-          rightPiece.push(rightLines[curRight] + '\n')
-          curRight++
-          curLeft++
-        }
-        hunkRight = html`<span>${rightPiece}</span>`
-        hunkLeft = html`<span>${leftPiece}</span>`
-      }
-      renderedRight.push(hunkRight)
-      renderedLeft.push(hunkLeft)
-    }
-    this.setState({
-      leftAssemblyDiff: renderedLeft,
-      rightAssemblyDiff: renderedRight,
-    })
-  }
-
-  getLeftFocusAssembly() {
-    return this.state.leftAssemblyDiff || this.state.leftFocus?.data().assembly
-  }
-
-  getRightFocusAssembly() {
-    return this.state.rightAssemblyDiff || this.state.rightFocus?.data().assembly
   }
 
   render(props, state) {
-    const assemblyAvailable = state.leftFocus || state.rightFocus
-    const registersAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.data().compatibilities[state.rightFocus.id()].regdiff
-    const memoryAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.data().compatibilities[state.rightFocus.id()].memdiff
-    const concretionAvailable = state.leftFocus && state.rightFocus &&
-      state.leftFocus.data().compatibilities[state.rightFocus.id()].conc_args
+    const assemblyAvailable = props.leftFocus || props.rightFocus
+    const registersAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].regdiff
+    const memoryAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].memdiff
+    const concretionAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].conc_args
+    const actionsAvailable = 
+      props.rightFocus?.top.outgoers("edge")?.[0].data()?.actions.length > 0 ||
+      props.leftFocus?.top.outgoers("edge")?.[0].data()?.actions.length
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
       <div>
         <button 
@@ -136,27 +50,300 @@ export default class DiffPanel extends Component {
           onClick=${() => this.toggleMode("concretions")}>
           Concretions
         </button>
+        <button disabled=${!actionsAvailable}
+          onClick=${() => this.toggleMode("actions")}>
+          Events
+        </button>
       </div>
       ${state.mode == "assembly" && assemblyAvailable && html`
-        <div id="asm-diff-data">
-          <pre id="asmViewLeft">
-          ${this.getLeftFocusAssembly()}
-          </pre>
-          <pre id="asmViewRight">
-          ${this.getRightFocusAssembly()}
-          </pre>
-        </div>`
+        <${AssemblyDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "registers" && registersAvailable && html`
-          <${RegisterDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+        <${RegisterDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       ${state.mode == "memory" && memoryAvailable && html`
-          <${MemoryDifference} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+        <${MemoryDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
-      ${state.mode == "concretions" && concretionAvailable && 
-          html`<${Concretions} rightFocus=${state.rightFocus} leftFocus=${state.leftFocus}/>`
+      ${state.mode == "concretions" && concretionAvailable && html`
+        <${Concretions} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+      }
+      ${state.mode == "actions" && actionsAvailable && html`
+        <${ActionDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       </div>`
+  }
+}
+
+class ActionDifference extends Component {
+  getActions(focus) {
+    const segment = getEdgesFromEnds(focus.top, focus.bot).reverse()
+    let contents = ""
+    const lines = []
+    const ids = []
+
+    for (const edge of segment) {
+      const id = edge.id()
+      for (const line of edge.data().actions) {
+        contents += line + '\n'
+        lines.push(line)
+        ids.push(id)
+      }
+    }
+
+    return { contents, lines, ids }
+  }
+
+  hunkFormat(hunk, className) {
+    const terminator = hunk.slice(-1)
+    if (terminator === '>') {
+      const newHunk = hunk.slice(0,hunk.length - 1)
+      return html`<span class=${className}>${newHunk}</span>${terminator} `
+    } else {
+      return html`<span class=${className}>${hunk}</span> `
+    }
+
+  }
+
+  diffWords(leftLine,rightLine) {
+  
+    const lwords = leftLine.split(/\s+/)
+    const rwords = rightLine.split(/\s+/)
+
+    const laddr = lwords.shift()
+    const raddr = rwords.shift()
+
+    const comparison = lwords.map((lw,idx) => rwords[idx] === lw)
+  
+    leftLine = lwords
+      .map((w,idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w,"hunkRemoved"))
+    rightLine = rwords
+      .map((w,idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w,"hunkAdded"))
+
+    leftLine.unshift(`${laddr} `)
+    rightLine.unshift(`${raddr} `)
+
+    return [leftLine, rightLine]
+  }
+
+  highlightNodes(idLeft, idRight) {
+    const cyLeft = this.props.leftFocus.top.cy()
+    const cyRight = this.props.rightFocus.top.cy()
+    cyLeft.highlight(cyLeft.edges(`#${idLeft}`).source())
+    cyRight.highlight(cyRight.edges(`#${idRight}`).source())
+  }
+
+  dimAll() {
+    this.props.leftFocus.top.cy().dim()
+    this.props.rightFocus.top.cy().dim()
+  }
+
+  compare(l, r) {
+    // TODO: more fleshed out comparator, case split on action type
+    const [, , laction, ...lterms] = l.split(/\s+/);
+    const [, , raction, ...rterms] = r.split(/\s+/);
+    if (laction === raction) {
+      switch (laction) {
+        case "reg/write:": return lterms[0] == rterms[0] && lterms.length === rterms.length
+        case "reg/read:": return lterms[0] == rterms[0] && lterms.length === rterms.length
+        default: return lterms.length === rterms.length
+      }
+    }
+    return false
+  }
+
+  format(s) {
+    let [,...results] = s.slice(1,-1).split(/\s+/);
+    results = results.map(s => {
+      switch (s) {
+        case "---->>" : return "→"
+        case "<<----" : return "←"
+        default : return s
+      }
+    })
+    return results.join(' ')
+  }
+
+  render(props) {
+    return html`<${LineDiffView} 
+      leftLines=${props.leftFocus ? this.getActions(props.leftFocus) : null}
+      rightLines=${props.rightFocus ? this.getActions(props.rightFocus) : null}
+      comparator=${(l, r) => this.compare(l, r)}
+      diffWords=${(l, r) => this.diffWords(l, r)}
+      highlight=${(idLeft, idRight) => this.highlightNodes(idLeft,idRight)}
+      format=${s => this.format(s)}
+      dim=${() => this.dimAll()}
+    />`
+  }
+}
+
+class AssemblyDifference extends Component {
+
+  getAssembly(focus) {
+    const segment = getNodesFromEnds(focus.top, focus.bot).reverse()
+    let contents = ""
+    const lines = []
+    const ids = []
+
+    for (const node of segment) {
+      const id = node.id()
+      for (const line of node.data().contents.split('\n')) {
+        contents += line + '\n'
+        lines.push(line)
+        ids.push(id)
+      }
+    }
+
+    return { contents, lines, ids }
+  }
+
+  highlightNodes(idLeft, idRight) {
+    const cyLeft = this.props.leftFocus.top.cy()
+    const cyRight = this.props.rightFocus.top.cy()
+    cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
+    cyRight.highlight(cyRight.nodes(`#${idRight}`))
+  }
+
+  dimAll() {
+    this.props.leftFocus.top.cy().dim()
+    this.props.rightFocus.top.cy().dim()
+  }
+
+  compare(l, r) {
+    // TODO --- count lines with identical mnemonics and numbers of operands as
+    // the same, and do a word-level diff.
+    const [, lmnemonic, ...loperands] = l.split(/\s+/);
+    const [, rmnemonic, ...roperands] = r.split(/\s+/);
+    return lmnemonic == rmnemonic && loperands.every((lop, idx) => lop == roperands[idx])
+  }
+
+  render(props) {
+    return html`<${LineDiffView} 
+      leftLines=${props.leftFocus ? this.getAssembly(props.leftFocus) : null}
+      rightLines=${props.rightFocus ? this.getAssembly(props.rightFocus) : null}
+      comparator=${(l, r) => this.compare(l, r)}
+      highlight=${(idLeft, idRight) => this.highlightNodes(idLeft, idRight)}
+      dim=${() => this.dimAll()}
+    />`
+  }
+}
+
+class LineDiffView extends Component {
+  getLeftContents() {
+    if (this.props.leftLines) {
+      if (this.props.rightLines) return this.diffLines().left
+      const lines = this.props.leftLines.contents
+      return lines
+        .split('\n')
+        .map(line => this.props.format?.(line) || line)
+        .join('\n')
+    }
+    return null
+  }
+
+  getRightContents() {
+    if (this.props.rightLines) {
+      if (this.props.leftLines) return this.diffLines().right
+      else {
+        const lines = this.props.rightLines.contents
+        return lines
+          .split('\n')
+          .map(line => this.props.format?.(line) || line)
+          .join('\n')
+          .trim()
+      }
+    }
+    return null
+  }
+
+  diffLines() {
+    // simple memoization
+    if (this.prevLeftLines == this.props.leftLines &&
+      this.prevRightLines == this.props.rightLines) {
+      return { left: this.prevLeftDiff, right: this.prevRightDiff }
+    }
+
+    this.prevLeftFocus = this.props.leftFocus
+    this.prevRightFocus = this.props.rightFocus
+
+    const { contents: leftContents, lines: leftLines, ids: leftIds } = this.props.leftLines
+    const { contents: rightContents, lines: rightLines, ids: rightIds } = this.props.rightLines
+
+    const diffs = Diff.diffLines(leftContents, rightContents, {
+      comparator: this.props.comparator
+    })
+    let renderedRight = []
+    let renderedLeft = []
+    let curLeft = 0
+    let curRight = 0
+    for (const diff of diffs) {
+      if (diff?.added) {
+        for (const line of diff.value.split('\n')) {
+          if (line == "") continue
+          const closeLeft = curLeft
+          const closeRight = curRight
+          const hunkRight = html`<div
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
+            class="hunkAdded">${this.props.format?.(line) || line}</div>`
+          const hunkLeft = html`<div
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
+          > </div>`
+          curRight++
+          renderedRight.push(hunkRight)
+          renderedLeft.push(hunkLeft)
+        }
+      } else if (diff?.removed) {
+        for (const line of diff.value.split('\n')) {
+          if (line == "") continue
+          const closeLeft = curLeft
+          const closeRight = curRight
+          const hunkRight = html`<div
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
+          > </div>`
+          const hunkLeft = html`<div
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
+            class="hunkRemoved">${this.props.format?.(line) || line}</div>`
+          curLeft++
+          renderedRight.push(hunkRight)
+          renderedLeft.push(hunkLeft)
+        }
+      } else {
+        for (let i = 0; i < diff.count; i++) {
+          const closeLeft = curLeft
+          const closeRight = curRight
+          let rightLine = this.props.format?.(rightLines[curRight]) || rightLines[curRight]
+          let leftLine = this.props.format?.(leftLines[curLeft]) || leftLines[curLeft];
+          [leftLine,rightLine] = this.props.diffWords?.(leftLine, rightLine) || [leftLine,rightLine]
+          const hunkRight = html`<div
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
+          >${rightLine}</div>`
+          const hunkLeft = html`<div
+            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
+            onMouseLeave=${this.props.dim}
+          >${leftLine}</div>`
+          curRight++
+          curLeft++
+          renderedRight.push(hunkRight)
+          renderedLeft.push(hunkLeft)
+        }
+      }
+    }
+
+    this.prevLeftDiff = renderedLeft
+    this.prevRightDiff = renderedRight
+
+    return { left: this.prevLeftDiff, right: this.prevRightDiff }
+  }
+
+  render() {
+    return html` <div id="asm-diff-data">
+      <pre id="asmViewLeft">${this.getLeftContents()}</pre>
+      <pre id="asmViewRight">${this.getRightContents()}</pre>
+    </div>`
   }
 }
 
@@ -168,15 +355,15 @@ class RegisterDifference extends Component {
   }
 
   setView(view) {
-    this.setState({view})
+    this.setState({ view })
   }
 
   render(props, state) {
-    const rightId = props.rightFocus.id()
+    const rightId = props.rightFocus.bot.id()
     const registers = []
-    const conc_regdiffs = props.leftFocus.data().compatibilities[rightId].conc_regdiff ?? []
+    const conc_regdiffs = props.leftFocus.bot.data().compatibilities[rightId].conc_regdiff ?? []
     const rdiffs = state.view === "symbolic"
-      ? props.leftFocus.data().compatibilities[rightId].regdiff
+      ? props.leftFocus.bot.data().compatibilities[rightId].regdiff
       : conc_regdiffs[state.view]
     for (const reg in rdiffs) {
       registers.push(html`
@@ -189,7 +376,7 @@ class RegisterDifference extends Component {
         view=${state.view} 
         setView=${view => this.setView(view)} 
         concretionCount=${conc_regdiffs.length}/>
-      <div id="grid-diff-data"> ${registers.length > 0 
+      <div id="grid-diff-data"> ${registers.length > 0
         ? registers
         : html`<span class="no-difference">no register differences detected ✓</span>`
       }</div></div>`
@@ -204,15 +391,15 @@ class MemoryDifference extends Component {
   }
 
   setView(view) {
-    this.setState({view})
+    this.setState({ view })
   }
 
   render(props, state) {
-    const rightId = props.rightFocus.id()
+    const rightId = props.rightFocus.bot.id()
     const addresses = []
-    const conc_adiffs = props.leftFocus.data().compatibilities[rightId].conc_memdiff ?? []
+    const conc_adiffs = props.leftFocus.bot.data().compatibilities[rightId].conc_memdiff ?? []
     const adiffs = state.view === "symbolic"
-      ? props.leftFocus.data().compatibilities[rightId].memdiff
+      ? props.leftFocus.bot.data().compatibilities[rightId].memdiff
       : conc_adiffs[state.view]
     for (const reg in adiffs) {
       addresses.push(html`
@@ -225,7 +412,7 @@ class MemoryDifference extends Component {
         view=${state.view} 
         setView=${view => this.setView(view)} 
         concretionCount=${conc_adiffs.length}/>
-      <div id="grid-diff-data"> ${addresses.length > 0 
+      <div id="grid-diff-data"> ${addresses.length > 0
         ? addresses
         : html`<span class="no-difference">no memory differences detected ✓</span>`
       }</div></div>`
@@ -234,9 +421,9 @@ class MemoryDifference extends Component {
 
 class Concretions extends Component {
   render(props) {
-    const rightId = props.rightFocus.id()
+    const rightId = props.rightFocus.bot.id()
     const examples = []
-    const concretions = props.leftFocus.data().compatibilities[rightId].conc_args
+    const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_args
     for (const concretion of concretions) {
       examples.push(html`
         <pre class="concrete-example">${JSON.stringify(concretion, undefined, 2)}</pre>

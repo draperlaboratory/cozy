@@ -7,7 +7,7 @@ export const segmentationMixin = {
   // 
   // The connector is an extra function that we can use to potentially link
   // segments with different constraints under some conditions
-  getSegment(node, connector) {
+  getRangeOf(node, connector) {
     const constraints =  node.data().constraints
 
     // first we ascend to the highest node with the given constraints
@@ -38,28 +38,31 @@ export const segmentationMixin = {
     return this.collection(generations)
   },
 
-  showSegment(node) {
-    const seg = this.getSegment(node)
-    this.elements().removeClass("segmentHighlight")
-    seg.addClass("segmentHighlight")
+  segmentToRange(segment) {
+    return segment.bot.predecessors('node')
+      .intersection(segment.top.successors('node'))
+  },
+
+  rangeToSegment(range) {
+    return {
+      bot: range.filter(ele => ele.outgoers("node").intersection(range).length == 0)[0],
+      top: range.filter(ele => ele.incomers("node").intersection(range).length == 0)[0],
+    }
   },
 
   // this shows a generalized segment, in which we ignore additional
   // constraints that don't narrow the pool of compatible nodes on the opposite
   // side.
-  showCompatibilitySegment(node, cy) {
+  getCompatibilityRangeOf(node, cy) {
     const connector = (n,o) => {
       const ncompat = this.getLeavesCompatibleWith(n,cy)
       const ocompat = this.getLeavesCompatibleWith(o,cy)
       return ncompat.size == ocompat.size
     }
-    const seg = this.getSegment(node, connector)
-    this.elements().removeClass("segmentHighlight")
-    seg.addClass("segmentHighlight")
+    return this.getRangeOf(node, connector)
   },
 
-  // gets all leaves in cy compatible with a given
-  // node
+  // gets all leaves in cy compatible with a given node
   getLeavesCompatibleWith(node, cy) {
     const leaves = node.successors().add(node).leaves()
     const ids = leaves.flatMap(leaf => Object.keys(leaf.data().compatibilities))
@@ -92,5 +95,5 @@ export const segmentationMixin = {
         depth += 1
       }
     }
-  }
+  },
 }

@@ -23,4 +23,3 @@ comparison = Comparison(rslt_pre, rslt_post)
 
 #execution_graph.dump_comparison(proj_pre, proj_post, rslt_pre, rslt_post, comparison, "simple_pre.json","simple_post.json", args=[arg])
 execution_graph.visualize_comparison(proj_pre, proj_post, rslt_pre, rslt_post, comparison, args=[arg], num_examples=2, open_browser=True)
-

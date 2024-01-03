@@ -78,7 +78,7 @@ export const style = [
       : Colors.focusedNode
     }
   },
-  { selector: "node.segmentHighlight",
+  { selector: "node.temporaryFocus",
     style: { 
       'underlay-color': '#708090',
       'underlay-opacity': 0.5,
