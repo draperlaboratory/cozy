@@ -1,25 +1,20 @@
-#include <unistd.h>
+#include <stdio.h>
 
 int bv1() {
-    char message[] = "you're on branch 1\n";
-    write(1, message, sizeof(message) - 1);
+    puts("you're on branch 1");
     return 1;
 }
 
 int bv2() {
-    char message[] = "you're on branch 2\n";
-    write(1, message, sizeof(message) - 1);
+    puts("you're on branch 2");
     return 2;
 }
 
-int main (int v) {
+int main(int v) {
     if (v < 10) return bv1();
-    char message[] = "you're not on branch 1\n";
-    write(1, message, sizeof(message) - 1);
+    puts("you're not on branch 1");
     if (v < 15) return bv2();
-    char message2[] = "you're not on branch 2\n";
-    write(1, message2, sizeof(message2) - 1);
-    char message3[] = "you're on the catchall return\n";
-    write(1, message3, sizeof(message2) - 1);
+    puts("you're not on branch 2");
+    puts("you're on the catchall return");
     return 0;
 }
