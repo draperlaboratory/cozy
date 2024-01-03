@@ -28,8 +28,8 @@ export default class DiffPanel extends Component {
     const concretionAvailable = props.leftFocus && props.rightFocus &&
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].conc_args
     const actionsAvailable = 
-      props.rightFocus?.top.outgoers("edge")?.[0].data()?.actions.length > 0 ||
-      props.leftFocus?.top.outgoers("edge")?.[0].data()?.actions.length
+      props.rightFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0 ||
+      props.leftFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
       <div>
         <button 
