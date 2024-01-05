@@ -31,6 +31,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                     concrete_arg_mapper: Callable [[any], any] | None = None,
                     include_vex: bool = False, include_simprocs: bool = False,
                     flag_syscalls: bool = False, include_actions: bool = False,
+                    include_debug: bool = False,
                     args: any = [], num_examples: int = 0) -> None:
     """
     Generates and saves JSON data for Cozy-Viz.
@@ -58,6 +59,8 @@ def dump_comparison(proj_a: Project, proj_b: Project,
         SimProcedures called in each basic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
+    :param bool, optional include_debug: whether to include debugging information
+        recovered from DWARF metadata. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -70,6 +73,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                                     include_vex=include_vex,
                                     include_simprocs=include_simprocs,
                                     include_actions=include_actions,
+                                    include_debug=include_debug,
                                     flag_syscalls=flag_syscalls,
                                     args=args, num_examples=num_examples)
     def write_graph(g, file_name):
@@ -85,6 +89,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
                          concrete_arg_mapper: Callable [[any], any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False, include_actions: bool = False,
+                         include_debug: bool = False,
                          args: any = [], num_examples: int = 0,
                          open_browser=False, port=8080
                          ):
@@ -110,6 +115,8 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
         SimProcedures called in each basic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
+    :param bool, optional include_debug: whether to include debugging information
+        recovered from DWARF metadata. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -125,6 +132,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
                                     include_vex=include_vex,
                                     flag_syscalls=flag_syscalls,
                                     include_actions = include_actions,
+                                    include_debug = include_debug,
                                     include_simprocs = include_simprocs,
                                     args=args, num_examples=num_examples)
     start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)), open_browser=open_browser, port=port)
@@ -137,6 +145,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False,
                          include_actions: bool = False,
+                         include_debug: bool = False,
                          args: any = [], num_examples: int = 0) -> tuple[nx.DiGraph, nx.DiGraph]:
     """
     Generates JSON data for Cozy-Viz.
@@ -176,6 +185,15 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
     g_b = eg_b.reconstruct_bbl_addr_graph()
     leaves_a = [v for (v, d) in g_a.out_degree() if d == 0]
     leaves_b = [v for (v, d) in g_b.out_degree() if d == 0]
+    if include_debug:
+        def attach_sourcemap(g,objs):
+            root = [v for (v, d) in g.in_degree() if d == 0]
+            sourcemap = {}
+            for obj in objs: sourcemap.update(obj.addr_to_line)
+            sourcemap = dict(map(lambda item: (item[0], list(item[1])), sourcemap.items()))
+            g.nodes[root[0]]["debug"] = sourcemap
+        attach_sourcemap(g_a, proj_a.angr_proj.loader.all_elf_objects)
+        attach_sourcemap(g_b, proj_b.angr_proj.loader.all_elf_objects)
     for na in leaves_a:
         g_a.nodes[na]["compatibilities"] = {}
     for nb in leaves_b:

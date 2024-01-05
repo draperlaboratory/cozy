@@ -429,14 +429,14 @@ class Project:
     :ivar dict[str | int, str] fun_prototypes: Maps function names or function addresses to their type signatures.
     """
 
-    def __init__(self, binary_path: str, fun_prototypes: dict[str | int, str] | None=None):
+    def __init__(self, binary_path: str, fun_prototypes: dict[str | int, str] | None=None, load_debug_info: bool = False):
         """
         Constructor for a project.
 
         :param str binary_path: The path to the binary to analyze.
         :param dict[str | int, str] | None fun_prototypes: Initial dictionary that maps function names or addresses to their type signatures. If None is passed, fun_prototypes is initialized to the empty dictionary.
         """
-        self.angr_proj = angr.Project(binary_path)
+        self.angr_proj = angr.Project(binary_path, load_debug_info=load_debug_info)
         if fun_prototypes is None:
             self.fun_prototypes = {}
         else:

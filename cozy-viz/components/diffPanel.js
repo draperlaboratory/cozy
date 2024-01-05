@@ -181,19 +181,28 @@ class AssemblyDifference extends Component {
   getAssembly(focus) {
     const segment = getNodesFromEnds(focus.top, focus.bot).reverse()
     let contents = ""
+    let msg = ""
     const lines = []
     const ids = []
+    const msgs = []
+    const debug = focus.top.cy().debugData
 
     for (const node of segment) {
       const id = node.id()
       for (const line of node.data().contents.split('\n')) {
+        if (debug) {
+          const addr = parseInt(line.match(/^[0-9a-f]*/),16)
+          if (debug[addr]) msg = "" // start fresh list of debug locations
+          for (const loc of debug[addr] || []) msg += loc + '\n'
+        }
         contents += line + '\n'
         lines.push(line)
+        msgs.push(msg)
         ids.push(id)
       }
     }
 
-    return { contents, lines, ids }
+    return { contents, lines, ids, msgs }
   }
 
   highlightNodes(idLeft, idRight) {
@@ -265,8 +274,18 @@ class LineDiffView extends Component {
     this.prevLeftFocus = this.props.leftFocus
     this.prevRightFocus = this.props.rightFocus
 
-    const { contents: leftContents, lines: leftLines, ids: leftIds } = this.props.leftLines
-    const { contents: rightContents, lines: rightLines, ids: rightIds } = this.props.rightLines
+    const { 
+      contents: leftContents, 
+      lines: leftLines, 
+      ids: leftIds, 
+      msgs: leftMsgs,
+    } = this.props.leftLines
+    const { 
+      contents: rightContents, 
+      lines: rightLines, 
+      ids: rightIds,
+      msgs: rightMsgs,
+    } = this.props.rightLines
 
     const diffs = Diff.diffLines(leftContents, rightContents, {
       comparator: this.props.comparator
@@ -275,20 +294,20 @@ class LineDiffView extends Component {
     let renderedLeft = []
     let curLeft = 0
     let curRight = 0
+
+    let toHunk = (curLeft, curRight, content, theclass, left) => html`<div
+        title=${left ? leftMsgs[curLeft] : rightMsgs[curRight]}
+        onMouseEnter=${() => this.props.highlight(leftIds[curLeft], rightIds[curRight])} 
+        onMouseLeave=${this.props.dim}
+        class=${theclass}>${content}
+      </div>`
+
     for (const diff of diffs) {
       if (diff?.added) {
         for (const line of diff.value.split('\n')) {
           if (line == "") continue
-          const closeLeft = curLeft
-          const closeRight = curRight
-          const hunkRight = html`<div
-            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${this.props.dim}
-            class="hunkAdded">${this.props.format?.(line) || line}</div>`
-          const hunkLeft = html`<div
-            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${this.props.dim}
-          > </div>`
+          const hunkRight = toHunk(curLeft,curRight,this.props.format?.(line) || line, "hunkAdded")
+          const hunkLeft = toHunk(curLeft,curRight,null,null,true)
           curRight++
           renderedRight.push(hunkRight)
           renderedLeft.push(hunkLeft)
@@ -296,39 +315,23 @@ class LineDiffView extends Component {
       } else if (diff?.removed) {
         for (const line of diff.value.split('\n')) {
           if (line == "") continue
-          const closeLeft = curLeft
-          const closeRight = curRight
-          const hunkRight = html`<div
-            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${this.props.dim}
-          > </div>`
-          const hunkLeft = html`<div
-            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${this.props.dim}
-            class="hunkRemoved">${this.props.format?.(line) || line}</div>`
+          const hunkRight = toHunk(curLeft,curRight,null,null)
+          const hunkLeft = toHunk(curLeft,curRight,this.props.format?.(line) || line, "hunkRemoved",true)
           curLeft++
           renderedRight.push(hunkRight)
-          renderedLeft.push(hunkLeft)
+          renderedLeft.push(hunkLeft,true)
         }
       } else {
         for (let i = 0; i < diff.count; i++) {
-          const closeLeft = curLeft
-          const closeRight = curRight
           let rightLine = this.props.format?.(rightLines[curRight]) || rightLines[curRight]
           let leftLine = this.props.format?.(leftLines[curLeft]) || leftLines[curLeft];
           [leftLine,rightLine] = this.props.diffWords?.(leftLine, rightLine) || [leftLine,rightLine]
-          const hunkRight = html`<div
-            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${this.props.dim}
-          >${rightLine}</div>`
-          const hunkLeft = html`<div
-            onMouseEnter=${() => this.props.highlight(leftIds[closeLeft], rightIds[closeRight])}
-            onMouseLeave=${this.props.dim}
-          >${leftLine}</div>`
+          const hunkRight = toHunk(curLeft,curRight,rightLine,null)
+          const hunkLeft = toHunk(curLeft,curRight,leftLine,null)
           curRight++
           curLeft++
           renderedRight.push(hunkRight)
-          renderedLeft.push(hunkLeft)
+          renderedLeft.push(hunkLeft,true)
         }
       }
     }
