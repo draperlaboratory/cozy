@@ -311,7 +311,7 @@ class LineDiffView extends Component {
         for (const line of diff.value.split('\n')) {
           if (line == "") continue
           const hunkRight = toHunk(curLeft,curRight,this.props.format?.(line) || line, "hunkAdded")
-          const hunkLeft = toHunk(curLeft,curRight,null,null,true)
+          const hunkLeft = toHunk(curLeft,curRight," ",null,true)
           curRight++
           renderedRight.push(hunkRight)
           renderedLeft.push(hunkLeft)
@@ -319,7 +319,7 @@ class LineDiffView extends Component {
       } else if (diff?.removed) {
         for (const line of diff.value.split('\n')) {
           if (line == "") continue
-          const hunkRight = toHunk(curLeft,curRight,null,null)
+          const hunkRight = toHunk(curLeft,curRight," ",null)
           const hunkLeft = toHunk(curLeft,curRight,this.props.format?.(line) || line, "hunkRemoved",true)
           curLeft++
           renderedRight.push(hunkRight)
