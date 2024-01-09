@@ -78,19 +78,22 @@ class ActionDifference extends Component {
   getActions(focus) {
     const segment = getEdgesFromEnds(focus.top, focus.bot).reverse()
     let contents = ""
+    let msg = ""
     const lines = []
     const ids = []
+    const msgs = []
 
     for (const edge of segment) {
       const id = edge.id()
       for (const line of edge.data().actions) {
         contents += line + '\n'
         lines.push(line)
+        msgs.push(msg)
         ids.push(id)
       }
     }
 
-    return { contents, lines, ids }
+    return { contents, lines, ids, msgs }
   }
 
   hunkFormat(hunk, className) {
@@ -280,6 +283,7 @@ class LineDiffView extends Component {
       ids: leftIds, 
       msgs: leftMsgs,
     } = this.props.leftLines
+
     const { 
       contents: rightContents, 
       lines: rightLines, 
