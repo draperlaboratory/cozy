@@ -240,38 +240,48 @@ class AssemblyDifference extends Component {
 }
 
 class LineDiffView extends Component {
-  getLeftContents() {
-    if (this.props.leftLines) {
-      if (this.props.rightLines) return this.diffLines().left
-      const lines = this.props.leftLines.contents
-      return lines
-        .split('\n')
-        .map(line => this.props.format?.(line) || line)
-        .join('\n')
+  getContents() {
+    if (!this.props.leftLines && !this.props.rightLines) return null
+    if (!this.props.rightLines) {
+      const { 
+        lines: leftLines, 
+        ids: leftIds, 
+        msgs: leftMsgs,
+      } = this.props.leftLines
+      const hunkCtx =  { leftIds, rightIds: [""], leftMsgs, rightMsgs: [""] }
+      return leftLines
+        .map((line,idx) => Hunk({
+            hunkCtx,
+            curLeft: idx,
+            curRight: 0,
+            leftContent: this.props.format?.(line) || line, 
+            rightContent: " ",
+          }))
     }
-    return null
-  }
-
-  getRightContents() {
-    if (this.props.rightLines) {
-      if (this.props.leftLines) return this.diffLines().right
-      else {
-        const lines = this.props.rightLines.contents
-        return lines
-          .split('\n')
-          .map(line => this.props.format?.(line) || line)
-          .join('\n')
-          .trim()
-      }
+    if (!this.props.leftLines) {
+      const { 
+        lines: rightLines, 
+        ids: rightIds, 
+        msgs: rightMsgs,
+      } = this.props.rightLines
+      const hunkCtx =  { rightIds, leftIds: [""], rightMsgs, leftMsgs: [""] }
+      return rightLines
+        .map((line, idx) => Hunk({
+            hunkCtx,
+            curLeft: 0,
+            curRight: idx,
+            leftContent: " ",
+            rightContent: this.props.format?.(line) || line,
+          }))
     }
-    return null
+    return this.diffLines()
   }
 
   diffLines() {
     // simple memoization
     if (this.prevLeftLines == this.props.leftLines &&
       this.prevRightLines == this.props.rightLines) {
-      return { left: this.prevLeftDiff, right: this.prevRightDiff }
+      return this.prevDiff
     }
 
     this.prevLeftFocus = this.props.leftFocus
@@ -291,67 +301,96 @@ class LineDiffView extends Component {
       msgs: rightMsgs,
     } = this.props.rightLines
 
+    const hunkCtx = { leftIds, leftMsgs, rightIds, rightMsgs }
     const diffs = Diff.diffLines(leftContents, rightContents, {
       comparator: this.props.comparator
     })
-    let renderedRight = []
-    let renderedLeft = []
+    let rendered = []
     let curLeft = 0
     let curRight = 0
-
-    let toHunk = (curLeft, curRight, content, theclass, left) => html`<div
-        title=${left ? leftMsgs[curLeft] : rightMsgs[curRight]}
-        onMouseEnter=${() => this.props.highlight(leftIds[curLeft], rightIds[curRight])} 
-        onMouseLeave=${this.props.dim}
-        class=${theclass}>${content}
-      </div>`
+    let mkHunk = ({curLeft,curRight,leftContent,rightContent,leftClass,rightClass}) => Hunk({
+        highlight: () => this.props.highlight(leftIds[curLeft], rightIds[curRight]),
+        dim: () => this.props.dim(),
+        hunkCtx,
+        curLeft,
+        curRight,
+        leftContent,
+        rightContent,
+        leftClass,
+        rightClass,
+      })
 
     for (const diff of diffs) {
       if (diff?.added) {
         for (const line of diff.value.split('\n')) {
           if (line == "") continue
-          const hunkRight = toHunk(curLeft,curRight,this.props.format?.(line) || line, "hunkAdded")
-          const hunkLeft = toHunk(curLeft,curRight," ",null,true)
+          const hunk = mkHunk({
+            curLeft,
+            curRight,
+            leftContent: " ",
+            rightContent: this.props.format?.(line) || line, 
+            rightClass: "hunkAdded",
+          })
           curRight++
-          renderedRight.push(hunkRight)
-          renderedLeft.push(hunkLeft)
+          rendered.push(hunk)
         }
       } else if (diff?.removed) {
         for (const line of diff.value.split('\n')) {
           if (line == "") continue
-          const hunkRight = toHunk(curLeft,curRight," ",null)
-          const hunkLeft = toHunk(curLeft,curRight,this.props.format?.(line) || line, "hunkRemoved",true)
+          const hunk = mkHunk({
+            curLeft,
+            curRight,
+            leftContent: this.props.format?.(line) || line, 
+            rightContent: " ",
+            leftClass: "hunkRemoved",
+          })
           curLeft++
-          renderedRight.push(hunkRight)
-          renderedLeft.push(hunkLeft,true)
+          rendered.push(hunk)
         }
       } else {
         for (let i = 0; i < diff.count; i++) {
-          let rightLine = this.props.format?.(rightLines[curRight]) || rightLines[curRight]
-          let leftLine = this.props.format?.(leftLines[curLeft]) || leftLines[curLeft];
-          [leftLine,rightLine] = this.props.diffWords?.(leftLine, rightLine) || [leftLine,rightLine]
-          const hunkRight = toHunk(curLeft,curRight,rightLine,null)
-          const hunkLeft = toHunk(curLeft,curRight,leftLine,null)
+          let rightContent = this.props.format?.(rightLines[curRight]) || rightLines[curRight]
+          let leftContent = this.props.format?.(leftLines[curLeft]) || leftLines[curLeft];
+          [leftContent,rightContent] = this.props.diffWords?.(leftContent, rightContent) || [leftContent,rightContent]
+          const hunk = mkHunk({
+            curLeft,
+            curRight,
+            leftContent,
+            rightContent,
+          })
           curRight++
           curLeft++
-          renderedRight.push(hunkRight)
-          renderedLeft.push(hunkLeft,true)
+          rendered.push(hunk)
         }
       }
     }
 
-    this.prevLeftDiff = renderedLeft
-    this.prevRightDiff = renderedRight
+    this.prevDiff = rendered
 
-    return { left: this.prevLeftDiff, right: this.prevRightDiff }
+    return rendered
   }
 
   render() {
     return html` <div id="asm-diff-data">
-      <pre id="asmViewLeft">${this.getLeftContents()}</pre>
-      <pre id="asmViewRight">${this.getRightContents()}</pre>
+      <pre id="asmView">${this.getContents()}</pre>
     </div>`
   }
+}
+
+function Hunk({dim, highlight, hunkCtx, curLeft, curRight, leftContent, leftClass, rightContent, rightClass}) {
+  return html`<div
+        onMouseEnter=${highlight} 
+        onMouseLeave=${dim}
+        >
+        <div
+          title=${hunkCtx?.leftMsgs[curLeft]}
+          class=${leftClass}
+        >${leftContent}</div>
+        <div
+          title=${hunkCtx?.rightMsgs[curRight]}
+          class=${rightClass}
+        >${rightContent}</div>
+      </div>`
 }
 
 class RegisterDifference extends Component {

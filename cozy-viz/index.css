@@ -127,12 +127,17 @@ button:disabled {
 
 /* Diff panel */
 
-#asmViewLeft, #asmViewRight {
-  margin: 1em 0 0 1vw;
+#asmView  {
+  margin: 1em 1em 0vw 1em;
   z-index:2;
-  width:49vw;
+  width:100vw;
   overflow-x:hidden;
   text-overflow: ellipsis;
+}
+
+#asmView > div {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
 }
 
 #diff-panel {
