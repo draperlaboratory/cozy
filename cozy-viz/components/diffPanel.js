@@ -27,7 +27,7 @@ export default class DiffPanel extends Component {
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].memdiff
     const concretionAvailable = props.leftFocus && props.rightFocus &&
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].conc_args
-    const actionsAvailable = 
+    const actionsAvailable =
       props.rightFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0 ||
       props.leftFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
@@ -99,7 +99,7 @@ class ActionDifference extends Component {
   hunkFormat(hunk, className) {
     const terminator = hunk.slice(-1)
     if (terminator === '>') {
-      const newHunk = hunk.slice(0,hunk.length - 1)
+      const newHunk = hunk.slice(0, hunk.length - 1)
       return html`<span class=${className}>${newHunk}</span>${terminator} `
     } else {
       return html`<span class=${className}>${hunk}</span> `
@@ -107,20 +107,24 @@ class ActionDifference extends Component {
 
   }
 
-  diffWords(leftLine,rightLine) {
-  
+  onInput(e) {
+    this.setState({ filterExpr: e.target.value })
+  }
+
+  diffWords(leftLine, rightLine) {
+
     const lwords = leftLine.split(/\s+/)
     const rwords = rightLine.split(/\s+/)
 
     const laddr = lwords.shift()
     const raddr = rwords.shift()
 
-    const comparison = lwords.map((lw,idx) => rwords[idx] === lw)
-  
+    const comparison = lwords.map((lw, idx) => rwords[idx] === lw)
+
     leftLine = lwords
-      .map((w,idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w,"hunkRemoved"))
+      .map((w, idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w, "hunkRemoved"))
     rightLine = rwords
-      .map((w,idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w,"hunkAdded"))
+      .map((w, idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w, "hunkAdded"))
 
     leftLine.unshift(`${laddr} `)
     rightLine.unshift(`${raddr} `)
@@ -155,27 +159,32 @@ class ActionDifference extends Component {
   }
 
   format(s) {
-    let [,...results] = s.slice(1,-1).split(/\s+/);
+    let [, ...results] = s.slice(1, -1).split(/\s+/);
     results = results.map(s => {
       switch (s) {
-        case "---->>" : return "→"
-        case "<<----" : return "←"
-        default : return s
+        case "---->>": return "→"
+        case "<<----": return "←"
+        default: return s
       }
     })
     return results.join(' ')
   }
 
-  render(props) {
-    return html`<${LineDiffView} 
+  render(props, state) {
+    return html`<div id="action-diff">
+      <${SearchInput} onInput=${e => this.onInput(e)} value=${this.filterExpr}/>
+      <${LineDiffView} 
+      filterExpr=${state.filterExpr}
       leftLines=${props.leftFocus ? this.getActions(props.leftFocus) : null}
       rightLines=${props.rightFocus ? this.getActions(props.rightFocus) : null}
       comparator=${(l, r) => this.compare(l, r)}
       diffWords=${(l, r) => this.diffWords(l, r)}
-      highlight=${(idLeft, idRight) => this.highlightNodes(idLeft,idRight)}
+      highlight=${(idLeft, idRight) => this.highlightNodes(idLeft, idRight)}
       format=${s => this.format(s)}
       dim=${() => this.dimAll()}
-    />`
+      />
+      </div>
+      `
   }
 }
 
@@ -194,7 +203,7 @@ class AssemblyDifference extends Component {
       const id = node.id()
       for (const line of node.data().contents.split('\n')) {
         if (debug) {
-          const addr = parseInt(line.match(/^[0-9a-f]*/),16)
+          const addr = parseInt(line.match(/^[0-9a-f]*/), 16)
           if (debug[addr]) msg = "" // start fresh list of debug locations
           for (const loc of debug[addr] || []) msg += loc + '\n'
         }
@@ -206,6 +215,10 @@ class AssemblyDifference extends Component {
     }
 
     return { contents, lines, ids, msgs }
+  }
+  
+  onInput(e) {
+    this.setState({filterExpr: e.target.value})
   }
 
   highlightNodes(idLeft, idRight) {
@@ -228,51 +241,62 @@ class AssemblyDifference extends Component {
     return lmnemonic == rmnemonic && loperands.every((lop, idx) => lop == roperands[idx])
   }
 
-  render(props) {
-    return html`<${LineDiffView} 
+  render(props, state) {
+    return html`<div id="assembly-diff">
+      <${SearchInput} value=${state.filterExpr} onInput=${e => this.onInput(e)}/>
+      <${LineDiffView} 
+      filterExpr=${state.filterExpr}
       leftLines=${props.leftFocus ? this.getAssembly(props.leftFocus) : null}
       rightLines=${props.rightFocus ? this.getAssembly(props.rightFocus) : null}
       comparator=${(l, r) => this.compare(l, r)}
       highlight=${(idLeft, idRight) => this.highlightNodes(idLeft, idRight)}
       dim=${() => this.dimAll()}
-    />`
+    />
+    </div>`
   }
+}
+
+function SearchInput({value, onInput}) {
+      return html`<div class="search-input">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input value="${value}" onInput=${onInput}></input>
+      </div>`
 }
 
 class LineDiffView extends Component {
   getContents() {
     if (!this.props.leftLines && !this.props.rightLines) return null
     if (!this.props.rightLines) {
-      const { 
-        lines: leftLines, 
-        ids: leftIds, 
+      const {
+        lines: leftLines,
+        ids: leftIds,
         msgs: leftMsgs,
       } = this.props.leftLines
-      const hunkCtx =  { leftIds, rightIds: [""], leftMsgs, rightMsgs: [""] }
+      const hunkCtx = { leftIds, rightIds: [""], leftMsgs, rightMsgs: [""] }
       return leftLines
-        .map((line,idx) => Hunk({
-            hunkCtx,
-            curLeft: idx,
-            curRight: 0,
-            leftContent: this.props.format?.(line) || line, 
-            rightContent: " ",
-          }))
+        .map((line, idx) => Hunk({
+          hunkCtx,
+          curLeft: idx,
+          curRight: 0,
+          leftContent: this.props.format?.(line) || line,
+          rightContent: " ",
+        }))
     }
     if (!this.props.leftLines) {
-      const { 
-        lines: rightLines, 
-        ids: rightIds, 
+      const {
+        lines: rightLines,
+        ids: rightIds,
         msgs: rightMsgs,
       } = this.props.rightLines
-      const hunkCtx =  { rightIds, leftIds: [""], rightMsgs, leftMsgs: [""] }
+      const hunkCtx = { rightIds, leftIds: [""], rightMsgs, leftMsgs: [""] }
       return rightLines
         .map((line, idx) => Hunk({
-            hunkCtx,
-            curLeft: 0,
-            curRight: idx,
-            leftContent: " ",
-            rightContent: this.props.format?.(line) || line,
-          }))
+          hunkCtx,
+          curLeft: 0,
+          curRight: idx,
+          leftContent: " ",
+          rightContent: this.props.format?.(line) || line,
+        }))
     }
     return this.diffLines()
   }
@@ -287,16 +311,16 @@ class LineDiffView extends Component {
     this.prevLeftFocus = this.props.leftFocus
     this.prevRightFocus = this.props.rightFocus
 
-    const { 
-      contents: leftContents, 
-      lines: leftLines, 
-      ids: leftIds, 
+    const {
+      contents: leftContents,
+      lines: leftLines,
+      ids: leftIds,
       msgs: leftMsgs,
     } = this.props.leftLines
 
-    const { 
-      contents: rightContents, 
-      lines: rightLines, 
+    const {
+      contents: rightContents,
+      lines: rightLines,
       ids: rightIds,
       msgs: rightMsgs,
     } = this.props.rightLines
@@ -308,17 +332,17 @@ class LineDiffView extends Component {
     let rendered = []
     let curLeft = 0
     let curRight = 0
-    let mkHunk = ({curLeft,curRight,leftContent,rightContent,leftClass,rightClass}) => Hunk({
-        highlight: () => this.props.highlight(leftIds[curLeft], rightIds[curRight]),
-        dim: () => this.props.dim(),
-        hunkCtx,
-        curLeft,
-        curRight,
-        leftContent,
-        rightContent,
-        leftClass,
-        rightClass,
-      })
+    let mkHunk = ({ curLeft, curRight, leftContent, rightContent, leftClass, rightClass }) => Hunk({
+      highlight: () => this.props.highlight(leftIds[curLeft], rightIds[curRight]),
+      dim: () => this.props.dim(),
+      hunkCtx,
+      curLeft,
+      curRight,
+      leftContent,
+      rightContent,
+      leftClass,
+      rightClass,
+    })
 
     for (const diff of diffs) {
       if (diff?.added) {
@@ -328,7 +352,7 @@ class LineDiffView extends Component {
             curLeft,
             curRight,
             leftContent: " ",
-            rightContent: this.props.format?.(line) || line, 
+            rightContent: this.props.format?.(line) || line,
             rightClass: "hunkAdded",
           })
           curRight++
@@ -340,7 +364,7 @@ class LineDiffView extends Component {
           const hunk = mkHunk({
             curLeft,
             curRight,
-            leftContent: this.props.format?.(line) || line, 
+            leftContent: this.props.format?.(line) || line,
             rightContent: " ",
             leftClass: "hunkRemoved",
           })
@@ -351,7 +375,7 @@ class LineDiffView extends Component {
         for (let i = 0; i < diff.count; i++) {
           let rightContent = this.props.format?.(rightLines[curRight]) || rightLines[curRight]
           let leftContent = this.props.format?.(leftLines[curLeft]) || leftLines[curLeft];
-          [leftContent,rightContent] = this.props.diffWords?.(leftContent, rightContent) || [leftContent,rightContent]
+          [leftContent, rightContent] = this.props.diffWords?.(leftContent, rightContent) || [leftContent, rightContent]
           const hunk = mkHunk({
             curLeft,
             curRight,
@@ -370,15 +394,26 @@ class LineDiffView extends Component {
     return rendered
   }
 
-  render() {
-    return html` <div id="asm-diff-data">
-      <pre id="asmView">${this.getContents()}</pre>
-    </div>`
+  render(props) {
+    const hunks = this.getContents().filter(({ contentListing }) => {
+      if (!props.filterExpr) return true
+      let lineFilter 
+      try {
+        lineFilter = new RegExp(props.filterExpr)
+      } catch (e) {
+        lineFilter = /^/
+      }
+
+      return lineFilter.test(contentListing.left) ||
+        lineFilter.test(contentListing.right)
+    })
+
+    return html`<pre id="line-diff-data-view">${hunks}</pre>`
   }
 }
 
-function Hunk({dim, highlight, hunkCtx, curLeft, curRight, leftContent, leftClass, rightContent, rightClass}) {
-  return html`<div
+function Hunk({ dim, highlight, hunkCtx, curLeft, curRight, leftContent, leftClass, rightContent, rightClass }) {
+  const hunk = html`<div
         onMouseEnter=${highlight} 
         onMouseLeave=${dim}
         >
@@ -391,6 +426,10 @@ function Hunk({dim, highlight, hunkCtx, curLeft, curRight, leftContent, leftClas
           class=${rightClass}
         >${rightContent}</div>
       </div>`
+
+  hunk.contentListing = { left: leftContent, right: rightContent }
+
+  return hunk
 }
 
 class RegisterDifference extends Component {

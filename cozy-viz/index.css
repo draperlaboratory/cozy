@@ -127,17 +127,40 @@ button:disabled {
 
 /* Diff panel */
 
-#asmView  {
-  margin: 1em 1em 0vw 1em;
-  z-index:2;
-  width:100vw;
-  overflow-x:hidden;
-  text-overflow: ellipsis;
+#action-diff, #assembly-diff {
+  padding: 5px 1em 0vw 1em;
+  width:calc(100vw - 2em);
 }
 
-#asmView > div {
+.search-input {
+  border:1px solid #ccc;
+  display:inline-block;
+  padding: 5px 5px 5px 0px;
+}
+
+.search-input > input {
+  border:none;
+}
+
+.search-input > svg {
+  height:1.2em;
+  vertical-align:middle;
+}
+
+#line-diff-data-view  {
+  z-index:2;
+}
+
+#line-diff-data-view > div {
   display:grid;
   grid-template-columns: 1fr 1fr;
+  grid-column-gap:5px;
+}
+
+#line-diff-data-view > div > div {
+  max-width:49vw;
+  overflow-x:hidden;
+  text-overflow: ellipsis;
 }
 
 #diff-panel {
@@ -173,10 +196,6 @@ button:disabled {
 
 #diff-panel button:disabled {
   color:#999;
-}
-
-#asm-diff-data {
-  display:flex;
 }
 
 #grid-diff-data {
