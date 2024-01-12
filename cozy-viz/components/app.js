@@ -36,6 +36,7 @@ export default class App extends Component {
     this.tooltip = createRef()
 
     this.prune = this.prune.bind(this)
+    this.unprune = this.unprune.bind(this)
     this.handleDragleave = this.handleDragleave.bind(this)
     this.handleDragover = this.handleDragover.bind(this)
     this.clearTooltip = this.clearTooltip.bind(this)
@@ -333,15 +334,12 @@ export default class App extends Component {
         break;
       }
       case Tidiness.tidy: {
-        if (this.state.tidiness == Tidiness.veryTidy) {
-          // if we're already very tidy, we need to refresh and then merge nodes
-          // from there.
-          this.batch(() => {
-            this.refresh()
-            this.tidy({})
-          })
-        }
-        else this.tidy({})
+        // technically we could hold off on the refresh here unless we're
+        // already veryTidy, but that's probably a premature optimization
+        this.batch(() => {
+          this.refresh()
+          this.tidy({})
+        })
         break;
       }
       case Tidiness.veryTidy: {
@@ -385,6 +383,10 @@ export default class App extends Component {
     this.cy2.cy.refocus()
   }
 
+  unprune() {
+    this.setTidiness(this.state.tidiness)
+  }
+
   render(_props, state) {
     // TODO I could get rid of a lot of lambdas here if I properly bound "this"
     // in some of these methods
@@ -393,6 +395,7 @@ export default class App extends Component {
       <${MenuBar} 
         setTidiness=${level => this.startRender(() => this.setTidiness(level))}
         prune=${this.prune}
+        unprune=${this.unprune}
         resetLayout=${this.resetLayout}
         tidiness=${state.tidiness}
         status=${state.status}
