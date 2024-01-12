@@ -33,4 +33,4 @@ cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
                                           prepatched_results, postpatched_results,
                                           comparison,
                                           args={"temp": temp, "cmd": cmd},
-                                          num_examples=2, open_browser=True)
+                                          num_examples=2, open_browser=True, include_actions=True)

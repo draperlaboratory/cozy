@@ -20,7 +20,7 @@ class Menu extends Component {
     if (this.props.open == this.props.title) {
       computePosition(this.button.current, this.options.current, {
         placement: "bottom-start"
-      }).then(({x,y}) => {
+      }).then(({ x, y }) => {
         this.options.current.style.left = `${x}px`
         this.options.current.style.top = `${y}px`
       })
@@ -44,8 +44,8 @@ class Menu extends Component {
     }
     const menuStyle = {
       color: props.enabled ? "black" : "#ccc",
-      backgroundColor: props.open === props.title 
-        ? "#e1e1e1" 
+      backgroundColor: props.open === props.title
+        ? "#e1e1e1"
         : "white"
     }
     return html`
@@ -77,13 +77,13 @@ class MenuOption extends Component {
 function noMemoryDiffs(leaf, other) {
   const comparison = leaf.data().compatibilities[other.id()]
   if (Object.keys(comparison.memdiff).length) return false
-  else return noErrors(leaf,other)
+  else return noErrors(leaf, other)
 }
 
 function noRegisterDiffs(leaf, other) {
   const comparison = leaf.data().compatibilities[other.id()]
   if (Object.keys(comparison.regdiff).length) return false
-  else return noErrors(leaf,other)
+  else return noErrors(leaf, other)
 }
 
 function noErrors(leaf, other) {
@@ -94,7 +94,7 @@ function noErrors(leaf, other) {
 function noStdDiffs(leaf, other) {
   if (leaf.data().stdout != other.data().stdout ||
     leaf.data().stderr != other.data().stderr) return false
-  else return noErrors(leaf,other)
+  else return noErrors(leaf, other)
 }
 
 function MenuBadge(props) {
@@ -109,6 +109,10 @@ export default class MenuBar extends Component {
     super()
     this.state = {
       open: null,
+      pruningMemory: false,
+      pruningStdout: false,
+      pruningRegisters: false,
+      pruningCorrect: false,
     }
   }
 
@@ -125,12 +129,12 @@ export default class MenuBar extends Component {
   }
 
   setOpen(open) {
-    this.setState({open})
+    this.setState({ open })
   }
 
   handleGlobalClick() {
     if (this.state.open) {
-      this.setState({open: null})
+      this.setState({ open: null })
     }
   }
 
@@ -140,9 +144,32 @@ export default class MenuBar extends Component {
     }
   }
 
-  prune(test) {
+  prune() {
+    // I think the user expectation is going to be that with nothing selected,
+    // nothing is pruned. But once something is selected, the more pruning
+    // requirements we add, the less we prune
+    let test = () => 
+      this.state.pruningMemory
+      || this.state.pruningStdout
+      || this.state.pruningRegisters
+      || this.state.pruningCorrect
+
+    const extendTest = (f,g) => (l,r) => f(l,r) && g(l,r)
+
+    if (this.state.pruningMemory) test = extendTest(noMemoryDiffs, test)
+    if (this.state.pruningStdout) test = extendTest(noStdDiffs, test)
+    if (this.state.pruningRegisters) test = extendTest(noRegisterDiffs, test)
+    if (this.state.pruningCorrect) test = extendTest(noErrors, test)
+
     this.props.prune(test)
-    this.setOpen(null)
+
+    this.setState({
+      open: null,
+      pruningMemory: false,
+      pruningStdout: false,
+      pruningRegisters: false,
+      pruningCorrect: false,
+    })
   }
 
   setTidiness(level) {
@@ -158,8 +185,8 @@ export default class MenuBar extends Component {
   saveFile(data) {
     const filename = prompt("please provide a filename")
 
-    var blob = new Blob([data], {type: 'text/json'}),
-    a = document.createElement('a')
+    var blob = new Blob([data], { type: 'text/json' }),
+      a = document.createElement('a')
 
     a.download = filename
     a.href = window.URL.createObjectURL(blob)
@@ -177,10 +204,10 @@ export default class MenuBar extends Component {
         title="Files"
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} onClick=${() => this.saveFile(props.getJSON()[0])}>
-            Save Pre Graph
+          Save Pre Graph
         <//>
         <${MenuOption} onClick=${() => this.saveFile(props.getJSON()[1])}>
-            Save Post Graph
+          Save Post Graph
         <//>
       <//>
       <${Menu} 
@@ -205,23 +232,23 @@ export default class MenuBar extends Component {
         <//>
         <hr/>
         <${MenuOption} 
-            onClick=${props.toggleSyscalls}
-            selected=${props.showingSyscalls}>
+          onClick=${props.toggleSyscalls}
+          selected=${props.showingSyscalls}>
             <${MenuBadge} color=${Colors.focusedSyscallNode}/> Show Syscalls
         <//>
         <${MenuOption} 
-            onClick=${props.toggleSimprocs}
-            selected=${props.showingSimprocs}>
+          onClick=${props.toggleSimprocs}
+          selected=${props.showingSimprocs}>
             <${MenuBadge} color=${Colors.focusedSimprocNode}/> Show SimProcedure calls
         <//>
         <${MenuOption} 
-            onClick=${props.toggleErrors}
-            selected=${props.showingErrors}>
+          onClick=${props.toggleErrors}
+          selected=${props.showingErrors}>
             <${MenuBadge} color=${Colors.focusedErrorNode}/> Show Errors
         <//>
         <${MenuOption} 
-            onClick=${props.toggleAsserts}
-            selected=${props.showingAsserts}>
+          onClick=${props.toggleAsserts}
+          selected=${props.showingAsserts}>
             <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
         <//>
       <//>
@@ -230,17 +257,24 @@ export default class MenuBar extends Component {
         open=${state.open}
         title="Prune"
         setOpen=${o => this.setOpen(o)}>
-        <${MenuOption} onClick=${() => this.prune(noMemoryDiffs)}>
-            Completed Branches with Identical Memory
+        <${MenuOption} onClick=${() => this.setState({pruningMemory: !state.pruningMemory})}>
+          <input type="checkbox" checked=${state.pruningMemory}/> Branches with Identical Memory
         <//>
-        <${MenuOption} onClick=${() => this.prune(noRegisterDiffs)}>
-            Completed Branches with Identical Register Contents 
+        <${MenuOption} onClick=${() => this.setState({pruningRegisters: !state.pruningRegisters})}>
+          <input type="checkbox" checked=${state.pruningRegisters}/> Branches with Identical Register Contents 
         <//>
-        <${MenuOption} onClick=${() => this.prune(noStdDiffs)}>
-            Completed Branches with Identical Stdout/Stderr
+        <${MenuOption} onClick=${() => this.setState({pruningStdout: !state.pruningStdout})}>
+          <input type="checkbox" checked=${state.pruningStdout}/> Branches with Identical Stdout/Stderr
         <//>
-        <${MenuOption} onClick=${() => this.prune(noErrors)}>
-            All Completed (Error-free) Branches
+        <${MenuOption} onClick=${() => this.setState({pruningCorrect: !state.pruningCorrect})}>
+          <input type="checkbox" checked=${state.pruningCorrect}/> Error-free Branches
+        <//>
+        <hr/>
+        <${MenuOption} onClick=${() => this.prune()}>
+          Prune branches matching all conditions above
+        <//>
+        <${MenuOption} onClick=${props.unprune}>
+          Revert Pruning
         <//>
       <//>
       <${Menu} 

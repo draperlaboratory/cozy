@@ -36,6 +36,7 @@ export default class App extends Component {
     this.tooltip = createRef()
 
     this.prune = this.prune.bind(this)
+    this.unprune = this.unprune.bind(this)
     this.handleDragleave = this.handleDragleave.bind(this)
     this.handleDragover = this.handleDragover.bind(this)
     this.clearTooltip = this.clearTooltip.bind(this)
@@ -144,9 +145,8 @@ export default class App extends Component {
           .focus(other.nodes().filter(node => +node.data().id in compatibilities))
         if (other.loci.length == 1) {
           // if there's only one compatibility, start a diff
-          const theId = Object.keys(ev.target.data().compatibilities)[0]
           const otherRoot = other.nodes().roots()[0]
-          otherSegment = { top: otherRoot, bot: other.nodes(`#${theId}`) }
+          otherSegment = { top: otherRoot, bot: other.loci[0] }
         }
       }
 
@@ -187,11 +187,11 @@ export default class App extends Component {
     this.cy2.cy.refocus().fit()
     this.setState({ 
       status: Status.idle,
-      leftFocus: {... this.state.leftFocus},
-      rightFocus: {... this.state.rightFocus}
+      leftFocus: this.state.leftFocus ? {... this.state.leftFocus} : null,
+      rightFocus: this.state.rightFocus ? {... this.state.rightFocus} : null,
       // we regenerate the focus, 
       // so that the assembly diff is regenerated, 
-      // so that its lines are properly mapped on to the merged nodes
+      // so that its lines are properly mapped on to the merged nodes,
     })
   }
 
@@ -335,15 +335,12 @@ export default class App extends Component {
         break;
       }
       case Tidiness.tidy: {
-        if (this.state.tidiness == Tidiness.veryTidy) {
-          // if we're already very tidy, we need to refresh and then merge nodes
-          // from there.
-          this.batch(() => {
-            this.refresh()
-            this.tidy({})
-          })
-        }
-        else this.tidy({})
+        // technically we could hold off on the refresh here unless we're
+        // already veryTidy, but that's probably a premature optimization
+        this.batch(() => {
+          this.refresh()
+          this.tidy({})
+        })
         break;
       }
       case Tidiness.veryTidy: {
@@ -387,6 +384,10 @@ export default class App extends Component {
     this.cy2.cy.refocus()
   }
 
+  unprune() {
+    this.setTidiness(this.state.tidiness)
+  }
+
   render(_props, state) {
     // TODO I could get rid of a lot of lambdas here if I properly bound "this"
     // in some of these methods
@@ -395,6 +396,7 @@ export default class App extends Component {
       <${MenuBar} 
         setTidiness=${level => this.startRender(() => this.setTidiness(level))}
         prune=${this.prune}
+        unprune=${this.unprune}
         resetLayout=${this.resetLayout}
         tidiness=${state.tidiness}
         status=${state.status}

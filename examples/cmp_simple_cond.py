@@ -9,9 +9,9 @@ proj_pre = Project('test_programs/simple_branch/simpleBranch-pre')
 
 proj_post = Project('test_programs/simple_branch/simpleBranch-post')
 
-sess_pre = proj_pre.session("main")
+sess_pre = proj_pre.session("my_fun")
 
-sess_post = proj_post.session("main")
+sess_post = proj_post.session("my_fun")
 
 arg = claripy.BVS('n', 4 * 8)
 
@@ -22,4 +22,4 @@ rslt_post = sess_post.run(arg, cache_intermediate_states=True)
 comparison = Comparison(rslt_pre, rslt_post)
 
 #execution_graph.dump_comparison(proj_pre, proj_post, rslt_pre, rslt_post, comparison, "simple_pre.json","simple_post.json", args=[arg])
-execution_graph.visualize_comparison(proj_pre, proj_post, rslt_pre, rslt_post, comparison, args=[arg], num_examples=2, open_browser=True)
+execution_graph.visualize_comparison(proj_pre, proj_post, rslt_pre, rslt_post, comparison, args=[arg], num_examples=2, open_browser=True, include_actions=True)
