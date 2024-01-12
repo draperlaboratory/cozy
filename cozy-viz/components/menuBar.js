@@ -258,20 +258,16 @@ export default class MenuBar extends Component {
         title="Prune"
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} onClick=${() => this.setState({pruningMemory: !state.pruningMemory})}>
-          <input type="checkbox" checked=${state.pruningMemory}/>
-          Branches with Identical Memory
+          <input type="checkbox" checked=${state.pruningMemory}/> Branches with Identical Memory
         <//>
         <${MenuOption} onClick=${() => this.setState({pruningRegisters: !state.pruningRegisters})}>
-          <input type="checkbox" checked=${state.pruningRegisters}/>
-          Branches with Identical Register Contents 
+          <input type="checkbox" checked=${state.pruningRegisters}/> Branches with Identical Register Contents 
         <//>
         <${MenuOption} onClick=${() => this.setState({pruningStdout: !state.pruningStdout})}>
-          <input type="checkbox" checked=${state.pruningStdout}/> 
-          Branches with Identical Stdout/Stderr
+          <input type="checkbox" checked=${state.pruningStdout}/> Branches with Identical Stdout/Stderr
         <//>
         <${MenuOption} onClick=${() => this.setState({pruningCorrect: !state.pruningCorrect})}>
-          <input type="checkbox" checked=${state.pruningCorrect}/>
-          Error-free Branches
+          <input type="checkbox" checked=${state.pruningCorrect}/> Error-free Branches
         <//>
         <hr/>
         <${MenuOption} onClick=${() => this.prune()}>
