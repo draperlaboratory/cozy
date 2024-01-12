@@ -187,11 +187,11 @@ export default class App extends Component {
     this.cy2.cy.refocus().fit()
     this.setState({ 
       status: Status.idle,
-      leftFocus: {... this.state.leftFocus},
-      rightFocus: {... this.state.rightFocus}
+      leftFocus: this.state.leftFocus ? {... this.state.leftFocus} : null,
+      rightFocus: this.state.rightFocus ? {... this.state.rightFocus} : null,
       // we regenerate the focus, 
       // so that the assembly diff is regenerated, 
-      // so that its lines are properly mapped on to the merged nodes
+      // so that its lines are properly mapped on to the merged nodes,
     })
   }
 
