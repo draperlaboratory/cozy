@@ -144,9 +144,8 @@ export default class App extends Component {
           .focus(other.nodes().filter(node => +node.data().id in compatibilities))
         if (other.loci.length == 1) {
           // if there's only one compatibility, start a diff
-          const theId = Object.keys(ev.target.data().compatibilities)[0]
           const otherRoot = other.nodes().roots()[0]
-          otherSegment = { top: otherRoot, bot: other.nodes(`#${theId}`) }
+          otherSegment = { top: otherRoot, bot: other.loci[0] }
         }
       }
 
