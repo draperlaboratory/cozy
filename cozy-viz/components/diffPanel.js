@@ -96,17 +96,6 @@ class ActionDifference extends Component {
     return { contents, lines, ids, msgs }
   }
 
-  hunkFormat(hunk, className) {
-    const terminator = hunk.slice(-1)
-    if (terminator === '>') {
-      const newHunk = hunk.slice(0, hunk.length - 1)
-      return html`<span class=${className}>${newHunk}</span>${terminator} `
-    } else {
-      return html`<span class=${className}>${hunk}</span> `
-    }
-
-  }
-
   onInput(e) {
     this.setState({ filterExpr: e.target.value })
   }
@@ -122,9 +111,9 @@ class ActionDifference extends Component {
     const comparison = lwords.map((lw, idx) => rwords[idx] === lw)
 
     leftLine = lwords
-      .map((w, idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w, "hunkRemoved"))
+      .map((w, idx) => comparison[idx] ? `${w} ` : hunkFormat(w, "hunkRemoved"))
     rightLine = rwords
-      .map((w, idx) => comparison[idx] ? `${w} ` : this.hunkFormat(w, "hunkAdded"))
+      .map((w, idx) => comparison[idx] ? `${w} ` : hunkFormat(w, "hunkAdded"))
 
     leftLine.unshift(`${laddr} `)
     rightLine.unshift(`${raddr} `)
@@ -216,9 +205,9 @@ class AssemblyDifference extends Component {
 
     return { contents, lines, ids, msgs }
   }
-  
+
   onInput(e) {
-    this.setState({filterExpr: e.target.value})
+    this.setState({ filterExpr: e.target.value })
   }
 
   highlightNodes(idLeft, idRight) {
@@ -238,7 +227,28 @@ class AssemblyDifference extends Component {
     // the same, and do a word-level diff.
     const [, lmnemonic, ...loperands] = l.split(/\s+/);
     const [, rmnemonic, ...roperands] = r.split(/\s+/);
-    return lmnemonic == rmnemonic && loperands.every((lop, idx) => lop == roperands[idx])
+    return lmnemonic == rmnemonic && loperands.length == roperands.length
+  }
+
+  diffWords(leftLine, rightLine) {
+
+    const lwords = leftLine.split(/\s+/)
+    const rwords = rightLine.split(/\s+/)
+
+    const laddr = lwords.shift()
+    const raddr = rwords.shift()
+
+    const comparison = lwords.map((lw, idx) => rwords[idx] === lw)
+
+    leftLine = lwords
+      .map((w, idx) => comparison[idx] ? `${w} ` : hunkFormat(w, "hunkRemoved"))
+    rightLine = rwords
+      .map((w, idx) => comparison[idx] ? `${w} ` : hunkFormat(w, "hunkAdded"))
+
+    leftLine.unshift(`${laddr} `)
+    rightLine.unshift(`${raddr} `)
+
+    return [leftLine, rightLine]
   }
 
   render(props, state) {
@@ -249,6 +259,7 @@ class AssemblyDifference extends Component {
       leftLines=${props.leftFocus ? this.getAssembly(props.leftFocus) : null}
       rightLines=${props.rightFocus ? this.getAssembly(props.rightFocus) : null}
       comparator=${(l, r) => this.compare(l, r)}
+      diffWords=${(l, r) => this.diffWords(l, r)}
       highlight=${(idLeft, idRight) => this.highlightNodes(idLeft, idRight)}
       dim=${() => this.dimAll()}
     />
@@ -256,8 +267,8 @@ class AssemblyDifference extends Component {
   }
 }
 
-function SearchInput({value, onInput}) {
-      return html`<div class="search-input">
+function SearchInput({ value, onInput }) {
+  return html`<div class="search-input">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <input value="${value}" onInput=${onInput}></input>
       </div>`
@@ -397,7 +408,7 @@ class LineDiffView extends Component {
   render(props) {
     const hunks = this.getContents().filter(({ contentListing }) => {
       if (!props.filterExpr) return true
-      let lineFilter 
+      let lineFilter
       try {
         lineFilter = new RegExp(props.filterExpr)
       } catch (e) {
@@ -411,6 +422,19 @@ class LineDiffView extends Component {
     return html`<pre id="line-diff-data-view">${hunks}</pre>`
   }
 }
+
+
+function hunkFormat(hunk, className) {
+  const terminator = hunk.slice(-1)
+  if (terminator === '>' || terminator == ',') {
+    const newHunk = hunk.slice(0, hunk.length - 1)
+    return html`<span class=${className}>${newHunk}</span>${terminator} `
+  } else {
+    return html`<span class=${className}>${hunk}</span> `
+  }
+
+}
+
 
 function Hunk({ dim, highlight, hunkCtx, curLeft, curRight, leftContent, leftClass, rightContent, rightClass }) {
   const hunk = html`<div
