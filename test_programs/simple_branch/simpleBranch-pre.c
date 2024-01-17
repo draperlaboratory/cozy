@@ -1,5 +1,10 @@
 #include <stdio.h>
 
+
+int main(int v) {
+
+}
+
 int bv1();
 int bv2();
 
@@ -20,8 +25,4 @@ int bv1() {
 int bv2() {
     puts("you're on branch 2");
     return 2;
-}
-
-int main(int v) {
-
 }

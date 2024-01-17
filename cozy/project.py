@@ -5,10 +5,11 @@ import portion as P
 
 import angr, claripy
 from angr import SimStateError, SimState
-from angr.sim_manager import ErrorRecord
+from angr.sim_manager import ErrorRecord, SimulationManager
 from cle import Backend
 
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
+from .exploration import JointConcolicSim, ConcolicSim
 from .terminal_state import TerminalState, AssertFailedState, ErrorState, DeadendedState
 
 class RunResult:
@@ -150,6 +151,136 @@ def _on_mem_write(state):
                 _mem_write_ctr += 1
     state.globals['mem_writes'] = mem_writes
 
+def _save_states(states):
+    for state in states:
+        # SimStateHistory already has a variable named strongref_state that is used when EFFICIENT_STATE_MERGING
+        # is enabled. However strongref_state in SimStateHistory may be set to None as part of a state cleanup
+        # process. It seems that the primary usecase for strongref_state in angr is to help with merging states
+        state.history.custom_strongref_state = state
+
+def _save_constraints(states):
+    for state in states:
+        state.history.custom_constraints = state.solver.constraints
+
+class SessionExploration:
+    def __init__(self, session: 'Session', cache_intermediate_states: bool=False, cache_constraints: bool=True):
+        self.session = session
+        self.assume_warnings: list[tuple[Assume, SimState]] = []
+        self.asserts_failed: list[AssertFailedState] = []
+        self.cache_intermediate_states = cache_intermediate_states
+        self.cache_constraints = cache_constraints
+
+    def explore(self, simgr):
+        raise NotImplementedError()
+
+class SessionDirectiveExploration(SessionExploration):
+    def explore(self, simgr):
+        addrs_to_directive = {}
+        for directive in self.session.directives:
+            if directive.addr in addrs_to_directive:
+                addrs_to_directive[directive.addr].append(directive)
+            else:
+                addrs_to_directive[directive.addr] = [directive]
+
+        find_addrs = set(addrs_to_directive.keys())
+
+        while len(simgr.active) > 0:
+            # Explore seems to check the find list BEFORE stepping
+            simgr.explore(find=find_addrs, n=1)
+
+            # When using explore with a find key, angr will only put 1 state into the found stash at a time
+            # This is problematic since we could create more than one error state triggered for every
+            # iteration of the loop. In this case we may never iterate over all the found states before
+            # the outer while loop terminates.
+            simgr.move(from_stash='active', to_stash='found', filter_func=lambda state: state.addr in find_addrs)
+
+            prune_states = set()
+            add_states = set()
+
+            for found_state in simgr.found:
+                if found_state.satisfiable():
+                    relevant_directives = addrs_to_directive[found_state.addr]
+                    for directive in relevant_directives:
+                        if isinstance(directive, Assume):
+                            cond = directive.condition_fun(found_state)
+                            found_state.add_constraints(cond)
+                            if not found_state.satisfiable():
+                                self.assume_warnings.append((directive, found_state))
+                                print(
+                                    "cozy WARNING: Assume for address {} was not satisfiable. In this path of execution there is no possible way for execution to proceed past this point: {}".format(
+                                        hex(directive.addr), str(cond)))
+                                if directive.info_str is not None:
+                                    print(directive.info_str)
+                        elif isinstance(directive, Assert):
+                            cond = directive.condition_fun(found_state)
+                            # Split execution into two states: one where the assertion holds and one where it
+                            # doesn't hold
+                            true_branch = found_state.copy()
+                            true_branch.add_constraints(cond)
+                            add_states.add(true_branch)
+
+                            # To check for validity, we need to check that (not cond) is unsatisfiable
+                            false_branch = found_state.copy()
+                            false_branch.add_constraints(~cond)
+                            if false_branch.satisfiable():
+                                if self.cache_intermediate_states:
+                                    _save_states([false_branch])
+                                if self.cache_constraints:
+                                    _save_constraints([false_branch])
+                                # If the false branch is satisfiable, add it to the list of failed assert states
+                                # This essentially halts execution on the false branch
+                                af = AssertFailedState(directive, cond, false_branch, len(self.asserts_failed))
+                                self.asserts_failed.append(af)
+                                # If false_branch is not satisfiable, then there is no way for the assertion to fail.
+                            # In any case, we should prune out the original state
+                            prune_states.add(found_state)
+                        elif isinstance(directive, VirtualPrint):
+                            if 'virtual_prints' in found_state.globals:
+                                accum_prints = found_state.globals['virtual_prints'].copy()
+                            else:
+                                accum_prints = []
+                            accum_prints.append((directive, directive.log_fun(found_state)))
+                            found_state.globals['virtual_prints'] = accum_prints
+                        elif isinstance(directive, ErrorDirective):
+                            prune_states.add(found_state)
+                            simgr.errored.append(
+                                ErrorRecord(found_state, SimStateError(directive.info_str), sys.exc_info()[2]))
+                else:
+                    raise RuntimeError(
+                        "One of the found states was not satisfiable. This probably shouldn't have happened.")
+
+            # After we are done iterating over the found states, it is now safe to prune the ones that triggered
+            # an error
+            simgr.move(from_stash='found', to_stash='pruned', filter_func=lambda state: state in prune_states)
+
+            for state in add_states:
+                simgr.found.append(state)
+
+            if self.cache_intermediate_states:
+                _save_states(simgr.found)
+            if self.cache_constraints:
+                _save_constraints(simgr.found)
+            # We need to step over all the found states so that we don't immediately halt
+            # execution of these states in the next interation of the loop
+            simgr.step(num_inst=1, stash="found")
+            simgr.move(from_stash='found', to_stash="active")
+            errored_states = [error_record.state for error_record in simgr.errored]
+            if self.cache_intermediate_states:
+                _save_states(simgr.active)
+                _save_states(errored_states)
+            if self.cache_constraints:
+                _save_constraints(simgr.active)
+                _save_constraints(errored_states)
+
+class SessionBasicExploration(SessionExploration):
+    def explore(self, simgr):
+        while len(simgr.active) > 0:
+            simgr.step()
+            if self.cache_intermediate_states:
+                _save_states(simgr.active)
+            if self.cache_constraints:
+                _save_constraints(simgr.active)
+
 class Session:
     """
     A session is a particular run of a project, consisting of attached directives (asserts/assumes).
@@ -241,37 +372,14 @@ class Session:
         """
         self.state.add_constraints(*constraints)
 
-    def _save_states(self, states):
-        for state in states:
-            # SimStateHistory already has a variable named strongref_state that is used when EFFICIENT_STATE_MERGING
-            # is enabled. However strongref_state in SimStateHistory may be set to None as part of a state cleanup
-            # process. It seems that the primary usecase for strongref_state in angr is to help with merging states
-            state.history.custom_strongref_state = state
-
-    def _save_constraints(self, states):
-        for state in states:
-            state.history.custom_constraints = state.solver.constraints
-
-    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> RunResult:
-        """
-        Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.
-
-        :param claripy.ast.bits args: The arguments to pass to the function. angr will utilize the function's type signature to figure out the calling convention to use with the arguments.
-        :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached, preventing their garbage collection. This is required for dumping the execution graph.
-        :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will be cached, which is required for performing memoized binary search when diffing states.
-        :param int | None ret_addr: What address to return to if calling as a function
-        :return: The result of running this session.
-        :rtype: RunResult
-        """
-
-        # TODO: Figure out if we can safely remove this restriction. Initial tests seem to suggest that
-        # running twice will result in different outcomes
+    def _call(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, cache_constraints: bool=True,
+              ret_addr: int | None=None) -> SimulationManager:
         if self.has_run:
             raise RuntimeError("This session has already been run once. Make a new session to run again.")
         self.has_run = True
 
         if cache_intermediate_states:
-            self._save_states([self.state])
+            _save_states([self.state])
 
         # Determine the address of the desired function
         if self.start_fun is None:
@@ -293,14 +401,19 @@ class Session:
 
             kwargs = dict() if ret_addr is None else {"ret_addr": ret_addr}
 
-            state = self.proj.angr_proj.factory.call_state(fun_addr, *args, base_state=self.state, prototype=fun_prototype, add_options={angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY, angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS, angr.options.SYMBOLIC_WRITE_ADDRESSES}, **kwargs)
+            state = self.proj.angr_proj.factory.call_state(fun_addr, *args, base_state=self.state,
+                                                           prototype=fun_prototype,
+                                                           add_options={angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY,
+                                                                        angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS,
+                                                                        angr.options.SYMBOLIC_WRITE_ADDRESSES},
+                                                           **kwargs)
         else:
             state = self.state
 
         if cache_intermediate_states:
-            self._save_states([state])
+            _save_states([state])
         if cache_constraints:
-            self._save_constraints([state])
+            _save_constraints([state])
 
         # This concretization strategy is necessary for nullable symbolic pointers. The default
         # concretization strategies attempts to concretize to integers within a small (128) byte
@@ -310,116 +423,68 @@ class Session:
         state.memory.read_strategies.insert(0, concrete_strategy)
         state.memory.write_strategies.insert(0, concrete_strategy)
 
-        simgr = self.proj.angr_proj.factory.simulation_manager(state, veritesting=False)
+        return self.proj.angr_proj.factory.simulation_manager(state)
 
-        assume_warnings: list[tuple[Assume, SimState]] = []
-        asserts_failed: list[AssertFailedState] = []
-
+    def _session_exploration(self, cache_intermediate_states: bool=False, cache_constraints: bool=True) -> SessionExploration:
         if len(self.directives) > 0:
-            addrs_to_directive = {}
-            for directive in self.directives:
-                if directive.addr in addrs_to_directive:
-                    addrs_to_directive[directive.addr].append(directive)
-                else:
-                    addrs_to_directive[directive.addr] = [directive]
-
-            find_addrs = set(addrs_to_directive.keys())
-
-            while len(simgr.active) > 0:
-                # Explore seems to check the find list BEFORE stepping
-                simgr.explore(find=find_addrs, n=1)
-
-                # When using explore with a find key, angr will only put 1 state into the found stash at a time
-                # This is problematic since we could create more than one error state triggered for every
-                # iteration of the loop. In this case we may never iterate over all the found states before
-                # the outer while loop terminates.
-                simgr.move(from_stash='active', to_stash='found', filter_func=lambda state: state.addr in find_addrs)
-
-                prune_states = set()
-                add_states = set()
-
-                for found_state in simgr.found:
-                    if found_state.satisfiable():
-                        relevant_directives = addrs_to_directive[found_state.addr]
-                        for directive in relevant_directives:
-                            if isinstance(directive, Assume):
-                                cond = directive.condition_fun(found_state)
-                                found_state.add_constraints(cond)
-                                if not found_state.satisfiable():
-                                    assume_warnings.append((directive, found_state))
-                                    print("cozy WARNING: Assume for address {} was not satisfiable. In this path of execution there is no possible way for execution to proceed past this point: {}".format(hex(directive.addr), str(cond)))
-                                    if directive.info_str is not None:
-                                        print(directive.info_str)
-                            elif isinstance(directive, Assert):
-                                cond = directive.condition_fun(found_state)
-                                # Split execution into two states: one where the assertion holds and one where it
-                                # doesn't hold
-                                true_branch = found_state.copy()
-                                true_branch.add_constraints(cond)
-                                add_states.add(true_branch)
-
-                                # To check for validity, we need to check that (not cond) is unsatisfiable
-                                false_branch = found_state.copy()
-                                false_branch.add_constraints(~cond)
-                                if false_branch.satisfiable():
-                                    if cache_intermediate_states:
-                                        self._save_states([false_branch])
-                                    if cache_constraints:
-                                        self._save_constraints([false_branch])
-                                    # If the false branch is satisfiable, add it to the list of failed assert states
-                                    # This essentially halts execution on the false branch
-                                    af = AssertFailedState(directive, cond, false_branch, len(asserts_failed))
-                                    asserts_failed.append(af)
-                                    # If false_branch is not satisfiable, then there is no way for the assertion to fail.
-                                # In any case, we should prune out the original state
-                                prune_states.add(found_state)
-                            elif isinstance(directive, VirtualPrint):
-                                if 'virtual_prints' in found_state.globals:
-                                    accum_prints = found_state.globals['virtual_prints'].copy()
-                                else:
-                                    accum_prints = []
-                                accum_prints.append((directive, directive.log_fun(found_state)))
-                                found_state.globals['virtual_prints'] = accum_prints
-                            elif isinstance(directive, ErrorDirective):
-                                prune_states.add(found_state)
-                                simgr.errored.append(ErrorRecord(found_state, SimStateError(directive.info_str), sys.exc_info()[2]))
-                    else:
-                        raise RuntimeError("One of the found states was not satisfiable. This probably shouldn't have happened.")
-
-                # After we are done iterating over the found states, it is now safe to prune the ones that triggered
-                # an error
-                simgr.move(from_stash='found', to_stash='pruned', filter_func=lambda state: state in prune_states)
-
-                for state in add_states:
-                    simgr.found.append(state)
-
-                if cache_intermediate_states:
-                    self._save_states(simgr.found)
-                if cache_constraints:
-                    self._save_constraints(simgr.found)
-                # We need to step over all the found states so that we don't immediately halt
-                # execution of these states in the next interation of the loop
-                simgr.step(num_inst=1, stash="found")
-                simgr.move(from_stash='found', to_stash="active")
-                errored_states = [error_record.state for error_record in simgr.errored]
-                if cache_intermediate_states:
-                    self._save_states(simgr.active)
-                    self._save_states(errored_states)
-                if cache_constraints:
-                    self._save_constraints(simgr.active)
-                    self._save_constraints(errored_states)
+            return SessionDirectiveExploration(self, cache_intermediate_states=cache_intermediate_states,
+                                               cache_constraints=cache_constraints)
         else:
-            while len(simgr.active) > 0:
-                simgr.step()
-                if cache_intermediate_states:
-                    self._save_states(simgr.active)
-                if cache_constraints:
-                    self._save_constraints(simgr.active)
+            return SessionBasicExploration(self, cache_intermediate_states=cache_intermediate_states,
+                                           cache_constraints=cache_constraints)
 
+    def _run_result(self, simgr: SimulationManager, sess_exploration: SessionExploration) -> RunResult:
         deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
 
-        return RunResult(deadended, errored, asserts_failed, assume_warnings)
+        return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings)
+
+    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> RunResult:
+        """
+        Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.
+
+        :param claripy.ast.bits args: The arguments to pass to the function. angr will utilize the function's type signature to figure out the calling convention to use with the arguments.
+        :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached, preventing their garbage collection. This is required for dumping the execution graph.
+        :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will be cached, which is required for performing memoized binary search when diffing states.
+        :param int | None ret_addr: What address to return to if calling as a function
+        :return: The result of running this session.
+        :rtype: RunResult
+        """
+
+        simgr = self._call(list(args), cache_intermediate_states=cache_intermediate_states,
+                           cache_constraints=cache_constraints, ret_addr=ret_addr)
+
+        sess_exploration = self._session_exploration(cache_intermediate_states=cache_intermediate_states,
+                                                     cache_constraints=cache_constraints)
+        sess_exploration.explore(simgr)
+        return self._run_result(simgr, sess_exploration)
+
+class JointConcolicSession:
+    def __init__(self, sess_left: Session, sess_right: Session):
+        self.sess_left = sess_left
+        self.sess_right = sess_right
+
+    def run(self, args_left, args_right, symbols: set[claripy.BVS] | frozenset[claripy.BVS],
+            cache_intermediate_states: bool=False, cache_constraints: bool=True,
+            ret_addr_left: int | None=None, ret_addr_right: int | None = None) -> tuple[RunResult, RunResult]:
+        simgr_left = self.sess_left._call(args_left, cache_intermediate_states=cache_intermediate_states,
+                                          cache_constraints=cache_constraints, ret_addr=ret_addr_left)
+        simgr_right = self.sess_left._call(args_right, cache_intermediate_states=cache_intermediate_states,
+                                           cache_constraints=cache_constraints, ret_addr=ret_addr_right)
+
+        sess_exploration_left = self.sess_left._session_exploration(cache_intermediate_states=cache_intermediate_states,
+                                                                    cache_constraints=cache_constraints)
+        sess_exploration_right = self.sess_right._session_exploration(cache_intermediate_states==cache_intermediate_states,
+                                                                      cache_constraints=cache_constraints)
+
+        concolic_explorer_left = ConcolicSim(symbols)
+        concolic_explorer_right = ConcolicSim(symbols)
+
+        jconcolic_sim = JointConcolicSim(simgr_left, simgr_right, symbols, concolic_explorer_left, concolic_explorer_right)
+        jconcolic_sim.explore(explore_fun_left=sess_exploration_left.explore, explore_fun_right=sess_exploration_right.explore)
+
+        return (self.sess_left._run_result(simgr_left, sess_exploration_left),
+                self.sess_right._run_result(simgr_right, sess_exploration_right))
 
 class Project:
     """

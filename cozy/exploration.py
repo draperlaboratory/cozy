@@ -1,5 +1,7 @@
+from enum import Enum
+
 import angr
-from angr import ExplorationTechnique, sim_options
+from angr import ExplorationTechnique, sim_options, SimulationManager
 import claripy
 from collections.abc import Callable
 
@@ -145,3 +147,66 @@ class ConcolicSim(ExplorationTechnique):
             return None
         else:
             return self.deferred_stash
+
+class ExploreMode(Enum):
+    EXPLORE_LEFT = 0
+    EXPLORE_RIGHT = 1
+
+class JointConcolicSim:
+    def __init__(self, simgr_left: SimulationManager, simgr_right: SimulationManager,
+                 symbols: set[claripy.BVS] | frozenset[claripy.BVS],
+                 left_explorer: ConcolicSim, right_explorer: ConcolicSim):
+        self.simgr_left = simgr_left
+        self.simgr_right = simgr_right
+        self.symbols = symbols
+        self.explore_mode = ExploreMode.EXPLORE_LEFT
+        self.left_explorer = left_explorer
+        self.right_explorer = right_explorer
+        left_explorer._symbols = None
+        right_explorer._symbols = None
+        self._generate_concrete(simgr_left.active, simgr_right.active)
+        self.simgr_left.use_technique(self.left_explorer)
+        self.simgr_right.use_technique(self.right_explorer)
+
+    def _swap_explore_mode(self):
+        if self.explore_mode == ExploreMode.EXPLORE_LEFT:
+            self.explore_mode = ExploreMode.EXPLORE_RIGHT
+        else:
+            self.explore_mode = ExploreMode.EXPLORE_LEFT
+
+    def _generate_concrete(self, from_stash_left, from_stash_right):
+        if self.explore_mode == ExploreMode.EXPLORE_LEFT:
+            primary_explorer = self.left_explorer
+            primary_simgr = self.simgr_left
+            primary_from_stash = from_stash_left
+            secondary_explorer = self.right_explorer
+            secondary_simgr = self.simgr_right
+        else:
+            primary_explorer = self.right_explorer
+            primary_simgr = self.simgr_right
+            primary_from_stash = from_stash_right
+            secondary_explorer = self.left_explorer
+            secondary_simgr = self.simgr_left
+
+        primary_explorer._generate_concrete(primary_simgr, primary_from_stash, self.symbols)
+        secondary_explorer.set_concrete(secondary_simgr, primary_explorer.concrete)
+
+    def explore(self,
+                explore_fun_left: Callable[[SimulationManager], None] = None,
+                explore_fun_right: Callable[[SimulationManager], None] = None):
+        while len(self.simgr_left.active) > 0 or len(self.simgr_right.active) > 0:
+            if explore_fun_left is None:
+                self.simgr_left.explore()
+            else:
+                explore_fun_left(self.simgr_left)
+            if explore_fun_right is None:
+                self.simgr_right.explore()
+            else:
+                explore_fun_right(self.simgr_right)
+            def swap_and_generate():
+                self._swap_explore_mode()
+                self._generate_concrete(self.simgr_left.stashes[self.left_explorer.deferred_stash],
+                                        self.simgr_right.stashes[self.right_explorer.deferred_stash])
+            swap_and_generate()
+            if len(self.simgr_left.active) == 0 and len(self.simgr_right.active) == 0:
+                swap_and_generate()
