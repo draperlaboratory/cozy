@@ -84,14 +84,13 @@ class ConcolicSim(ExplorationTechnique):
     def set_concrete(self, simgr, concrete: dict[claripy.BVS, claripy.BVV]):
         """
         Sets the concrete input via a substitution dictionary. All the symbols used by the program should have concrete
-        values provided for them. Note that there should be no active states when this method is called, otherwise
-        a ValueError is thrown. This method will move the appropriate deferred state into the active stash.
+        values provided for them. The active and deferred stash will be mutated to ensure that only states which
+        are satisfied by the concrete substitution are active.
 
         :param dict[claripy.BVS, claripy.BVV] concrete: A dictionary mapping each symbol to its concrete value.
         """
-        if len(simgr.active) > 0:
-            raise ValueError("Concrete input can only be set when there are 0 active states.")
         self._set_replacement_dict(concrete)
+        simgr.move(from_stash='active', to_stash=self.deferred_stash)
         # If this path becomes too slow, instead of checking every state
         # in the deferred stash, we can follow execution from the initial states
         # This will probably not be a problem as is_solution should be pretty quick

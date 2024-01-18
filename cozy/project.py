@@ -469,7 +469,7 @@ class JointConcolicSession:
             ret_addr_left: int | None=None, ret_addr_right: int | None = None) -> tuple[RunResult, RunResult]:
         simgr_left = self.sess_left._call(args_left, cache_intermediate_states=cache_intermediate_states,
                                           cache_constraints=cache_constraints, ret_addr=ret_addr_left)
-        simgr_right = self.sess_left._call(args_right, cache_intermediate_states=cache_intermediate_states,
+        simgr_right = self.sess_right._call(args_right, cache_intermediate_states=cache_intermediate_states,
                                            cache_constraints=cache_constraints, ret_addr=ret_addr_right)
 
         sess_exploration_left = self.sess_left._session_exploration(cache_intermediate_states=cache_intermediate_states,
