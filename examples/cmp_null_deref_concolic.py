@@ -1,6 +1,7 @@
 import archinfo
 
 import cozy.analysis as analysis
+from cozy.exploration import BBTransitionHeuristic
 from cozy.project import Project, JointConcolicSession
 from cozy.directive import Assume, Assert
 from cozy.constants import *
@@ -69,7 +70,7 @@ def setup_post_patched():
 pre_sess = setup_pre_patched()
 post_sess = setup_post_patched()
 
-joint_sess = JointConcolicSession(pre_sess, post_sess)
+joint_sess = JointConcolicSession(pre_sess, post_sess, BBTransitionHeuristic(), BBTransitionHeuristic())
 (pre_patched, post_patched) = joint_sess.run(args, args, set(args), cache_intermediate_states=True)
 
 print(pre_patched.report_asserts_failed(args))

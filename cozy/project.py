@@ -460,9 +460,11 @@ class Session:
         return self._run_result(simgr, sess_exploration)
 
 class JointConcolicSession:
-    def __init__(self, sess_left: Session, sess_right: Session):
+    def __init__(self, sess_left: Session, sess_right: Session, candidate_heuristic_left=None, candidate_heuristic_right=None):
         self.sess_left = sess_left
         self.sess_right = sess_right
+        self.candidate_heuristic_left = candidate_heuristic_left
+        self.candidate_heuristic_right = candidate_heuristic_right
 
     def run(self, args_left, args_right, symbols: set[claripy.BVS] | frozenset[claripy.BVS],
             cache_intermediate_states: bool=False, cache_constraints: bool=True,
@@ -480,7 +482,9 @@ class JointConcolicSession:
         concolic_explorer_left = ConcolicSim(symbols)
         concolic_explorer_right = ConcolicSim(symbols)
 
-        jconcolic_sim = JointConcolicSim(simgr_left, simgr_right, symbols, concolic_explorer_left, concolic_explorer_right)
+        jconcolic_sim = JointConcolicSim(simgr_left, simgr_right, symbols, concolic_explorer_left, concolic_explorer_right,
+                                         candidate_heuristic_left=self.candidate_heuristic_left,
+                                         candidate_heuristic_right=self.candidate_heuristic_right)
         jconcolic_sim.explore(explore_fun_left=sess_exploration_left.explore, explore_fun_right=sess_exploration_right.explore)
 
         return (self.sess_left._run_result(simgr_left, sess_exploration_left),

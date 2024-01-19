@@ -1,9 +1,33 @@
 from enum import Enum
 
 import angr
-from angr import ExplorationTechnique, sim_options, SimulationManager
+from angr import ExplorationTechnique, sim_options, SimulationManager, SimState
 import claripy
 from collections.abc import Callable
+
+class BBTransitionHeuristic:
+    def __init__(self):
+        self.transitions = {}
+
+    def __call__(self, candidate_states: list[SimState]):
+        if len(candidate_states) == 0:
+            raise ValueError("Cannot choose a candidate from a list of 0 length")
+        min_count = None
+        min_candidate = None
+        min_transition = None
+        for candidate in candidate_states:
+            addr = candidate.addr
+            prev_addr = candidate.history.addr
+            transition = (prev_addr, addr)
+            count = self.transitions.get(transition, 0)
+            if min_count is None or count < min_count:
+                min_count = count
+                min_candidate = candidate
+                min_transition = transition
+
+        self.transitions[min_transition] = min_count + 1
+        candidate_states.remove(min_candidate)
+        return min_candidate
 
 class ConcolicSim(ExplorationTechnique):
     """
@@ -154,7 +178,8 @@ class ExploreMode(Enum):
 class JointConcolicSim:
     def __init__(self, simgr_left: SimulationManager, simgr_right: SimulationManager,
                  symbols: set[claripy.BVS] | frozenset[claripy.BVS],
-                 left_explorer: ConcolicSim, right_explorer: ConcolicSim):
+                 left_explorer: ConcolicSim, right_explorer: ConcolicSim,
+                 candidate_heuristic_left = None, candidate_heuristic_right = None):
         self.simgr_left = simgr_left
         self.simgr_right = simgr_right
         self.symbols = symbols
@@ -163,6 +188,8 @@ class JointConcolicSim:
         self.right_explorer = right_explorer
         left_explorer._symbols = None
         right_explorer._symbols = None
+        self.candidate_heuristic_left = candidate_heuristic_left
+        self.candidate_heuristic_right = candidate_heuristic_right
         self._generate_concrete(simgr_left.active, simgr_right.active)
         self.simgr_left.use_technique(self.left_explorer)
         self.simgr_right.use_technique(self.right_explorer)
@@ -178,16 +205,19 @@ class JointConcolicSim:
             primary_explorer = self.left_explorer
             primary_simgr = self.simgr_left
             primary_from_stash = from_stash_left
+            primary_heuristic = self.candidate_heuristic_left
             secondary_explorer = self.right_explorer
             secondary_simgr = self.simgr_right
         else:
             primary_explorer = self.right_explorer
             primary_simgr = self.simgr_right
             primary_from_stash = from_stash_right
+            primary_heuristic = self.candidate_heuristic_right
             secondary_explorer = self.left_explorer
             secondary_simgr = self.simgr_left
 
-        primary_explorer._generate_concrete(primary_simgr, primary_from_stash, self.symbols)
+        primary_explorer._generate_concrete(primary_simgr, primary_from_stash, self.symbols,
+                                            candidate_heuristic=primary_heuristic)
         secondary_explorer.set_concrete(secondary_simgr, primary_explorer.concrete)
 
     def explore(self,
