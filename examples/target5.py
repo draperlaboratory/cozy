@@ -19,8 +19,8 @@ cmd = claripy.BVS("cmd", 32)
 
 def run(sess: cozy.project.Session):
     arg0 = sess.malloc(rover_message_struct.size)
-    sess.state.mem[arg0].struct.RoverMessage_t.packetData.temp = temp.reversed
-    sess.state.mem[arg0].struct.RoverMessage_t.packetData.cmd = cmd.reversed
+    sess.mem[arg0].struct.RoverMessage_t.packetData.temp = temp.reversed
+    sess.mem[arg0].struct.RoverMessage_t.packetData.cmd = cmd.reversed
 
     return sess.run(arg0, cache_intermediate_states=True)
 

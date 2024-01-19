@@ -352,6 +352,13 @@ class Session:
         """
         self.state.memory.store(addr, data, **kwargs)
 
+    @property
+    def mem(self):
+        """
+        Access memory using a dict-like interface. This property simply forwards to state.mem
+        """
+        return self.state.mem
+
     def add_directives(self, *directives: Directive) -> None:
         """
         Adds multiple directives to the session.

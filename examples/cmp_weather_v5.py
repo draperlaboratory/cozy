@@ -41,18 +41,18 @@ def initialize_state(sess):
     # For each row
     for (i, (rowaddr, vaddr, vals_row, nvals, nxt)) in enumerate(zip(row_addrs, val_addrs, vals, num_vals, next_args)):
         # Set up the vals pointer
-        sess.state.mem[rowaddr].struct.SensorRow.vals = vaddr
+        sess.mem[rowaddr].struct.SensorRow.vals = vaddr
         # Set num_vals to a symbolic value
-        sess.state.mem[rowaddr].struct.SensorRow.num_vals = nvals
+        sess.mem[rowaddr].struct.SensorRow.num_vals = nvals
         # Constrain num_vals
         sess.add_constraints(0 <= nvals, nvals <= MAX_NUM_VALS)
         # Store symbolic integers in the value array
         for (j, v) in enumerate(vals_row):
             # For some reason angr doesn't seem to like setting values inside arrays
             # use the mem interface, so load manually here
-            sess.state.memory.store(vaddr + j * INT_SIZE, v, endness=endness)
+            sess.memory.store(vaddr + j * INT_SIZE, v, endness=endness)
         # Set up the next pointer
-        sess.state.mem[rowaddr].struct.SensorRow.next = nxt
+        sess.mem[rowaddr].struct.SensorRow.next = nxt
         if (i + 1) < len(row_addrs):
             # If this is not the last row, constrain the next pointer to be null or the next entry
             sess.add_constraints(primitives.sym_ptr_constraints(nxt, row_addrs[i + 1], can_be_null=True))
@@ -61,7 +61,7 @@ def initialize_state(sess):
             sess.add_constraints(nxt == NULL_PTR)
     # Set up the latest_data global variable
     latest_data_addr = sess.proj.find_symbol_addr("latest_data")
-    sess.state.mem[latest_data_addr].SensorRowPtr = latest_data
+    sess.mem[latest_data_addr].SensorRowPtr = latest_data
     # Constrain latest_data to be either null or point to the first entry
     sess.add_constraints(primitives.sym_ptr_constraints(latest_data, row_addrs[0], can_be_null=True))
     # Add the constraints for the temperature range
