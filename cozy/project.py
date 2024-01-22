@@ -1,5 +1,8 @@
+import os
+import pickle
 import sys
 from collections.abc import Callable
+from enum import Enum
 
 import portion as P
 
@@ -9,7 +12,7 @@ from angr.sim_manager import ErrorRecord, SimulationManager
 from cle import Backend
 
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
-from .exploration import JointConcolicSim, ConcolicSim
+from .exploration import JointConcolicSim, ConcolicSim, BBTransitionHeuristic, CoverageTermination
 from .terminal_state import TerminalState, AssertFailedState, ErrorState, DeadendedState
 
 class RunResult:
@@ -293,7 +296,7 @@ class Session:
     :ivar list[Directive] directives: The directives added to this session.
     :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
     """
-    def __init__(self, proj, start_fun: str | int | None=None):
+    def __init__(self, proj: "Project", start_fun: str | int | None=None):
         """
         Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
         """
@@ -379,6 +382,16 @@ class Session:
         """
         self.state.add_constraints(*constraints)
 
+    @property
+    def start_fun_addr(self):
+        # Determine the address of the desired function
+        if isinstance(self.start_fun, int):
+            return self.start_fun
+        elif isinstance(self.start_fun, str):
+            return self.proj.find_symbol_addr(self.start_fun)
+        else:
+            return None
+
     def _call(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, cache_constraints: bool=True,
               ret_addr: int | None=None) -> SimulationManager:
         if self.has_run:
@@ -388,15 +401,7 @@ class Session:
         if cache_intermediate_states:
             _save_states([self.state])
 
-        # Determine the address of the desired function
-        if self.start_fun is None:
-            fun_addr = None
-        elif isinstance(self.start_fun, int):
-            fun_addr = self.start_fun
-        elif isinstance(self.start_fun, str):
-            fun_addr = self.proj.find_symbol_addr(self.start_fun)
-        else:
-            raise TypeError("Type of start_fun passed to this session's constructor is incorrect")
+        fun_addr = self.start_fun_addr
 
         if fun_addr is not None:
             if self.start_fun in self.proj.fun_prototypes:
@@ -466,12 +471,33 @@ class Session:
         sess_exploration.explore(simgr)
         return self._run_result(simgr, sess_exploration)
 
+class CandidateHeuristicOption(Enum):
+    ARBITRARY = 0
+    BB_TRANSITION = 1
+
+class TerminationHeuristicOption(Enum):
+    COMPLETE = 0
+    COVERAGE = 1
+
 class JointConcolicSession:
-    def __init__(self, sess_left: Session, sess_right: Session, candidate_heuristic_left=None, candidate_heuristic_right=None):
+    def __init__(self, sess_left: Session, sess_right: Session, candidate_heuristic: CandidateHeuristicOption=CandidateHeuristicOption.ARBITRARY,
+                 termination_heuristic: TerminationHeuristicOption=TerminationHeuristicOption.COMPLETE, coverage_fraction=0.9):
         self.sess_left = sess_left
         self.sess_right = sess_right
-        self.candidate_heuristic_left = candidate_heuristic_left
-        self.candidate_heuristic_right = candidate_heuristic_right
+        if candidate_heuristic == CandidateHeuristicOption.ARBITRARY:
+            self.candidate_heuristic_left = None
+            self.candidate_heuristic_right = None
+        elif candidate_heuristic == CandidateHeuristicOption.BB_TRANSITION:
+            self.candidate_heuristic_left = BBTransitionHeuristic()
+            self.candidate_heuristic_right = BBTransitionHeuristic()
+        else:
+            raise ValueError("Unknown candidate_heuristic")
+        if termination_heuristic == TerminationHeuristicOption.COMPLETE:
+            self.termination_heuristic_left = None
+            self.termination_heuristic_right = None
+        elif termination_heuristic == TerminationHeuristicOption.COVERAGE:
+            self.termination_heuristic_left = CoverageTermination(sess_left.proj.cfg.kb.functions[sess_left.start_fun_addr], coverage_fraction=coverage_fraction)
+            self.termination_heuristic_right = CoverageTermination(sess_right.proj.cfg.kb.functions[sess_right.start_fun_addr], coverage_fraction=coverage_fraction)
 
     def run(self, args_left, args_right, symbols: set[claripy.BVS] | frozenset[claripy.BVS],
             cache_intermediate_states: bool=False, cache_constraints: bool=True,
@@ -492,7 +518,10 @@ class JointConcolicSession:
         jconcolic_sim = JointConcolicSim(simgr_left, simgr_right, symbols, concolic_explorer_left, concolic_explorer_right,
                                          candidate_heuristic_left=self.candidate_heuristic_left,
                                          candidate_heuristic_right=self.candidate_heuristic_right)
-        jconcolic_sim.explore(explore_fun_left=sess_exploration_left.explore, explore_fun_right=sess_exploration_right.explore)
+        jconcolic_sim.explore(explore_fun_left=sess_exploration_left.explore,
+                              explore_fun_right=sess_exploration_right.explore,
+                              termination_fun_left=self.termination_heuristic_left,
+                              termination_fun_right=self.termination_heuristic_right)
 
         return (self.sess_left._run_result(simgr_left, sess_exploration_left),
                 self.sess_right._run_result(simgr_right, sess_exploration_right))
@@ -517,6 +546,7 @@ class Project:
             self.fun_prototypes = {}
         else:
             self.fun_prototypes = fun_prototypes
+        self.cached_cfg = None
 
     def object_ranges(self, obj_filter: Callable[[Backend], bool] | None=None) -> list[range]:
         """
@@ -561,3 +591,18 @@ class Project:
         :rtype: Session
         """
         return Session(self, start_fun=start_fun)
+
+    @property
+    def cfg(self):
+        if self.cached_cfg is None:
+            cfg_filename = self.angr_proj.filename + ".cfg.pickle"
+            if os.path.exists(cfg_filename):
+                with open(cfg_filename, 'rb') as f:
+                    self.cached_cfg = pickle.load(f)
+            else:
+                print("Computing CFG... this may take some time")
+                self.cached_cfg = self.angr_proj.analyses.CFGFast()
+                print("Done computing CFG!")
+                with open(cfg_filename, 'wb') as f:
+                    pickle.dump(self.cached_cfg, f)
+        return self.cached_cfg
