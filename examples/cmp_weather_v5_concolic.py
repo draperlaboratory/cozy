@@ -99,7 +99,7 @@ def run_orig_and_1():
     initialize_state(sess_1)
 
     joint_sess = JointConcolicSession(sess_orig, sess_1, candidate_heuristic=CandidateHeuristicOption.BB_TRANSITION,
-                                      termination_heuristic=CycloCompTerminationOption())
+                                      termination_heuristic=CycloCompTerminationOption(3))
 
     return joint_sess.run([], [], symbols, cache_intermediate_states=True)
 
