@@ -6,6 +6,7 @@ import claripy
 from collections.abc import Callable
 
 from angr.knowledge_plugins import Function
+from claripy import UnsatError
 
 
 class BBTransitionHeuristic:
@@ -149,15 +150,18 @@ class ConcolicSim(ExplorationTechnique):
                 candidate_state = from_stash.pop()
             else:
                 candidate_state = candidate_heuristic(from_stash)
-            eval_res_lst = candidate_state.solver._solver.batch_eval(symbols_list, 1)
-            if len(eval_res_lst) > 0:
-                eval_res = eval_res_lst[0]
-                concrete = {sym: claripy.BVV(concrete_val, sym.length) for (sym, concrete_val) in
-                            zip(symbols_list, eval_res)}
-                self._set_replacement_dict(concrete)
-                simgr.active.append(candidate_state)
-                return
-            else:
+            try:
+                eval_res_lst = candidate_state.solver._solver.batch_eval(symbols_list, 1)
+                if len(eval_res_lst) > 0:
+                    eval_res = eval_res_lst[0]
+                    concrete = {sym: claripy.BVV(concrete_val, sym.length) for (sym, concrete_val) in
+                                zip(symbols_list, eval_res)}
+                    self._set_replacement_dict(concrete)
+                    simgr.active.append(candidate_state)
+                    return
+                else:
+                    simgr.unsat.append(candidate_state)
+            except UnsatError:
                 simgr.unsat.append(candidate_state)
 
     def generate_concrete(self, simgr: angr.SimulationManager, symbols: set[claripy.BVS] | frozenset[claripy.BVS],

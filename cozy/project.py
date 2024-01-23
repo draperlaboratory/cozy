@@ -356,6 +356,10 @@ class Session:
         self.state.memory.store(addr, data, **kwargs)
 
     @property
+    def memory(self):
+        return self.state.memory
+
+    @property
     def mem(self):
         """
         Access memory using a dict-like interface. This property simply forwards to state.mem
