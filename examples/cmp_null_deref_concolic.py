@@ -2,7 +2,8 @@ import archinfo
 
 import cozy.analysis as analysis
 from cozy.exploration import BBTransitionHeuristic
-from cozy.project import Project, JointConcolicSession, CandidateHeuristicOption, TerminationHeuristicOption
+from cozy.project import Project, JointConcolicSession, CandidateHeuristicOption, TerminationHeuristicOption, \
+    CycloCompTerminationOption
 from cozy.directive import Assume, Assert
 from cozy.constants import *
 import cozy.primitives as primitives
@@ -71,7 +72,7 @@ pre_sess = setup_pre_patched()
 post_sess = setup_post_patched()
 
 joint_sess = JointConcolicSession(pre_sess, post_sess, candidate_heuristic=CandidateHeuristicOption.BB_TRANSITION,
-                                  termination_heuristic=TerminationHeuristicOption.COVERAGE)
+                                  termination_heuristic=CycloCompTerminationOption())
 (pre_patched, post_patched) = joint_sess.run(args, args, set(args), cache_intermediate_states=True)
 
 print(pre_patched.report_asserts_failed(args))

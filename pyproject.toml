@@ -18,9 +18,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "angr >= 9.2.51",
+    "angr >= 9.2.86",
     "networkx >= 3.0",
-    "claripy >= 9.2.51",
+    "claripy >= 9.2.86",
     "portion >= 2.4.1"
 ]
 

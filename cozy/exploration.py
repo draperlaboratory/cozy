@@ -49,6 +49,15 @@ class CoverageTermination:
                 self.prev_deadended_states.add(state)
         return ((len(self.visited_blocks) / len(self.block_addrs)) >= self.coverage_fraction)
 
+class CyclomaticComplexityTermination:
+    def __init__(self, fun: Function, multiplier=None):
+        self.cyclomatic_complexity = fun.cyclomatic_complexity
+        if multiplier is not None:
+            self.cyclomatic_complexity = int(multiplier * self.cyclomatic_complexity)
+
+    def __call__(self, simgr):
+        return len(simgr.deadended) >= self.cyclomatic_complexity
+
 class ConcolicSim(ExplorationTechnique):
     """
     This class implements concolic execution without using an external emulator

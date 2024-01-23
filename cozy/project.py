@@ -12,7 +12,8 @@ from angr.sim_manager import ErrorRecord, SimulationManager
 from cle import Backend
 
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
-from .exploration import JointConcolicSim, ConcolicSim, BBTransitionHeuristic, CoverageTermination
+from .exploration import JointConcolicSim, ConcolicSim, BBTransitionHeuristic, CoverageTermination, \
+    CyclomaticComplexityTermination
 from .terminal_state import TerminalState, AssertFailedState, ErrorState, DeadendedState
 
 class RunResult:
@@ -479,13 +480,24 @@ class CandidateHeuristicOption(Enum):
     ARBITRARY = 0
     BB_TRANSITION = 1
 
-class TerminationHeuristicOption(Enum):
-    COMPLETE = 0
-    COVERAGE = 1
+class TerminationHeuristicOption:
+    pass
+
+class CompleteTerminationOption(TerminationHeuristicOption):
+    pass
+
+class CoverageTerminationOption(TerminationHeuristicOption):
+    def __init__(self, coverage_fraction=0.9):
+        self.coverage_fraction = coverage_fraction
+
+class CycloCompTerminationOption(TerminationHeuristicOption):
+    def __init__(self, multiplier=None):
+        self.multiplier = multiplier
 
 class JointConcolicSession:
-    def __init__(self, sess_left: Session, sess_right: Session, candidate_heuristic: CandidateHeuristicOption=CandidateHeuristicOption.ARBITRARY,
-                 termination_heuristic: TerminationHeuristicOption=TerminationHeuristicOption.COMPLETE, coverage_fraction=0.9):
+    def __init__(self, sess_left: Session, sess_right: Session,
+                 candidate_heuristic: CandidateHeuristicOption=CandidateHeuristicOption.ARBITRARY,
+                 termination_heuristic: TerminationHeuristicOption=CompleteTerminationOption()):
         self.sess_left = sess_left
         self.sess_right = sess_right
         if candidate_heuristic == CandidateHeuristicOption.ARBITRARY:
@@ -496,12 +508,25 @@ class JointConcolicSession:
             self.candidate_heuristic_right = BBTransitionHeuristic()
         else:
             raise ValueError("Unknown candidate_heuristic")
-        if termination_heuristic == TerminationHeuristicOption.COMPLETE:
+        if isinstance(termination_heuristic, CompleteTerminationOption):
             self.termination_heuristic_left = None
             self.termination_heuristic_right = None
-        elif termination_heuristic == TerminationHeuristicOption.COVERAGE:
-            self.termination_heuristic_left = CoverageTermination(sess_left.proj.cfg.kb.functions[sess_left.start_fun_addr], coverage_fraction=coverage_fraction)
-            self.termination_heuristic_right = CoverageTermination(sess_right.proj.cfg.kb.functions[sess_right.start_fun_addr], coverage_fraction=coverage_fraction)
+        elif isinstance(termination_heuristic, CoverageTerminationOption):
+            self.termination_heuristic_left = CoverageTermination(
+                sess_left.proj.cfg.kb.functions[sess_left.start_fun_addr],
+                coverage_fraction=termination_heuristic.coverage_fraction
+            )
+            self.termination_heuristic_right = CoverageTermination(
+                sess_right.proj.cfg.kb.functions[sess_right.start_fun_addr],
+                coverage_fraction=termination_heuristic.coverage_fraction
+            )
+        elif isinstance(termination_heuristic, CycloCompTerminationOption):
+            self.termination_heuristic_left = CyclomaticComplexityTermination(
+                sess_left.proj.cfg.kb.functions[sess_left.start_fun_addr], multiplier=termination_heuristic.multiplier
+            )
+            self.termination_heuristic_right = CyclomaticComplexityTermination(
+                sess_right.proj.cfg.kb.functions[sess_right.start_fun_addr], multiplier=termination_heuristic.multiplier
+            )
 
     def run(self, args_left, args_right, symbols: set[claripy.BVS] | frozenset[claripy.BVS],
             cache_intermediate_states: bool=False, cache_constraints: bool=True,
