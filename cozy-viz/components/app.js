@@ -248,6 +248,7 @@ export default class App extends Component {
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
     Object.assign(cy, segmentationMixin);
+    cy.debugData = cy.nodes().roots()[0].data("debug")
 
     // set layout
     cy.layout(standardLayout).run()
