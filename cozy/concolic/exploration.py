@@ -1,11 +1,14 @@
 from enum import Enum
 
 import angr
-from angr import ExplorationTechnique, sim_options, SimulationManager, SimState
+from angr import ExplorationTechnique, sim_options, SimulationManager
 import claripy
 from collections.abc import Callable
 
 from claripy import UnsatError
+
+# This module can be used independently from the rest of the cozy codebase. Perhaps someday the exploration
+# techniques can be merged into the main angr codebase.
 
 class ConcolicSim(ExplorationTechnique):
     """
@@ -157,11 +160,32 @@ class ExploreMode(Enum):
     EXPLORE_RIGHT = 1
 
 class JointConcolicSim:
+    """
+    Jointly runs two SimulationManager objects by concretizing symbols, then running the left and right simulations\
+    with the same concrete input. This joint simulator alternates between the left and right simulations\
+    when generating new concrete inputs.
+    """
     def __init__(self, simgr_left: SimulationManager, simgr_right: SimulationManager,
                  symbols: set[claripy.BVS] | frozenset[claripy.BVS],
                  left_explorer: ConcolicSim, right_explorer: ConcolicSim,
                  candidate_heuristic_left: Callable[[list[angr.SimState]], angr.SimState] | None = None,
                  candidate_heuristic_right: Callable[[list[angr.SimState]], angr.SimState] | None = None):
+        """
+        :param SimulationManager simgr_left: The first simulation manager to run in concolic execution
+        :param SimulationManager simgr_right: The second simulation manager to run in concolic execution.
+        :param ConcolicSim left_explorer: The first exploration method to use for concolic execution. Note that\
+        this exploration technique will be attached to the left simulation manager.
+        :param ConcolicSim right_explorer: The second exploration method to use for concolic execution. Note that\
+        this exploration technique will be attached to the right simulation manager.
+        :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_left: The heuristic that
+        should be used to choose the deferred state that should be explored further. Note that this function should\
+        mutate its input list (ie, remove the desired state), and return that desired state. Note that some\
+        pre-made candidate heuristic techniques can be found in the :py:mod:cozy.concolic.heuristics module.
+        :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_right: The heuristic that
+        should be used to choose the deferred state that should be explored further. Note that this function should\
+        mutate its input list (ie, remove the desired state), and return that desired state. Note that some\
+        pre-made candidate heuristic techniques can be found in the :py:mod:cozy.concolic.heuristics module.
+        """
         self.simgr_left = simgr_left
         self.simgr_right = simgr_right
         self.symbols = symbols
@@ -206,7 +230,30 @@ class JointConcolicSim:
                 explore_fun_left: Callable[[SimulationManager], None] | None = None,
                 explore_fun_right: Callable[[SimulationManager], None] | None = None,
                 termination_fun_left: Callable[[SimulationManager], bool] | None = None,
-                termination_fun_right: Callable[[SimulationManager], bool] | None = None):
+                termination_fun_right: Callable[[SimulationManager], bool] | None = None) -> None:
+        """
+        Explores the simulations given in the left and right simulation manager.
+
+        :param Callable[[SimulationManager], None] | None explore_fun_left: If this parameter is not None, then\
+        instead of :py:meth:SimulationManager.explore being called to do the exploration, we call explore_fun_left\
+        instead.
+        :param Callable[[SimulationManager], None] | None explore_fun_right: If this parameter is not None, then\
+        instead of :py:meth:SimulationManager.explore being called to do the exploration, we call explore_fun_right\
+        instead.
+        :param Callable[[SimulationManager], bool] | None termination_fun_left: Every time we finish exploring one\
+        concrete input, this function is called to determine if the exploration should terminate. If both termination\
+        functions return True, then exploration is halted and this function returns. If this parameter is None, then\
+        the left simulation manager will terminate only when no further exploration is possible (ie, execution is\
+        complete). Pre-made termination functions can be found in the :py:mod:cozy.concolic.heuristics module.
+        :param Callable[[SimulationManager], bool] | None termination_fun_right: Every time we finish exploring one\
+        concrete input, this function is called to determine if the exploration should terminate. If both termination\
+        functions return True, then exploration is halted and this function returns. If this parameter is None, then\
+        the right simulation manager will terminate only when no further exploration is possible (ie, execution is\
+        complete). Pre-made termination functions can be found in the :py:mod:cozy.concolic.heuristics module.
+
+        :return: None
+        :rtype: None
+        """
         while len(self.simgr_left.active) > 0 or len(self.simgr_right.active) > 0:
             if termination_fun_left is not None and termination_fun_right is not None and termination_fun_left(self.simgr_left) and termination_fun_right(self.simgr_right):
                 return

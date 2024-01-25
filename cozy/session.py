@@ -156,22 +156,17 @@ def _save_states(states):
         # process. It seems that the primary usecase for strongref_state in angr is to help with merging states
         state.history.custom_strongref_state = state
 
-def _save_constraints(states):
-    for state in states:
-        state.history.custom_constraints = state.solver.constraints
-
-class SessionExploration:
-    def __init__(self, session: 'Session', cache_intermediate_states: bool=False, cache_constraints: bool=True):
+class _SessionExploration:
+    def __init__(self, session: 'Session', cache_intermediate_states: bool=False):
         self.session = session
         self.assume_warnings: list[tuple[Assume, SimState]] = []
         self.asserts_failed: list[AssertFailedState] = []
         self.cache_intermediate_states = cache_intermediate_states
-        self.cache_constraints = cache_constraints
 
     def explore(self, simgr):
         raise NotImplementedError()
 
-class SessionDirectiveExploration(SessionExploration):
+class _SessionDirectiveExploration(_SessionExploration):
     def explore(self, simgr):
         addrs_to_directive = {}
         for directive in self.session.directives:
@@ -223,8 +218,6 @@ class SessionDirectiveExploration(SessionExploration):
                             if false_branch.satisfiable():
                                 if self.cache_intermediate_states:
                                     _save_states([false_branch])
-                                if self.cache_constraints:
-                                    _save_constraints([false_branch])
                                 # If the false branch is satisfiable, add it to the list of failed assert states
                                 # This essentially halts execution on the false branch
                                 af = AssertFailedState(directive, cond, false_branch, len(self.asserts_failed))
@@ -256,8 +249,6 @@ class SessionDirectiveExploration(SessionExploration):
 
             if self.cache_intermediate_states:
                 _save_states(simgr.found)
-            if self.cache_constraints:
-                _save_constraints(simgr.found)
             # We need to step over all the found states so that we don't immediately halt
             # execution of these states in the next interation of the loop
             simgr.step(num_inst=1, stash="found")
@@ -266,18 +257,13 @@ class SessionDirectiveExploration(SessionExploration):
             if self.cache_intermediate_states:
                 _save_states(simgr.active)
                 _save_states(errored_states)
-            if self.cache_constraints:
-                _save_constraints(simgr.active)
-                _save_constraints(errored_states)
 
-class SessionBasicExploration(SessionExploration):
+class _SessionBasicExploration(_SessionExploration):
     def explore(self, simgr):
         while len(simgr.active) > 0:
             simgr.step()
             if self.cache_intermediate_states:
                 _save_states(simgr.active)
-            if self.cache_constraints:
-                _save_constraints(simgr.active)
 
 class Session:
     """
@@ -391,7 +377,7 @@ class Session:
         else:
             return None
 
-    def _call(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, cache_constraints: bool=True,
+    def _call(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False,
               ret_addr: int | None=None) -> SimulationManager:
         if self.has_run:
             raise RuntimeError("This session has already been run once. Make a new session to run again.")
@@ -423,8 +409,6 @@ class Session:
 
         if cache_intermediate_states:
             _save_states([state])
-        if cache_constraints:
-            _save_constraints([state])
 
         # This concretization strategy is necessary for nullable symbolic pointers. The default
         # concretization strategies attempts to concretize to integers within a small (128) byte
@@ -436,21 +420,19 @@ class Session:
 
         return self.proj.angr_proj.factory.simulation_manager(state)
 
-    def _session_exploration(self, cache_intermediate_states: bool=False, cache_constraints: bool=True) -> SessionExploration:
+    def _session_exploration(self, cache_intermediate_states: bool=False) -> _SessionExploration:
         if len(self.directives) > 0:
-            return SessionDirectiveExploration(self, cache_intermediate_states=cache_intermediate_states,
-                                               cache_constraints=cache_constraints)
+            return _SessionDirectiveExploration(self, cache_intermediate_states=cache_intermediate_states)
         else:
-            return SessionBasicExploration(self, cache_intermediate_states=cache_intermediate_states,
-                                           cache_constraints=cache_constraints)
+            return _SessionBasicExploration(self, cache_intermediate_states=cache_intermediate_states)
 
-    def _run_result(self, simgr: SimulationManager, sess_exploration: SessionExploration) -> RunResult:
+    def _run_result(self, simgr: SimulationManager, sess_exploration: _SessionExploration) -> RunResult:
         deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
 
         return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings)
 
-    def run(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> RunResult:
+    def run(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, ret_addr: int | None=None) -> RunResult:
         """
         Runs a session to completion, either starting from the start_fun used to create the session, or from the\
         program start. Note that currently a session may be run only once. If run is called multiple times, a\
@@ -459,18 +441,15 @@ class Session:
         :param list[claripy.ast.bits] args: The arguments to pass to the function. angr will utilize the function's\
         type signature to figure out the calling convention to use with the arguments.
         :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached,\
-        preventing their garbage collection. This is required for dumping the execution graph.
-        :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will\
-        be cached, which is required for performing memoized binary search when diffing states.
+        preventing their garbage collection. This is required for dumping the execution graph which is used in\
+        visualization.
         :param int | None ret_addr: What address to return to if calling as a function
         :return: The result of running this session.
         :rtype: RunResult
         """
 
-        simgr = self._call(list(args), cache_intermediate_states=cache_intermediate_states,
-                           cache_constraints=cache_constraints, ret_addr=ret_addr)
+        simgr = self._call(list(args), cache_intermediate_states=cache_intermediate_states, ret_addr=ret_addr)
 
-        sess_exploration = self._session_exploration(cache_intermediate_states=cache_intermediate_states,
-                                                     cache_constraints=cache_constraints)
+        sess_exploration = self._session_exploration(cache_intermediate_states=cache_intermediate_states)
         sess_exploration.explore(simgr)
         return self._run_result(simgr, sess_exploration)

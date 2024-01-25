@@ -4,12 +4,16 @@ from angr.knowledge_plugins import Function, FunctionManager
 from cozy.project import Session
 
 class ArbitraryCandidate:
+    """
+    For use as the candidate heuristic in :py:meth:cozy.exploration.ConcolicSim.generate_concrete
+    This heuristic will choose the next exploration candidate by popping the last element off the candidate's list.
+    """
     def __call__(self, candidate_states: list[SimState]):
         return candidate_states.pop()
 
 class BBTransitionCandidate:
     """
-    A transition heuristic for use as the candidate heuristic in :py:meth:cozy.exploration.ConcolicSim.generate_concrete
+    For use as the candidate heuristic in :py:meth:cozy.exploration.ConcolicSim.generate_concrete
     This heuristic will select a candidate whose basic block history has been seen least frequently in the past. This
     class keeps an internal record of candidates it chose in the past to compute this metric.
     """
@@ -70,13 +74,25 @@ class CoverageTermination:
     function's basic blocks have been visited at least once.
     """
     def __init__(self, fun: Function, coverage_fraction: float=0.9):
+        """
+        :param Function fun: The function that we are seeking a specific coverage over.
+        :param float coverage_fraction: A number in the range [0, 1] that determines what fraction of basic blocks need\
+        to be visited before termination is reached.
+        """
         self.block_addrs = fun.block_addrs_set
         self.prev_terminal_states = set()
         self.visited_blocks = set()
         self.coverage_fraction = coverage_fraction
 
     @staticmethod
-    def from_session(sess: Session, coverage_fraction=0.9) -> 'CoverageTermination':
+    def from_session(sess: Session, coverage_fraction: float=0.9) -> 'CoverageTermination':
+        """
+        Constructs a CoverageTermination object from an unrun session.
+
+        :param Session sess: The session which is set to call some specific function, but has not yet been run.
+        :param float coverage_fraction: A number in the range [0, 1] that determines what fraction of basic blocks need\
+        to be visited before termination is reached.
+        """
         return CoverageTermination(sess.proj.cfg.kb.functions[sess.start_fun_addr], coverage_fraction=coverage_fraction)
 
     def __call__(self, simgr):
@@ -94,7 +110,7 @@ class CyclomaticComplexityTermination:
     This termination heuristic tells the concolic execution to explore until a certain number of terminated
     states are reached. If add_callees is False, then this value is equal to the cyclomatic complexity of the function.
     Otherwise, it is equal to the cyclomatic complexity of the function plus the cyclomatic complexity of all callees
-    of the function.
+    of the function (recursively).
     """
 
     def __init__(self, fun: Function, fun_manager: FunctionManager, add_callees=True, multiplier: int | float=1):
