@@ -4,8 +4,10 @@ import cozy.analysis as analysis
 import cozy.claripy_ext as claripy_ext
 import cozy.execution_graph as execution_graph
 from cozy.directive import ErrorDirective
-from cozy.heuristics import CyclomaticComplexityTermination, BBTransitionCandidate
-from cozy.project import Project, RunResult, Session, JointConcolicSession
+from cozy.concolic.heuristics import CyclomaticComplexityTermination, BBTransitionCandidate
+from cozy.concolic.session import JointConcolicSession
+from cozy.project import Project
+from cozy.session import Session
 from cozy.constants import *
 import cozy.primitives as primitives
 import angr, claripy

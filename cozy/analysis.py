@@ -5,11 +5,10 @@ from angr import SimState
 
 import portion as P
 
-from angr.state_plugins import SimStateHistory
 from . import claripy_ext
 from .functools_ext import *
 import collections.abc
-from .project import RunResult
+from .session import RunResult
 from .concrete import _concretize, CompatiblePairInput
 from .terminal_state import TerminalState, DeadendedState
 

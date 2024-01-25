@@ -3,9 +3,9 @@ import networkx as nx
 import json
 import sys
 from angr.block import Block
-from angr.sim_state import SimState
 from collections.abc import Callable
-from .project import Project, RunResult
+from .project import Project
+from .session import RunResult
 from . import analysis
 from .server import start_viz_server
 

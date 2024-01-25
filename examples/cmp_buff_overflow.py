@@ -5,7 +5,6 @@ from cozy.directive import Assume
 from cozy.project import Project
 from cozy.constants import *
 import cozy.primitives as primitives
-from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
 
 arg0 = [5, 4, 3]
 arg1 = claripy.BVS('idx_arg', INT_SIZE * 8)

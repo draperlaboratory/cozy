@@ -6,7 +6,7 @@ from cozy.constants import *
 import cozy.primitives as primitives
 from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
 
-from cozy.heuristics import BBTransitionCandidate, CyclomaticComplexityTermination
+from cozy.heuristics import BBTransitionCandidate, CyclomaticComplexityTermination, CompleteTermination
 from cozy.project import JointConcolicSession, Project
 
 arg0 = primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg').annotate(MultiwriteAnnotation())
@@ -73,8 +73,8 @@ post_sess = setup_post_patched()
 joint_sess = JointConcolicSession(pre_sess, post_sess,
                                   candidate_heuristic_left=BBTransitionCandidate(),
                                   candidate_heuristic_right=BBTransitionCandidate(),
-                                  termination_heuristic_left=CyclomaticComplexityTermination.from_session(pre_sess),
-                                  termination_heuristic_right=CyclomaticComplexityTermination.from_session(post_sess))
+                                  termination_heuristic_left=CompleteTermination(),
+                                  termination_heuristic_right=CompleteTermination())
 (pre_patched, post_patched) = joint_sess.run(args, args, set(args), cache_intermediate_states=True)
 
 print(pre_patched.report_asserts_failed(args))
