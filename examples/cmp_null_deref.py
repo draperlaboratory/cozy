@@ -48,7 +48,7 @@ def run_pre_patched():
     #sess.add_directives(mem_write_okay)
 
     args = construct_args(sess)
-    run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
+    run_results = sess.run(args, cache_intermediate_states=dump_execution_graphs)
     print(run_results.report_asserts_failed(args))
     return (proj, run_results)
 
@@ -77,7 +77,7 @@ def run_post_patched():
     sess = proj.session('my_fun')
     sess.add_directives(*directives)
     args = construct_args(sess)
-    run_results = sess.run(*args, cache_intermediate_states=dump_execution_graphs)
+    run_results = sess.run(args, cache_intermediate_states=dump_execution_graphs)
     print(run_results.report_asserts_failed(args))
     return (proj, run_results)
 

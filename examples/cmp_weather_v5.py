@@ -74,7 +74,7 @@ def run(proj, **kwargs):
     # set things up to do that in the framework code instead.
     sess.add_directives(ErrorDirective.from_fun_offset(proj, "abort", 0x0))
     initialize_state(sess)
-    return sess.run(**kwargs)
+    return sess.run([], **kwargs)
 
 def run_weather_orig(**kwargs) -> RunResult:
     return run(proj_orig, **kwargs)

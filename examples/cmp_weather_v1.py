@@ -77,7 +77,7 @@ def run_weather_1():
 
     sess.add_constraints(range_constraint)
     sess.store_fs('data.txt', concrete_datafile())
-    return sess.run()
+    return sess.run([])
 
 def run_weather_2():
     proj = Project('test_programs/weather_demo/v1/weather-2')
@@ -98,7 +98,7 @@ def run_weather_2():
 
     sess.add_constraints(range_constraint)
     sess.store_fs('data.txt', concrete_datafile())
-    return sess.run()
+    return sess.run([])
 
 def run_weather_3():
     proj = Project('test_programs/weather_demo/v1/weather-3')
@@ -119,7 +119,7 @@ def run_weather_3():
 
     sess.add_constraints(range_constraint)
     sess.store_fs('data.txt', concrete_datafile())
-    return sess.run()
+    return sess.run([])
 
 args = symbolic_integers_lst
 def concrete_mapper(integers_lst):

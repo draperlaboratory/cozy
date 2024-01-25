@@ -1,14 +1,13 @@
 import archinfo
 
 import cozy.analysis as analysis
-from cozy.exploration import BBTransitionHeuristic
-from cozy.project import Project, JointConcolicSession, CandidateHeuristicOption, TerminationHeuristicOption, \
-    CycloCompTerminationOption
 from cozy.directive import Assume, Assert
 from cozy.constants import *
 import cozy.primitives as primitives
-import cozy.execution_graph as execution_graph
 from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
+
+from cozy.heuristics import BBTransitionCandidate, CyclomaticComplexityTermination
+from cozy.project import JointConcolicSession, Project
 
 arg0 = primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg').annotate(MultiwriteAnnotation())
 args = [arg0]
@@ -71,8 +70,11 @@ def setup_post_patched():
 pre_sess = setup_pre_patched()
 post_sess = setup_post_patched()
 
-joint_sess = JointConcolicSession(pre_sess, post_sess, candidate_heuristic=CandidateHeuristicOption.BB_TRANSITION,
-                                  termination_heuristic=CycloCompTerminationOption(3))
+joint_sess = JointConcolicSession(pre_sess, post_sess,
+                                  candidate_heuristic_left=BBTransitionCandidate(),
+                                  candidate_heuristic_right=BBTransitionCandidate(),
+                                  termination_heuristic_left=CyclomaticComplexityTermination.from_session(pre_sess),
+                                  termination_heuristic_right=CyclomaticComplexityTermination.from_session(post_sess))
 (pre_patched, post_patched) = joint_sess.run(args, args, set(args), cache_intermediate_states=True)
 
 print(pre_patched.report_asserts_failed(args))

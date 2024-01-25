@@ -5,58 +5,7 @@ from angr import ExplorationTechnique, sim_options, SimulationManager, SimState
 import claripy
 from collections.abc import Callable
 
-from angr.knowledge_plugins import Function
 from claripy import UnsatError
-
-
-class BBTransitionHeuristic:
-    def __init__(self):
-        self.transitions = {}
-
-    def __call__(self, candidate_states: list[SimState]):
-        if len(candidate_states) == 0:
-            raise ValueError("Cannot choose a candidate from a list of 0 length")
-        min_count = None
-        min_candidate = None
-        min_transition = None
-        for candidate in candidate_states:
-            prev_addr = candidate.history.addr
-            addr = candidate.addr
-            transition = (prev_addr, addr)
-            count = self.transitions.get(transition, 0)
-            if min_count is None or count < min_count:
-                min_count = count
-                min_candidate = candidate
-                min_transition = transition
-
-        self.transitions[min_transition] = min_count + 1
-        candidate_states.remove(min_candidate)
-        return min_candidate
-
-class CoverageTermination:
-    def __init__(self, fun: Function, coverage_fraction=0.9):
-        self.block_addrs = fun.block_addrs_set
-        self.prev_deadended_states = set()
-        self.visited_blocks = set()
-        self.coverage_fraction = coverage_fraction
-
-    def __call__(self, simgr):
-        for state in simgr.deadended:
-            if state not in self.prev_deadended_states:
-                for addr in state.history.bbl_addrs:
-                    if addr in self.block_addrs:
-                        self.visited_blocks.add(addr)
-                self.prev_deadended_states.add(state)
-        return ((len(self.visited_blocks) / len(self.block_addrs)) >= self.coverage_fraction)
-
-class CyclomaticComplexityTermination:
-    def __init__(self, fun: Function, multiplier=None):
-        self.cyclomatic_complexity = fun.cyclomatic_complexity
-        if multiplier is not None:
-            self.cyclomatic_complexity = int(multiplier * self.cyclomatic_complexity)
-
-    def __call__(self, simgr):
-        return len(simgr.deadended) >= self.cyclomatic_complexity
 
 class ConcolicSim(ExplorationTechnique):
     """
@@ -211,7 +160,8 @@ class JointConcolicSim:
     def __init__(self, simgr_left: SimulationManager, simgr_right: SimulationManager,
                  symbols: set[claripy.BVS] | frozenset[claripy.BVS],
                  left_explorer: ConcolicSim, right_explorer: ConcolicSim,
-                 candidate_heuristic_left = None, candidate_heuristic_right = None):
+                 candidate_heuristic_left: Callable[[list[angr.SimState]], angr.SimState] | None = None,
+                 candidate_heuristic_right: Callable[[list[angr.SimState]], angr.SimState] | None = None):
         self.simgr_left = simgr_left
         self.simgr_right = simgr_right
         self.symbols = symbols
@@ -253,10 +203,10 @@ class JointConcolicSim:
         secondary_explorer.set_concrete(secondary_simgr, primary_explorer.concrete)
 
     def explore(self,
-                explore_fun_left: Callable[[SimulationManager], None] = None,
-                explore_fun_right: Callable[[SimulationManager], None] = None,
-                termination_fun_left: Callable[[SimulationManager], bool] = None,
-                termination_fun_right: Callable[[SimulationManager], bool] = None):
+                explore_fun_left: Callable[[SimulationManager], None] | None = None,
+                explore_fun_right: Callable[[SimulationManager], None] | None = None,
+                termination_fun_left: Callable[[SimulationManager], bool] | None = None,
+                termination_fun_right: Callable[[SimulationManager], bool] | None = None):
         while len(self.simgr_left.active) > 0 or len(self.simgr_right.active) > 0:
             if termination_fun_left is not None and termination_fun_right is not None and termination_fun_left(self.simgr_left) and termination_fun_right(self.simgr_right):
                 return

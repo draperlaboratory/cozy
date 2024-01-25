@@ -159,7 +159,7 @@ def run_evil():
     sess.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
 
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
-    return sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=True)
+    return sess.run([this_obj], 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=True)
 
 
 pre_patched_results = run_prepatched()

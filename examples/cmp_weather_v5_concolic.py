@@ -4,8 +4,8 @@ import cozy.analysis as analysis
 import cozy.claripy_ext as claripy_ext
 import cozy.execution_graph as execution_graph
 from cozy.directive import ErrorDirective
-from cozy.project import Project, RunResult, Session, JointConcolicSession, CandidateHeuristicOption, \
-    TerminationHeuristicOption, CycloCompTerminationOption
+from cozy.heuristics import CyclomaticComplexityTermination, BBTransitionCandidate
+from cozy.project import Project, RunResult, Session, JointConcolicSession
 from cozy.constants import *
 import cozy.primitives as primitives
 import angr, claripy
@@ -98,8 +98,11 @@ def run_orig_and_1():
     add_error_directive(sess_1)
     initialize_state(sess_1)
 
-    joint_sess = JointConcolicSession(sess_orig, sess_1, candidate_heuristic=CandidateHeuristicOption.BB_TRANSITION,
-                                      termination_heuristic=CycloCompTerminationOption(3))
+    joint_sess = JointConcolicSession(sess_orig, sess_1,
+                                      candidate_heuristic_left=BBTransitionCandidate(),
+                                      candidate_heuristic_right=BBTransitionCandidate(),
+                                      termination_heuristic_left=CyclomaticComplexityTermination.from_session(sess_orig),
+                                      termination_heuristic_right=CyclomaticComplexityTermination.from_session(sess_1))
 
     return joint_sess.run([], [], symbols, cache_intermediate_states=True)
 

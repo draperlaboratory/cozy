@@ -21,7 +21,7 @@ def run_pre_patched():
 
     sess = proj.session('patch_fun')
     args = construct_args(sess)
-    return sess.run(*args)
+    return sess.run(args)
 
 # The patched function is the same as the original, except it has an if statement
 # to check if the input argument is NULL
@@ -32,7 +32,7 @@ def run_post_patched():
     sess = proj.session('patch_fun')
     args = construct_args(sess)
     #sess.add_directives(Assume.from_fun_offset(proj, "patch_fun", 0x0, lambda st: (st.regs.rsi >= 0) & (st.regs.rsi < 3)))
-    return sess.run(*args)
+    return sess.run(args)
 
 print("Running pre-patched.")
 pre_patched = run_pre_patched()

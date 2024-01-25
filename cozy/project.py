@@ -2,7 +2,6 @@ import os
 import pickle
 import sys
 from collections.abc import Callable
-from enum import Enum
 
 import portion as P
 
@@ -12,8 +11,7 @@ from angr.sim_manager import ErrorRecord, SimulationManager
 from cle import Backend
 
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
-from .exploration import JointConcolicSim, ConcolicSim, BBTransitionHeuristic, CoverageTermination, \
-    CyclomaticComplexityTermination
+from .exploration import JointConcolicSim, ConcolicSim
 from .terminal_state import TerminalState, AssertFailedState, ErrorState, DeadendedState
 
 class RunResult:
@@ -456,13 +454,18 @@ class Session:
 
         return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings)
 
-    def run(self, *args: claripy.ast.bits, cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> RunResult:
+    def run(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, cache_constraints: bool=True, ret_addr: int | None=None) -> RunResult:
         """
-        Runs a session to completion, either starting from the start_fun used to create the session, or from the program start. Note that currently a session may be run only once. If run is called multiple times, a RuntimeError will be thrown.
+        Runs a session to completion, either starting from the start_fun used to create the session, or from the\
+        program start. Note that currently a session may be run only once. If run is called multiple times, a\
+        RuntimeError will be thrown.
 
-        :param claripy.ast.bits args: The arguments to pass to the function. angr will utilize the function's type signature to figure out the calling convention to use with the arguments.
-        :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached, preventing their garbage collection. This is required for dumping the execution graph.
-        :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will be cached, which is required for performing memoized binary search when diffing states.
+        :param list[claripy.ast.bits] args: The arguments to pass to the function. angr will utilize the function's\
+        type signature to figure out the calling convention to use with the arguments.
+        :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached,\
+        preventing their garbage collection. This is required for dumping the execution graph.
+        :param bool cache_constraints: If this flag is True, then the intermediate execution state's constraints will\
+        be cached, which is required for performing memoized binary search when diffing states.
         :param int | None ret_addr: What address to return to if calling as a function
         :return: The result of running this session.
         :rtype: RunResult
@@ -476,61 +479,25 @@ class Session:
         sess_exploration.explore(simgr)
         return self._run_result(simgr, sess_exploration)
 
-class CandidateHeuristicOption(Enum):
-    ARBITRARY = 0
-    BB_TRANSITION = 1
-
-class TerminationHeuristicOption:
-    pass
-
-class CompleteTerminationOption(TerminationHeuristicOption):
-    pass
-
-class CoverageTerminationOption(TerminationHeuristicOption):
-    def __init__(self, coverage_fraction=0.9):
-        self.coverage_fraction = coverage_fraction
-
-class CycloCompTerminationOption(TerminationHeuristicOption):
-    def __init__(self, multiplier=None):
-        self.multiplier = multiplier
-
 class JointConcolicSession:
     def __init__(self, sess_left: Session, sess_right: Session,
-                 candidate_heuristic: CandidateHeuristicOption=CandidateHeuristicOption.ARBITRARY,
-                 termination_heuristic: TerminationHeuristicOption=CompleteTerminationOption()):
+                 candidate_heuristic_left: Callable[[list[angr.SimState]], angr.SimState] | None = None,
+                 candidate_heuristic_right: Callable[[list[angr.SimState]], angr.SimState] | None = None,
+                 termination_heuristic_left: Callable[[SimulationManager], bool] | None = None,
+                 termination_heuristic_right: Callable[[SimulationManager], bool] | None = None):
         self.sess_left = sess_left
         self.sess_right = sess_right
-        if candidate_heuristic == CandidateHeuristicOption.ARBITRARY:
-            self.candidate_heuristic_left = None
-            self.candidate_heuristic_right = None
-        elif candidate_heuristic == CandidateHeuristicOption.BB_TRANSITION:
-            self.candidate_heuristic_left = BBTransitionHeuristic()
-            self.candidate_heuristic_right = BBTransitionHeuristic()
-        else:
-            raise ValueError("Unknown candidate_heuristic")
-        if isinstance(termination_heuristic, CompleteTerminationOption):
-            self.termination_heuristic_left = None
-            self.termination_heuristic_right = None
-        elif isinstance(termination_heuristic, CoverageTerminationOption):
-            self.termination_heuristic_left = CoverageTermination(
-                sess_left.proj.cfg.kb.functions[sess_left.start_fun_addr],
-                coverage_fraction=termination_heuristic.coverage_fraction
-            )
-            self.termination_heuristic_right = CoverageTermination(
-                sess_right.proj.cfg.kb.functions[sess_right.start_fun_addr],
-                coverage_fraction=termination_heuristic.coverage_fraction
-            )
-        elif isinstance(termination_heuristic, CycloCompTerminationOption):
-            self.termination_heuristic_left = CyclomaticComplexityTermination(
-                sess_left.proj.cfg.kb.functions[sess_left.start_fun_addr], multiplier=termination_heuristic.multiplier
-            )
-            self.termination_heuristic_right = CyclomaticComplexityTermination(
-                sess_right.proj.cfg.kb.functions[sess_right.start_fun_addr], multiplier=termination_heuristic.multiplier
-            )
+
+        self.candidate_heuristic_left = candidate_heuristic_left
+        self.candidate_heuristic_right = candidate_heuristic_right
+
+        self.termination_heuristic_left = termination_heuristic_left
+        self.termination_heuristic_right = termination_heuristic_right
 
     def run(self, args_left, args_right, symbols: set[claripy.BVS] | frozenset[claripy.BVS],
             cache_intermediate_states: bool=False, cache_constraints: bool=True,
             ret_addr_left: int | None=None, ret_addr_right: int | None = None) -> tuple[RunResult, RunResult]:
+
         simgr_left = self.sess_left._call(args_left, cache_intermediate_states=cache_intermediate_states,
                                           cache_constraints=cache_constraints, ret_addr=ret_addr_left)
         simgr_right = self.sess_right._call(args_right, cache_intermediate_states=cache_intermediate_states,
@@ -547,6 +514,7 @@ class JointConcolicSession:
         jconcolic_sim = JointConcolicSim(simgr_left, simgr_right, symbols, concolic_explorer_left, concolic_explorer_right,
                                          candidate_heuristic_left=self.candidate_heuristic_left,
                                          candidate_heuristic_right=self.candidate_heuristic_right)
+
         jconcolic_sim.explore(explore_fun_left=sess_exploration_left.explore,
                               explore_fun_right=sess_exploration_right.explore,
                               termination_fun_left=self.termination_heuristic_left,
