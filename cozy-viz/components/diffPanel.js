@@ -1,6 +1,6 @@
 import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.1.0/+esm'
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
-import { Component } from 'https://unpkg.com/preact@latest?module'
+import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import { getNodesFromEnds, getEdgesFromEnds } from '../util/segmentation.js'
 
 export default class DiffPanel extends Component {
@@ -9,6 +9,9 @@ export default class DiffPanel extends Component {
     this.state = {
       mode: null,
     }
+    
+    this.diffPanel = createRef()
+    this.dragHandle = createRef()
   }
 
   toggleMode(mode) {
@@ -17,6 +20,22 @@ export default class DiffPanel extends Component {
     } else {
       this.setState({ mode })
     }
+  }
+
+  startResize(e) {
+    this.diffPanel.current.onpointermove = e => {
+      this.diffPanel.current.style.maxHeight = `${Math.max(50, window.innerHeight - e.clientY)}px`
+    }
+    this.dragHandle.current.setPointerCapture(e.pointerId)
+    this.dragHandle.current.classList.add("grabbed")
+    this.diffPanel.current.classList.add("resizing")
+  }
+
+  stopResize(e) {
+    this.diffPanel.current.onpointermove = null
+    this.dragHandle.current.releasePointerCapture(e.pointerId)
+    this.dragHandle.current.classList.remove("grabbed")
+    this.diffPanel.current.classList.remove("resizing")
   }
 
   render(props, state) {
@@ -30,7 +49,12 @@ export default class DiffPanel extends Component {
     const actionsAvailable =
       props.rightFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0 ||
       props.leftFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0
-    return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter}>
+    return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter} ref=${this.diffPanel}>
+      <div id="diff-drag-handle" 
+        onPointerDown=${e => this.startResize(e)} 
+        onPointerUp=${e => this.stopResize(e)} 
+        ref=${this.dragHandle}
+      />
       <div>
         <button 
           disabled=${!assemblyAvailable}
