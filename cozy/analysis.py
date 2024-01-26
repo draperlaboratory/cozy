@@ -39,7 +39,8 @@ def _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range
 
 class StateDiff:
     """
-    StateDiff encapsulates the memoized state used by the difference method. This class is used internally by Comparison and is typically not for external use.
+    StateDiff encapsulates the memoized state used by the difference method. This class is used internally by\
+    Comparison and is typically not for external use.
     """
 
     def __init__(self):
@@ -52,14 +53,23 @@ class StateDiff:
                    compute_reg_diff=True) -> (
             tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None):
         """
-        Compares two states to find differences in memory. This function will return None if the two states have non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are different between the two. This function is based off of angr.analyses.congruency_check.CongruencyCheck().compare_states, but has been customized for our purposes. Note that this function may use memoization to enhance performance.
+        Compares two states to find differences in memory. This function will return None if the two states have\
+        non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are\
+        different between the two. This function is based off of\
+        angr.analyses.congruency_check.CongruencyCheck().compare_states, but has been customized for our purposes. Note\
+        that this function may use memoization to enhance performance.
 
         :param SimState sl: The first state to compare
         :param SimState sr: The second state to compare
-        :param collections.abc.Iterable[range] | None ignore_addrs: Memory addresses to ignore when doing the memory diffing. This representation is more efficient than a set of integers since the ranges involved can be quite large.
-        :param bool compute_mem_diff: If this flag is True, then we will diff the memory. If this is false, then the first element of the return tuple will be None.
-        :param compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the second element of the return tuple will be None.
-        :return: None if the two states are not compatible, otherwise returns a tuple containing the memory and register differences.
+        :param collections.abc.Iterable[range] | None ignore_addrs: Memory addresses to ignore when doing the memory\
+        diffing. This representation is more efficient than a set of integers since the ranges involved can be quite\
+        large.
+        :param bool compute_mem_diff: If this flag is True, then we will diff the memory. If this is false, then the\
+        first element of the return tuple will be None.
+        :param compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the\
+        second element of the return tuple will be None.
+        :return: None if the two states are not compatible, otherwise returns a tuple containing the memory and\
+        register differences.
         :rtype: tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None
         """
 
@@ -175,9 +185,16 @@ class CompatiblePair:
 
     :ivar TerminalState state_left: Information pertaining specifically to the pre-patched state being compared.
     :ivar TerminalState state_right: Information pertaining specifically to the post-patched state being compared.
-    :ivar dict[range, tuple[claripy.ast.Base, claripy.ast.Base]] mem_diff: Maps memory addresses to pairs of claripy ASTs, where the left element of the tuple is the data in memory for state_left, and the right element of the tuple is what was found in memory for state_right. Only memory locations that are different are saved in this dict.
-    :ivar dict[str, tuple[claripy.ast.Base, claripy.ast.Base]] reg_diff: Similar to mem_diff, except that the dict is keyed by register names. Note that some registers may be subparts of another. For example in x64, EAX is a subregister of RAX.
-    :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value determined the write address.
+    :ivar dict[range, tuple[claripy.ast.Base, claripy.ast.Base]] mem_diff: Maps memory addresses to pairs of claripy\
+    ASTs, where the left element of the tuple is the data in memory for state_left, and the right element of the tuple\
+    is what was found in memory for state_right. Only memory locations that are different are saved in this dict.
+    :ivar dict[str, tuple[claripy.ast.Base, claripy.ast.Base]] reg_diff: Similar to mem_diff, except that the dict is\
+    keyed by register names. Note that some registers may be subparts of another. For example in x64, EAX is a\
+    subregister of RAX.
+    :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses\
+    to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the\
+    frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
+    determined the write address.
     :ivar bool compare_std_out: If True then we should consider stdout when checking if the two input states are equal.
     :ivar bool compare_std_err: If True then we should consider stderr when checking if the two input states are equal.
     """
@@ -201,7 +218,8 @@ class CompatiblePair:
 
     def equal(self) -> bool:
         """
-        Determines if the two compatible states are observationally equal. That is, they contain the same memory contents, registers, stdout, and stderr after execution.
+        Determines if the two compatible states are observationally equal. That is, they contain the same memory\
+        contents, registers, stdout, and stderr after execution.
 
         :return: True if the two compatible states are observationally equal, and False otherwise.
         :rtype: bool
@@ -215,9 +233,11 @@ class CompatiblePair:
 
     def concrete_examples(self, args: any, num_examples=3) -> list[CompatiblePairInput]:
         """
-        Concretizes the arguments used to put the program in these states by jointly using the constraints attached to the compatible states.
+        Concretizes the arguments used to put the program in these states by jointly using the constraints attached to\
+        the compatible states.
 
-        :param any args: The input arguments to concretize. This argument may be a Python datastructure, the concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
+        :param any args: The input arguments to concretize. This argument may be a Python datastructure, the\
+        concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
         :param int num_examples: The maximum number of concrete examples to generate for this particular pair.
         :return: A list of concrete inputs that satisfy both constraints attached to the states.
         :rtype: list[CompatiblePairInput]
@@ -235,11 +255,15 @@ class CompatiblePair:
 
 class Comparison:
     """
-    This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible state in the other execution tree. In most scenarios there will be no orphaned states.
+    This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible\
+    state in the other execution tree. In most scenarios there will be no orphaned states.
 
-    :ivar dict[tuple[SimState, SimState], CompatiblePair] pairs: pairs stores a dictionary that maps a pair of (pre_patch_state, post_patch_state) compatible states to their comparison information
-    :ivar set[TerminalState] orphans_left: Pre-patched states for which there are 0 corresponding compatible states in the post-patch
-    :ivar set[TerminalState] orphans_right: Post-patched states for which there are 0 corresponding compatible states in the pre-patch
+    :ivar dict[tuple[SimState, SimState], CompatiblePair] pairs: pairs stores a dictionary that maps a pair of\
+    (pre_patch_state, post_patch_state) compatible states to their comparison information
+    :ivar set[TerminalState] orphans_left: Pre-patched states for which there are 0 corresponding compatible states in\
+    the post-patch
+    :ivar set[TerminalState] orphans_right: Post-patched states for which there are 0 corresponding compatible states\
+    in the pre-patch
     """
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
@@ -251,10 +275,12 @@ class Comparison:
         :param project.RunResult pre_patched: The pre-patched state bundle
         :param project.RunResult post_patched: The post-patched state bundle
         :param list[range] | None ignore_addrs: A list of addresses ranges to ignore when comparing memory.
-        :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously occupied by the stack are ignored.
+        :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously\
+        occupied by the stack are ignored.
         :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
         :param bool compare_registers: If True, then the analysis will compare registers used by the program.
-        :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results. Note that angr currently concretizes values written to stdout, so these values will be binary strings.
+        :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results.\
+        Note that angr currently concretizes values written to stdout, so these values will be binary strings.
         :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
         """
 
@@ -332,7 +358,8 @@ class Comparison:
 
     def is_compatible(self, state_left: SimState, state_right: SimState) -> bool:
         """
-        Returns True when the two input states are compatible based on the pairs stored in this object, and False otherwise.
+        Returns True when the two input states are compatible based on the pairs stored in this object, and False\
+        otherwise.
 
         :param SimState state_left: The pre-patched state
         :param SimState state_right: The post-patched state
@@ -350,31 +377,48 @@ class Comparison:
         """
         return iter(self.pairs.values())
 
-    def verify(self, verification_assertion: Callable[[CompatiblePair], claripy.ast.Base]) -> list[CompatiblePair]:
+    def verify(self, verification_assertion: Callable[[CompatiblePair], claripy.ast.Base | bool]) -> list[CompatiblePair]:
         """
-        Determines what compatible state pairs are valid with respect to a verification assertion. Note that the comparison results are verified with respect to the verification_assertion if the returned list is empty (has length 0).
+        Determines what compatible state pairs are valid with respect to a verification assertion. Note that the\
+        comparison results are verified with respect to the verification_assertion if the returned list is empty\
+        (has length 0).
 
-        :param Callable[[CompatiblePair], claripy.ast.Base] verification_assertion: A function which takes in a compatible pair and returns a claripy expression which must be satisfiable for all inputs while under the joint constraints of the state pair.
-        :return: A list of all compatible pairs for which there was a concrete input that caused the verification assertion to fail.
+        :param Callable[[CompatiblePair], claripy.ast.Base | bool] verification_assertion: A function which takes in a\
+        compatible pair and returns a claripy expression which must be satisfiable for all inputs while under the\
+        joint constraints of the state pair. Alternatively the function can return a bool. If the return value\
+        is False, this will be considered a verification failure. If the return value is True, this will be considered\
+        a verification success.
+        :return: A list of all compatible pairs for which there was a concrete input that caused the verification\
+        assertion to fail.
         :rtype: list[CompatiblePair]
         """
         failure_list = []
         for ((state_left, state_right), pair_comp) in self.pairs.items():
-            joint_solver = claripy.Solver()
-            joint_solver.add(state_left.solver.constraints)
-            joint_solver.add(state_right.solver.constraints)
-            joint_solver.simplify()
             assertion = verification_assertion(pair_comp)
-            if joint_solver.satisfiable(~assertion):
-                failure_list.append(pair_comp)
+
+            if isinstance(assertion, bool):
+                if assertion == False:
+                    failure_list.append(pair_comp)
+            else:
+                joint_solver = claripy.Solver()
+                joint_solver.add(state_left.solver.constraints)
+                joint_solver.add(state_right.solver.constraints)
+                joint_solver.simplify()
+
+                if joint_solver.satisfiable(~assertion):
+                    failure_list.append(pair_comp)
         return failure_list
 
     def report(self, args: any, concrete_arg_mapper: Callable[[any], any] | None=None, num_examples: int=3) -> str:
         """
         Generates a human-readable report of the result object, saved as a string. This string is suitable for printing.
 
-        :param any args: The symbolic/concolic arguments used during exeuction, here these args are concretized so that we can give examples of concrete input.
-        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param any args: The symbolic/concolic arguments used during exeuction, here these args are concretized so that\
+        we can give examples of concrete input.
+        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized\
+        versions of args before they are added to the return string. Some examples of this function include converting\
+        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on\
+        another part of the input arguments.
         :param int num_examples: The number of concrete examples to show the user.
         :return: A human-readable summary of the comparison.
         :rtype: str

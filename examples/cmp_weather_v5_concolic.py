@@ -12,6 +12,7 @@ from cozy.constants import *
 import cozy.primitives as primitives
 import angr, claripy
 from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
+import cozy.types
 
 MAX_NUM_ROWS = 3
 MAX_NUM_VALS = 5
@@ -27,10 +28,8 @@ add_prototype(proj_orig)
 add_prototype(proj_patched_1)
 add_prototype(proj_patched_2)
 
-sensor_row_struct = angr.types.parse_type('struct SensorRow {int *vals; int num_vals; struct SensorRow *next; }').with_arch(proj_orig.angr_proj.arch)
-angr.types.register_types(sensor_row_struct)
-sensor_row_ptr = angr.types.parse_types('typedef struct SensorRow *SensorRowPtr;')
-angr.types.register_types(sensor_row_ptr)
+sensor_row_struct = cozy.types.register_type('struct SensorRow {int *vals; int num_vals; struct SensorRow *next; }', proj_orig.arch)
+cozy.types.register_type('typedef struct SensorRow *SensorRowPtr;', proj_orig.arch)
 
 latest_data = primitives.sym_ptr(archinfo.ArchAMD64, 'latest_data_init').annotate(MultiwriteAnnotation())
 vals = [[claripy.BVS("val_{}_{}".format(i, j), INT_SIZE * 8) for j in range(MAX_NUM_VALS)] for i in range(MAX_NUM_ROWS)]

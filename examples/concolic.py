@@ -18,12 +18,8 @@ def run_null_deref():
 def run_target5():
     proj = angr.Project('test_programs/amp_target5_hackathon/gs_data_processor')
 
-    rover_data_struct = angr.types.parse_type('struct RoverData_t { int temp; unsigned int cmd; }').with_arch(proj.arch)
-    angr.types.register_types(rover_data_struct)
-
-    rover_message_struct = angr.types.parse_type(
-        'struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }').with_arch(proj.arch)
-    angr.types.register_types(rover_message_struct)
+    cozy.types.register_type('struct RoverData_t { int temp; unsigned int cmd; }', proj.arch)
+    rover_message_struct = cozy.types.register_type('struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }', proj.arch)
 
     temp = claripy.BVS("temp", 32)
     cmd = claripy.BVS("cmd", 32)
@@ -67,13 +63,9 @@ def run_target5():
 def run_target5_generate():
     proj = angr.Project('test_programs/amp_target5_hackathon/gs_data_processor')
 
-    rover_data_struct = angr.types.parse_type('struct RoverData_t { int temp; unsigned int cmd; }').with_arch(
-        proj.arch)
-    angr.types.register_types(rover_data_struct)
-
-    rover_message_struct = angr.types.parse_type(
-        'struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }').with_arch(proj.arch)
-    angr.types.register_types(rover_message_struct)
+    cozy.types.register_type('struct RoverData_t { int temp; unsigned int cmd; }', proj.arch)
+    rover_message_struct = cozy.types.register_type(
+        'struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }', proj.arch)
 
     temp = claripy.BVS("temp", 32)
     cmd = claripy.BVS("cmd", 32)

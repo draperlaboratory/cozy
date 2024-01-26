@@ -88,3 +88,7 @@ class Project:
                 with open(cfg_filename, 'wb') as f:
                     pickle.dump(self.cached_cfg, f)
         return self.cached_cfg
+
+    @property
+    def arch(self):
+        return self.angr_proj.arch

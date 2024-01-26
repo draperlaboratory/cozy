@@ -39,13 +39,10 @@ Defining Custom Types
 
 Our next task will be to define the structs used by this function. The primary inputs
 to this function is the temperature field and the cmd field. Let's register these datatypes
-with angr::
+with cozy::
 
-    rover_data_struct = angr.types.parse_type('struct RoverData_t { int temp; unsigned int cmd; }').with_arch(proj_prepatched.angr_proj.arch)
-    angr.types.register_types(rover_data_struct)
-
-    rover_message_struct = angr.types.parse_type('struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }').with_arch(proj_prepatched.angr_proj.arch)
-    angr.types.register_types(rover_message_struct)
+    cozy.types.register_type('struct RoverData_t { int temp; unsigned int cmd; }', proj_prepatched.arch)
+    rover_message_struct = cozy.types.register_type('struct RoverMessage_t { unsigned char header[8]; struct RoverData_t packetData; }', proj_prepatched.arch)
 
 We are now ready to add the type signature of the method we wish to analyze to the cozy project::
 
@@ -65,10 +62,10 @@ We now define a run function, which will run a prepatched or postpatched session
 
     def run(sess: cozy.project.Session):
         arg0 = sess.malloc(rover_message_struct.size)
-        sess.state.mem[arg0].struct.RoverMessage_t.packetData.temp = temp.reversed
-        sess.state.mem[arg0].struct.RoverMessage_t.packetData.cmd = cmd.reversed
+        sess.mem[arg0].struct.RoverMessage_t.packetData.temp = temp.reversed
+        sess.mem[arg0].struct.RoverMessage_t.packetData.cmd = cmd.reversed
 
-        return sess.run(arg0, cache_intermediate_states=True)
+        return sess.run([arg0], cache_intermediate_states=True)
 
 In this case we are mutating the memory by changing the memory of the angr state before
 cozy runs. In this case we use angr's API to mutate the temp and cmd fields. Since the

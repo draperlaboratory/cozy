@@ -3,6 +3,7 @@ import archinfo
 import cozy.analysis as analysis
 import cozy.claripy_ext as claripy_ext
 import cozy.execution_graph as execution_graph
+import cozy.types
 from cozy.directive import ErrorDirective
 from cozy.project import Project
 from cozy.session import RunResult
@@ -18,10 +19,8 @@ proj_orig = Project('test_programs/weather_demo/v5/build/weather-orig')
 proj_patched_1 = Project('test_programs/weather_demo/v5/build/weather-patched-1')
 proj_patched_2 = Project('test_programs/weather_demo/v5/build/weather-patched-2')
 
-sensor_row_struct = angr.types.parse_type('struct SensorRow {int *vals; int num_vals; struct SensorRow *next; }').with_arch(proj_orig.angr_proj.arch)
-angr.types.register_types(sensor_row_struct)
-sensor_row_ptr = angr.types.parse_types('typedef struct SensorRow *SensorRowPtr;')
-angr.types.register_types(sensor_row_ptr)
+cozy.types.register_type('struct SensorRow {int *vals; int num_vals; struct SensorRow *next; }', proj_orig.arch)
+cozy.types.register_type('typedef struct SensorRow *SensorRowPtr;', proj_orig.arch)
 
 latest_data = primitives.sym_ptr(archinfo.ArchAMD64, 'latest_data_init').annotate(MultiwriteAnnotation())
 vals = [[claripy.BVS("val_{}_{}".format(i, j), INT_SIZE * 8) for j in range(MAX_NUM_VALS)] for i in range(MAX_NUM_ROWS)]
