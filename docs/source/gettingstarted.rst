@@ -180,7 +180,7 @@ Let's add the directive to the prepatch session::
 Let's invoke the prepatched my_fun with arg0 as the symbolic input via the
 :py:meth:`~cozy.project.Session.run` method::
 
-    run_result = sess_prepatched.run(arg0)
+    run_result = sess_prepatched.run([arg0])
     print(run_result)
 
 Which prints the following result that informs us that an assertion was triggered::
