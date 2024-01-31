@@ -85,7 +85,8 @@ class StateDiff:
         # angr may generate additional internal constraints as the function is symbolically executed
         # these generated symbols will be fresh. In contrast, the input arguments
         # will be the same symbol for both functions
-        joint_solver = claripy.Solver(track=True) # The track parameter is required to generate an unsat core
+        #joint_solver = claripy.Solver(track=True) # The track parameter is required to generate an unsat core
+        joint_solver = claripy.Solver(track=False)  # The track parameter is required to generate an unsat core
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
 
@@ -93,8 +94,8 @@ class StateDiff:
         # inputs to the function is the empty set. This means that these two states could not
         # have been reached with a given input, and we can therefore disregard this comparison
         if not (joint_solver.satisfiable()):
-            core = frozenset(joint_solver.unsat_core())
-            self.cores.append(core)
+            #core = frozenset(joint_solver.unsat_core())
+            #self.cores.append(core)
             return None
 
         ret_mem_diff = dict()
@@ -247,11 +248,18 @@ class CompatiblePair:
         joint_solver = claripy.Solver()
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
-        state_bundle = (args, self.mem_diff, self.reg_diff, self.state_left.virtual_prints, self.state_right.virtual_prints)
+
+        rangeless_mem_diff = {(rng.start, rng.stop): val for (rng, val) in self.mem_diff.items()}
+        state_bundle = (args, rangeless_mem_diff, self.reg_diff, self.state_left.virtual_prints, self.state_right.virtual_prints)
         concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
-        return [CompatiblePairInput(conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right)
-                for (conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right) in
-                concrete_results]
+
+        ret = []
+        for (conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right) in concrete_results:
+            range_conc_mem_diff = {range(start, stop): val for ((start, stop), val) in conc_mem_diff.items()}
+            ret.append(CompatiblePairInput(conc_args, range_conc_mem_diff, conc_reg_diff,
+                                           conc_vprints_left, conc_vprints_right))
+
+        return ret
 
 class Comparison:
     """

@@ -1,13 +1,14 @@
 import archinfo
 
 import cozy.analysis as analysis
+from cozy.concolic.heuristics import BBTransitionCandidate, CompleteTermination
+from cozy.concolic.session import JointConcolicSession
 from cozy.directive import Assume, Assert
 from cozy.constants import *
 import cozy.primitives as primitives
 from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
 
-from cozy.heuristics import BBTransitionCandidate, CyclomaticComplexityTermination, CompleteTermination
-from cozy.project import JointConcolicSession, Project
+from cozy.project import Project
 
 arg0 = primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg').annotate(MultiwriteAnnotation())
 args = [arg0]

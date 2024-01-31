@@ -12,6 +12,7 @@ Welcome to cozy's documentation!
 
    gettingstarted
    launchingavisualization
+   concolic
 
 
 

@@ -52,3 +52,19 @@ def simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bit
                     continue
                 return simplified_expr
         return expr
+
+def get_symbol_name(sym):
+    return sym.args[0]
+
+def model(constraints, **kwargs):
+    solver = claripy.Solver()
+    solver.add(constraints)
+    if solver.satisfiable(**kwargs):
+        models = list(solver._models)
+        if len(models) > 0:
+            print("found model")
+            return models[0].model
+        else:
+            return dict()
+    else:
+        return None

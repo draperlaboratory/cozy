@@ -7,6 +7,9 @@ from collections.abc import Callable
 
 from claripy import UnsatError
 
+from cozy import claripy_ext
+
+
 # This module can be used independently from the rest of the cozy codebase. Perhaps someday the exploration
 # techniques can be merged into the main angr codebase.
 
@@ -80,7 +83,11 @@ class ConcolicSim(ExplorationTechnique):
         :rtype: bool
         :return: If the constraints are True after substitution, then True is returned. Otherwise returns False.
         """
-        return claripy.And(*constraints).replace_dict(self._replacement_dict).is_true()
+        expr = claripy.And(*constraints).replace_dict(self._replacement_dict)
+        if len(expr.variables) == 0:
+            return expr.is_true()
+        else:
+            raise RuntimeError("Some symbols were unconstrained when checking for truthiness after substitution. Are you sure that all symbols are present in the set you passed to generate_concrete?")
 
     def _set_replacement_dict(self, concrete):
         self.concrete = concrete
@@ -105,18 +112,26 @@ class ConcolicSim(ExplorationTechnique):
     def _generate_concrete(self, simgr: angr.SimulationManager, from_stash: list[angr.SimState],
                            symbols: set[claripy.BVS] | frozenset[claripy.BVS],
                            candidate_heuristic: Callable[[list[angr.SimState]], angr.SimState] | None=None):
-        symbols_list = list(symbols)
+        symbols_lookup = {claripy_ext.get_symbol_name(sym): sym for sym in symbols}
         while len(from_stash) > 0:
             if candidate_heuristic is None:
                 candidate_state = from_stash.pop()
             else:
                 candidate_state = candidate_heuristic(from_stash)
             try:
-                eval_res_lst = candidate_state.solver._solver.batch_eval(symbols_list, 1)
-                if len(eval_res_lst) > 0:
-                    eval_res = eval_res_lst[0]
-                    concrete = {sym: claripy.BVV(concrete_val, sym.length) for (sym, concrete_val) in
-                                zip(symbols_list, eval_res)}
+                model = claripy_ext.model(candidate_state.solver.constraints)
+
+                # angr could have introduced symbols during execution that aren't part of symbols
+                all_symbols = dict(symbols_lookup)
+                for constraint in candidate_state.solver.constraints:
+                    for leaf in constraint.leaf_asts():
+                        if leaf.symbolic:
+                            leaf_name = claripy_ext.get_symbol_name(leaf)
+                            all_symbols[leaf_name] = leaf
+
+                if model is not None:
+                    concrete = {sym: (claripy.BVV(model[sym_name], sym.length) if sym_name in model else claripy.BVV(0, sym.length))
+                                for (sym_name, sym) in all_symbols.items()}
                     self._set_replacement_dict(concrete)
                     simgr.active.append(candidate_state)
                     return
@@ -180,11 +195,11 @@ class JointConcolicSim:
         :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_left: The heuristic that
         should be used to choose the deferred state that should be explored further. Note that this function should\
         mutate its input list (ie, remove the desired state), and return that desired state. Note that some\
-        pre-made candidate heuristic techniques can be found in the :py:mod:cozy.concolic.heuristics module.
+        pre-made candidate heuristic techniques can be found in the :py:mod:`cozy.concolic.heuristics` module.
         :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_right: The heuristic that
         should be used to choose the deferred state that should be explored further. Note that this function should\
         mutate its input list (ie, remove the desired state), and return that desired state. Note that some\
-        pre-made candidate heuristic techniques can be found in the :py:mod:cozy.concolic.heuristics module.
+        pre-made candidate heuristic techniques can be found in the :py:mod:`cozy.concolic.heuristics` module.
         """
         self.simgr_left = simgr_left
         self.simgr_right = simgr_right
@@ -235,21 +250,21 @@ class JointConcolicSim:
         Explores the simulations given in the left and right simulation manager.
 
         :param Callable[[SimulationManager], None] | None explore_fun_left: If this parameter is not None, then\
-        instead of :py:meth:SimulationManager.explore being called to do the exploration, we call explore_fun_left\
+        instead of :py:meth:`SimulationManager.explore` being called to do the exploration, we call explore_fun_left\
         instead.
         :param Callable[[SimulationManager], None] | None explore_fun_right: If this parameter is not None, then\
-        instead of :py:meth:SimulationManager.explore being called to do the exploration, we call explore_fun_right\
+        instead of :py:meth:`SimulationManager.explore` being called to do the exploration, we call explore_fun_right\
         instead.
         :param Callable[[SimulationManager], bool] | None termination_fun_left: Every time we finish exploring one\
         concrete input, this function is called to determine if the exploration should terminate. If both termination\
         functions return True, then exploration is halted and this function returns. If this parameter is None, then\
         the left simulation manager will terminate only when no further exploration is possible (ie, execution is\
-        complete). Pre-made termination functions can be found in the :py:mod:cozy.concolic.heuristics module.
+        complete). Pre-made termination functions can be found in the :py:mod:`cozy.concolic.heuristics` module.
         :param Callable[[SimulationManager], bool] | None termination_fun_right: Every time we finish exploring one\
         concrete input, this function is called to determine if the exploration should terminate. If both termination\
         functions return True, then exploration is halted and this function returns. If this parameter is None, then\
         the right simulation manager will terminate only when no further exploration is possible (ie, execution is\
-        complete). Pre-made termination functions can be found in the :py:mod:cozy.concolic.heuristics module.
+        complete). Pre-made termination functions can be found in the :py:mod:`cozy.concolic.heuristics` module.
 
         :return: None
         :rtype: None
@@ -266,6 +281,10 @@ class JointConcolicSim:
                 self.simgr_right.explore()
             else:
                 explore_fun_right(self.simgr_right)
+
+            print("simgr_left", self.simgr_left)
+            print("simgr_right", self.simgr_right)
+
             def swap_and_generate():
                 self._swap_explore_mode()
                 self._generate_concrete(self.simgr_left.stashes[self.left_explorer.deferred_stash],

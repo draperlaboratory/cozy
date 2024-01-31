@@ -5,7 +5,7 @@ from cozy.project import Session
 
 class ArbitraryCandidate:
     """
-    For use as the candidate heuristic in :py:meth:cozy.exploration.ConcolicSim.generate_concrete
+    For use as the candidate heuristic in :py:meth:`cozy.exploration.ConcolicSim.generate_concrete`
     This heuristic will choose the next exploration candidate by popping the last element off the candidate's list.
     """
     def __call__(self, candidate_states: list[SimState]):
@@ -13,7 +13,7 @@ class ArbitraryCandidate:
 
 class BBTransitionCandidate:
     """
-    For use as the candidate heuristic in :py:meth:cozy.exploration.ConcolicSim.generate_concrete
+    For use as the candidate heuristic in :py:meth:`cozy.exploration.ConcolicSim.generate_concrete`
     This heuristic will select a candidate whose basic block history has been seen least frequently in the past. This
     class keeps an internal record of candidates it chose in the past to compute this metric.
     """
