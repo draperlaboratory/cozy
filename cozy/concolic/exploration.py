@@ -1,3 +1,4 @@
+import typing
 from enum import Enum
 
 import angr
@@ -93,7 +94,7 @@ class ConcolicSim(ExplorationTechnique):
         self.concrete = concrete
         self._replacement_dict = {sym.cache_key: val for (sym, val) in concrete.items()}
 
-    def set_concrete(self, simgr, concrete: dict[claripy.BVS, claripy.BVV]):
+    def set_concrete(self, simgr, concrete: dict[typing.Union[claripy.BVS, claripy.FPS], typing.Union[claripy.BVV, claripy.FPV]]):
         """
         Sets the concrete input via a substitution dictionary. All the symbols used by the program should have concrete
         values provided for them. The active and deferred stash will be mutated to ensure that only states which
@@ -112,27 +113,16 @@ class ConcolicSim(ExplorationTechnique):
     def _generate_concrete(self, simgr: angr.SimulationManager, from_stash: list[angr.SimState],
                            symbols: set[claripy.BVS] | frozenset[claripy.BVS],
                            candidate_heuristic: Callable[[list[angr.SimState]], angr.SimState] | None=None):
-        symbols_lookup = {claripy_ext.get_symbol_name(sym): sym for sym in symbols}
         while len(from_stash) > 0:
             if candidate_heuristic is None:
                 candidate_state = from_stash.pop()
             else:
                 candidate_state = candidate_heuristic(from_stash)
             try:
-                model = claripy_ext.model(candidate_state.solver.constraints)
-
-                # angr could have introduced symbols during execution that aren't part of symbols
-                all_symbols = dict(symbols_lookup)
-                for constraint in candidate_state.solver.constraints:
-                    for leaf in constraint.leaf_asts():
-                        if leaf.symbolic:
-                            leaf_name = claripy_ext.get_symbol_name(leaf)
-                            all_symbols[leaf_name] = leaf
+                model = claripy_ext.model(candidate_state.solver.constraints, extra_symbols=symbols)
 
                 if model is not None:
-                    concrete = {sym: (claripy.BVV(model[sym_name], sym.length) if sym_name in model else claripy.BVV(0, sym.length))
-                                for (sym_name, sym) in all_symbols.items()}
-                    self._set_replacement_dict(concrete)
+                    self._set_replacement_dict(model)
                     simgr.active.append(candidate_state)
                     return
                 else:

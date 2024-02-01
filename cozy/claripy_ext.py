@@ -1,3 +1,5 @@
+import typing
+
 import claripy
 
 from . import primitives
@@ -56,15 +58,40 @@ def simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bit
 def get_symbol_name(sym):
     return sym.args[0]
 
-def model(constraints, **kwargs):
+# TODO: Support generation of N models, not just one
+def model(constraints, extra_symbols=frozenset(), **kwargs) -> dict[typing.Union[claripy.BVS, claripy.FPS], typing.Union[claripy.BVV, claripy.FPV]] | None:
     solver = claripy.Solver()
     solver.add(constraints)
     if solver.satisfiable(**kwargs):
         models = list(solver._models)
+
+        ret = dict()
+
         if len(models) > 0:
-            print("found model")
-            return models[0].model
-        else:
-            return dict()
+            # m maps symbol names to either integers or floats. We want symbols to map
+            # to BVV or FPS, so we need to do that conversion here
+            m = models[0].model
+            for c in constraints:
+                for leaf in c.leaf_asts():
+                    if leaf.symbolic:
+                        leaf_name = get_symbol_name(leaf)
+                        if leaf.op == "BVS":
+                            ret[leaf] = claripy.BVV(m[leaf_name], leaf.length)
+                        elif leaf.op == "FPS":
+                            ret[leaf] = claripy.FPV(m[leaf_name], leaf.sort)
+                        else:
+                            raise ValueError("Unsupported leaf op")
+
+        # Set any symbols not in the model to 0
+        for extra in extra_symbols:
+            if extra not in ret:
+                if extra.op == "BVS":
+                    ret[extra] = claripy.BVV(0, extra.length)
+                elif extra.op == "FPS":
+                    ret[extra] = claripy.FPV(0.0, extra.sort)
+                else:
+                    raise ValueError("Unsupported leaf op")
+
+        return ret
     else:
         return None

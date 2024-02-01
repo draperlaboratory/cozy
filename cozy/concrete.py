@@ -1,42 +1,28 @@
 import claripy
-from . import directive
+from . import directive, claripy_ext
 from .functools_ext import *
 
 def _concretize(solver, state_bundle, n=1):
-    def f(elem, accum):
+    def traverse(elem, bundle_symbols):
+        if isinstance(elem, claripy.ast.Bits):
+            if elem.symbolic:
+                for leaf in elem.leaf_asts():
+                    if leaf.symbolic:
+                        bundle_symbols.add(leaf)
+        return bundle_symbols
+
+    extra_symbols = preorder_fold(state_bundle, traverse, set())
+
+    model = claripy_ext.model(solver.constraints, extra_symbols=extra_symbols)
+    replacement_dict = {sym.cache_key: val for (sym, val) in model.items()}
+
+    def f(elem):
         if isinstance(elem, claripy.ast.Base):
-            accum.append(elem)
-        return accum
-    # eval_lst will be a list, where the order of the elements is determined by
-    # the order they are visited in a preorder traversal of the Python datastructures
-    # The elements in question are claripy AST nodes that we are going to evaluate
-    eval_lst = preorder_fold(state_bundle, f, [])
+            return elem.replace_dict(replacement_dict)
+        else:
+            return elem
 
-    # This is a list of concrete examples
-    concrete_vals_lst = solver.batch_eval(eval_lst, n)
-
-    ret = []
-
-    # Foreach concrete example
-    for concrete_vals in concrete_vals_lst:
-        # Map the original datastructure so that claripy.ast.Base elements are replaced
-        # with their concrete values.
-        def g(elem0, idx0):
-            if isinstance(elem0, claripy.ast.Base):
-                # Lookup what this AST was concretely evaluated to by indexing into
-                # this list via the preorder traversal number
-                elem1 = concrete_vals[idx0]
-                idx1 = idx0 + 1
-            else:
-                elem1 = elem0
-                idx1 = idx0
-            return (elem1, idx1)
-
-        (concrete_vals_prime, last_idx) = preorder_mapfold(state_bundle, g, 0)
-
-        ret.append(concrete_vals_prime)
-
-    return ret
+    return [fmap(state_bundle, f)]
 
 class CompatiblePairInput:
     """

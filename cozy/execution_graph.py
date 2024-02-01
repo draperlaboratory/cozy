@@ -1,9 +1,12 @@
 import angr.errors
+import claripy
 import networkx as nx
 import json
 import sys
 from angr.block import Block
 from collections.abc import Callable
+
+from .functools_ext import fmap
 from .project import Project
 from .session import RunResult
 from . import analysis
@@ -20,6 +23,11 @@ def _serialize_diff(diff):
     def convert_val(v) -> str:
         if isinstance(v, int):
             return str(hex(v))
+        elif isinstance(v, claripy.ast.Bits):
+            if v.symbolic:
+                return v.shallow_repr(max_depth=3)
+            else:
+                return convert_val(v.concrete_value)
         else:
             return str(v)
     return {convert_key(k): (convert_val(v1), convert_val(v2)) for (k, (v1, v2)) in diff.items()}
@@ -205,24 +213,22 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
             if comparison_results.is_compatible(state_a, state_b):
                 comp = comparison_results.get_pair(state_a, state_b)
                 concretion = comp.concrete_examples(args, num_examples=num_examples)
-                g_a.nodes[na]["compatibilities"][nb] = {
-                        "memdiff": _serialize_diff(comp.mem_diff),
-                        "regdiff": _serialize_diff(comp.reg_diff),
-                        "conc_memdiff": list(map(lambda x: _serialize_diff(x.mem_diff), concretion)),
-                        "conc_regdiff": list(map(lambda x: _serialize_diff(x.reg_diff), concretion)),
-                        "conc_args": list(map(lambda x: concrete_arg_mapper(x.args), concretion))
-                                     if concrete_arg_mapper is not None 
-                                     else list(map(lambda x: x.args, concretion)),
-                    }
-                g_b.nodes[nb]["compatibilities"][na] = {
-                        "memdiff": _serialize_diff(comp.mem_diff),
-                        "regdiff": _serialize_diff(comp.reg_diff),
-                        "conc_memdiff": list(map(lambda x: _serialize_diff(x.mem_diff), concretion)),
-                        "conc_regdiff": list(map(lambda x: _serialize_diff(x.reg_diff), concretion)),
-                        "conc_args": list(map(lambda x: concrete_arg_mapper(x.args), concretion))
-                                     if concrete_arg_mapper is not None 
-                                     else list(map(lambda x: x.args, concretion)),
-                    }
+
+                if concrete_arg_mapper is not None:
+                    concrete_args = [concrete_arg_mapper(x.args) for x in concretion]
+                else:
+                    concrete_args = [x.args for x in concretion]
+                concrete_args = fmap(concrete_args, lambda x: x.concrete_value if isinstance(x, claripy.ast.Bits) else x)
+
+                info = {
+                    "memdiff": _serialize_diff(comp.mem_diff),
+                    "regdiff": _serialize_diff(comp.reg_diff),
+                    "conc_memdiff": [_serialize_diff(x.mem_diff) for x in concretion],
+                    "conc_regdiff": [_serialize_diff(x.reg_diff) for x in concretion],
+                    "conc_args": concrete_args
+                }
+                g_a.nodes[na]["compatibilities"][nb] = info
+                g_b.nodes[nb]["compatibilities"][na] = info
     def stringify_attrs(eg, g):
         for ((parent_i, child_i), edge_attr) in g.edges.items():
             child = g.nodes[child_i]["state"]

@@ -78,7 +78,7 @@ def log_lr(st):
 
 def run(sess, use_assert, cache_intermediate_states=False):
     len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C, "Requested size is too large!")
-    sess.add_directives(cozy.directive.VirtualPrint.from_fun_offset(sess.proj, onMessageLength_mangled, 0x0, log_lr, concrete_mapper=hex, info_str="Initial link register"))
+    sess.add_directives(cozy.directive.VirtualPrint.from_fun_offset(sess.proj, onMessageLength_mangled, 0x0, log_lr, concrete_mapper=lambda x: hex(x.concrete_value), info_str="Initial link register"))
     sess.add_directives(len_too_big)
 
     if use_assert:
@@ -97,7 +97,7 @@ def run(sess, use_assert, cache_intermediate_states=False):
     sess.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
 
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
-    result = sess.run(this_obj, 0x0, size_ptr_ptr, 4, 1, cache_intermediate_states=cache_intermediate_states)
+    result = sess.run([this_obj, 0x0, size_ptr_ptr, 4, 1], cache_intermediate_states=cache_intermediate_states)
 
     if use_assert:
         print(result.report_asserts_failed({"size": size, "totalram": totalram}))

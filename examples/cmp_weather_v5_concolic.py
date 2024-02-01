@@ -29,7 +29,7 @@ add_prototype(proj_patched_1)
 add_prototype(proj_patched_2)
 
 sensor_row_struct = cozy.types.register_type('struct SensorRow {int *vals; int num_vals; struct SensorRow *next; }', proj_orig.arch)
-cozy.types.register_type('typedef struct SensorRow *SensorRowPtr;', proj_orig.arch)
+cozy.types.register_types('typedef struct SensorRow *SensorRowPtr;')
 
 latest_data = primitives.sym_ptr(archinfo.ArchAMD64, 'latest_data_init').annotate(MultiwriteAnnotation())
 vals = [[claripy.BVS("val_{}_{}".format(i, j), INT_SIZE * 8) for j in range(MAX_NUM_VALS)] for i in range(MAX_NUM_ROWS)]
@@ -110,18 +110,19 @@ def run_orig_and_1():
 def concrete_mapper(concrete_args):
     (latest_data_init, rows) = concrete_args
     out_rows = []
-    row_ptr = latest_data_init["latest_data_init"]
+    row_ptr = latest_data_init["latest_data_init"].concrete_value
     for (vals, num_vals, next_row) in rows:
         if row_ptr == NULL_PTR:
             break
-        vals = vals[:num_vals]
+        vals = vals[:num_vals.concrete_value]
         out_rows.append({
-            'vals': [primitives.from_twos_comp(v, 32) for v in vals],
-            'num_vals': num_vals,
-            'next': hex(next_row)
+            'vals': [primitives.from_twos_comp(v.concrete_value, 32) for v in vals],
+            'num_vals': num_vals.concrete_value,
+            'next': hex(next_row.concrete_value)
         })
-        row_ptr = next_row
-    return (analysis.hexify(latest_data_init), out_rows)
+        row_ptr = next_row.concrete_value
+    out_latest_data_init = {"latest_data_init": hex(latest_data_init["latest_data_init"].concrete_value)}
+    return (out_latest_data_init, out_rows)
 
 (pre_patched, post_patched) = run_orig_and_1()
 comparison_results = analysis.Comparison(pre_patched, post_patched)

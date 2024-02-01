@@ -70,7 +70,7 @@ def run_weather_1():
         offset=0x4C,
         log_fun=lambda st: st.regs.eax,
         info_str="Computed Average",
-        concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val, 32)
+        concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val.concrete_value, 32)
     )
 
     sess.add_directives(my_print)
@@ -91,7 +91,7 @@ def run_weather_2():
         offset=0x46,
         log_fun=lambda st: st.regs.eax,
         info_str="Computed Average",
-        concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val, 32)
+        concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val.concrete_value, 32)
     )
 
     sess.add_directives(my_print)
@@ -112,7 +112,7 @@ def run_weather_3():
         offset=0x46,
         log_fun=lambda st: st.regs.eax,
         info_str="Computed Average: ",
-        concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val, 32)
+        concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val.concrete_value, 32)
     )
 
     sess.add_directives(my_print)
@@ -123,7 +123,7 @@ def run_weather_3():
 
 args = symbolic_integers_lst
 def concrete_mapper(integers_lst):
-    return [[primitives.from_twos_comp(x, 32) for x in integers] for integers in integers_lst]
+    return [[primitives.from_twos_comp(x.concrete_value, 32) for x in integers] for integers in integers_lst]
 
 print("Running weather-1")
 weather_1_states = run_weather_1()
