@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 
 import claripy
+import z3.z3types
 from angr import SimState
 
 import portion as P
@@ -89,7 +90,6 @@ class StateDiff:
         # these generated symbols will be fresh. In contrast, the input arguments
         # will be the same symbol for both functions
         joint_solver = claripy.Solver(track=use_unsat_core) # The track parameter is required to generate an unsat core
-        #joint_solver = claripy.Solver(track=False)  # The track parameter is required to generate an unsat core
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
 
