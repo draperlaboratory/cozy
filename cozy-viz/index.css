@@ -181,7 +181,8 @@ button:disabled {
 }
 
 #diff-drag-handle {
-  background: white;
+  top:0px;
+  position:sticky;
   height: 5px;
   cursor: grab;
 }
