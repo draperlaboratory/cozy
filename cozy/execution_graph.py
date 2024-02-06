@@ -241,7 +241,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
             if include_simprocs: attr['simprocs'] = eg._list_simprocs(attr["contents"]) or []
             if flag_syscalls: attr['has_syscall'] = eg._has_syscall(attr["contents"]) or False
             attr['contents'] = eg._get_bbl_asm(attr["contents"]) or "*"
-            attr['constraints'] = list(map(str, attr["constraints"])) or "*"
+            attr['constraints'] = [con.shallow_repr(max_depth=3) for con in attr["constraints"]] or "*"
             if "failed_cond" in attr: attr['failed_cond'] = str(attr["failed_cond"]) or "*"
             del attr['state']
     stringify_attrs(eg_a, g_a)
@@ -368,9 +368,17 @@ class ExecutionGraph:
         g = nx.convert_node_labels_to_integers(self.graph, label_attribute='state')
         for (node_i, attr) in g.nodes.items():
             node = g.nodes[node_i]['state']
-            # Assuming utf-8 character encoding, 
-            attr['stdout'] = node.posix.dumps(sys.stdout.fileno()).decode('utf-8')
-            attr['stderr'] = node.posix.dumps(sys.stderr.fileno()).decode('utf-8')
+            # Assuming utf-8 character encoding,
+            stdout = node.posix.dumps(sys.stdout.fileno())
+            try:
+                attr['stdout'] = stdout.decode('utf-8')
+            except UnicodeDecodeError:
+                attr['stdout'] = str(stdout)
+            stderr = node.posix.dumps(sys.stderr.fileno())
+            try:
+                attr['stderr'] = stderr.decode('utf-8')
+            except UnicodeDecodeError:
+                attr['stderr'] = str(stderr)
             if node.project.simos.is_syscall_addr(node.addr):
                 # Here we are inside of a syscall implementation. The address that
                 # angr jumps to when it executes a syscall does not actually contain

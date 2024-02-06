@@ -66,7 +66,23 @@ def model(constraints, extra_symbols=frozenset(), **kwargs) -> dict[typing.Union
         models = list(solver._models)
 
         ret = dict()
+        
+        def zero(sym):
+            if sym.op == "BVS":
+                return claripy.BVV(0, sym.length)
+            elif sym.op == "FPS":
+                return claripy.FPV(0.0, sym.sort)
+            else:
+                raise ValueError("Unsupported op")
 
+        def value(sym, v):
+            if sym.op == "BVS":
+                return claripy.BVV(v, sym.length)
+            elif sym.op == "FPS":
+                return claripy.FPV(v, sym.sort)
+            else:
+                raise ValueError("Unsupported op")
+        
         if len(models) > 0:
             # m maps symbol names to either integers or floats. We want symbols to map
             # to BVV or FPS, so we need to do that conversion here
@@ -75,22 +91,15 @@ def model(constraints, extra_symbols=frozenset(), **kwargs) -> dict[typing.Union
                 for leaf in c.leaf_asts():
                     if leaf.symbolic:
                         leaf_name = get_symbol_name(leaf)
-                        if leaf.op == "BVS":
-                            ret[leaf] = claripy.BVV(m[leaf_name], leaf.length)
-                        elif leaf.op == "FPS":
-                            ret[leaf] = claripy.FPV(m[leaf_name], leaf.sort)
+                        if leaf_name in m:
+                            ret[leaf] = value(leaf, m[leaf_name])
                         else:
-                            raise ValueError("Unsupported leaf op")
+                            ret[leaf] = zero(leaf)
 
         # Set any symbols not in the model to 0
         for extra in extra_symbols:
             if extra not in ret:
-                if extra.op == "BVS":
-                    ret[extra] = claripy.BVV(0, extra.length)
-                elif extra.op == "FPS":
-                    ret[extra] = claripy.FPV(0.0, extra.sort)
-                else:
-                    raise ValueError("Unsupported leaf op")
+                ret[extra] = zero(extra)
 
         return ret
     else:

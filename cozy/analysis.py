@@ -50,7 +50,8 @@ class StateDiff:
                    sl: SimState, sr: SimState,
                    ignore_addrs: collections.abc.Iterable[range] | None = None,
                    compute_mem_diff=True,
-                   compute_reg_diff=True) -> (
+                   compute_reg_diff=True,
+                   use_unsat_core=True) -> (
             tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None):
         """
         Compares two states to find differences in memory. This function will return None if the two states have\
@@ -66,8 +67,10 @@ class StateDiff:
         large.
         :param bool compute_mem_diff: If this flag is True, then we will diff the memory. If this is false, then the\
         first element of the return tuple will be None.
-        :param compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the\
+        :param bool compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the\
         second element of the return tuple will be None.
+        :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
+        comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
         :return: None if the two states are not compatible, otherwise returns a tuple containing the memory and\
         register differences.
         :rtype: tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None
@@ -85,8 +88,8 @@ class StateDiff:
         # angr may generate additional internal constraints as the function is symbolically executed
         # these generated symbols will be fresh. In contrast, the input arguments
         # will be the same symbol for both functions
-        #joint_solver = claripy.Solver(track=True) # The track parameter is required to generate an unsat core
-        joint_solver = claripy.Solver(track=False)  # The track parameter is required to generate an unsat core
+        joint_solver = claripy.Solver(track=use_unsat_core) # The track parameter is required to generate an unsat core
+        #joint_solver = claripy.Solver(track=False)  # The track parameter is required to generate an unsat core
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
 
@@ -94,8 +97,9 @@ class StateDiff:
         # inputs to the function is the empty set. This means that these two states could not
         # have been reached with a given input, and we can therefore disregard this comparison
         if not (joint_solver.satisfiable()):
-            #core = frozenset(joint_solver.unsat_core())
-            #self.cores.append(core)
+            if use_unsat_core:
+                core = frozenset(joint_solver.unsat_core())
+                self.cores.append(core)
             return None
 
         ret_mem_diff = dict()
@@ -276,7 +280,7 @@ class Comparison:
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
                  ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False,
-                 compare_std_err=False):
+                 compare_std_err=False, use_unsat_core=True):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
 
@@ -290,6 +294,8 @@ class Comparison:
         :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results.\
         Note that angr currently concretizes values written to stdout, so these values will be binary strings.
         :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
+        :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
+        comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
         """
 
         if ignore_addrs is None:
@@ -329,7 +335,8 @@ class Comparison:
                 diff = memoized_diff.difference(
                     state_pre.state, state_post.state, pair_ignore_addrs,
                     compute_mem_diff=compare_memory if is_deadended_comparison else False,
-                    compute_reg_diff=compare_registers if is_deadended_comparison else False
+                    compute_reg_diff=compare_registers if is_deadended_comparison else False,
+                    use_unsat_core=use_unsat_core
                 )
 
                 if diff is not None:

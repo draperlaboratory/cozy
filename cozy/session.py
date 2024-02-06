@@ -135,9 +135,17 @@ def _on_mem_write(state):
     else:
         start_addrs = None
     length = state.inspect.mem_write_length
+    if isinstance(length, claripy.ast.BV):
+        if length.concrete:
+            length = length.concrete_value
+        else:
+            # TODO: Do something better than take the max
+            length = state.solver.max(length)
     ip_frozenset = frozenset([state.ip])
     if start_addrs is not None and length is not None:
         for st_addr in start_addrs:
+            if not isinstance(length, int):
+                print("Gotcha")
             write_range = P.closedopen(st_addr, st_addr + length)
             if len(start_addrs) > 1:
                 existing_ip = [ip_set for (n, ip_set) in mem_writes[write_range].values()]

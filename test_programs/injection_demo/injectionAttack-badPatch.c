@@ -22,9 +22,10 @@ void receiver(char *serialized) {
 
   validateSerialized(serialized);
 
-  char *command = strtok(serialized, ";");
-  char *role = strtok(NULL, ";");
-  char *data = strtok(NULL, "");
+  char *saveptr;
+  char *command = strtok_r(serialized, ";", &saveptr);
+  char *role = strtok_r(NULL, ";", &saveptr);
+  char *data = strtok_r(NULL, "", &saveptr);
 
   // "sanitize" input
   if ((strcmp(command, "c:DELETE") != 0 && strcmp(command, "c:STORE") != 0) ||

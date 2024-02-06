@@ -260,7 +260,9 @@ class JointConcolicSim:
         :rtype: None
         """
         while len(self.simgr_left.active) > 0 or len(self.simgr_right.active) > 0:
-            if termination_fun_left is not None and termination_fun_right is not None and termination_fun_left(self.simgr_left) and termination_fun_right(self.simgr_right):
+            if (termination_fun_left is not None and termination_fun_right is not None and
+                    (len(self.simgr_left.active) == 0 or termination_fun_left(self.simgr_left)) and
+                    (len(self.simgr_right.active) == 0 or termination_fun_right(self.simgr_right))):
                 return
 
             if explore_fun_left is None:

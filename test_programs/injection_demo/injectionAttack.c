@@ -9,9 +9,10 @@ void delete(char *data) { printf("deleting: \"%s\"\n", data + 2); }
 void store(char *data) { printf("stored: \"%s\"\n", data + 2); }
 
 void receiver(char *serialized) {
-  char *command = strtok(serialized, ";");
-  char *role = strtok(NULL, ";");
-  char *data = strtok(NULL, "");
+  char *saveptr;
+  char *command = strtok_r(serialized, ";", &saveptr);
+  char *role = strtok_r(NULL, ";", &saveptr);
+  char *data = strtok_r(NULL, "", &saveptr);
 
   // "sanitize" input
   if ((strcmp(command, "c:DELETE") != 0 && strcmp(command, "c:STORE") != 0) ||
