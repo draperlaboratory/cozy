@@ -3,6 +3,7 @@ import pickle
 from collections.abc import Callable
 
 import angr
+from angr import SimProcedure
 from cle import Backend
 
 from cozy.session import Session
@@ -76,6 +77,11 @@ class Project:
 
     @property
     def cfg(self):
+        """
+        Returns the control flow graph for this project. This property will cache the cfg in a pickle file
+        to speed up future runs. This means if you change the underlying program you will need to delete the
+        .cfg.pickle file located in the same directory as your executable.
+        """
         if self.cached_cfg is None:
             cfg_filename = self.angr_proj.filename + ".cfg.pickle"
             if os.path.exists(cfg_filename):
@@ -91,4 +97,26 @@ class Project:
 
     @property
     def arch(self):
+        """
+        Returns the underlying angr project architecture
+        """
         return self.angr_proj.arch
+
+    def hook_symbol(self, symbol_name: str, simproc_class: type[SimProcedure], kwargs=None, replace: bool | None=None) -> int:
+        """
+        Hooks a symbol in the angr project. If the symbol is one from libc, this method will also replace
+        what is stored in :py:attr:`angr.SIM_PROCEDURES["libc"][symbol_name]`.
+
+        :param str symbol_name: The name of the symbol to hook.
+        :param type[SimProcedure] simproc_class: The class to use to hook the symbol. Note that this is not an instance\
+        of SimProcedure, but is instead a reference to the class itself.
+        :param kwargs: These are the keyword arguments that will be passed to the procedure's `run` method eventually.
+        :param bool | None replace: Control the behavior on finding that the address is already hooked. If true,\
+        silently replace the hook. If false, warn and do not replace the hook. If none (default), warn and replace the\
+        hook.
+        :rtype: int
+        :return: The address of the new symbol.
+        """
+        if symbol_name in angr.SIM_PROCEDURES["libc"]:
+            angr.SIM_PROCEDURES["libc"][symbol_name] = simproc_class
+        return self.angr_proj.hook_symbol(symbol_name, simproc_class(project=self.angr_proj), kwargs=kwargs, replace=replace)

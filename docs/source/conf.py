@@ -7,9 +7,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'cozy'
-copyright = '2023, The Charles Stark Draper Laboratory'
+copyright = '2024, The Charles Stark Draper Laboratory'
 author = 'The Charles Stark Draper Laboratory'
-release = '1.0'
+release = '1.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

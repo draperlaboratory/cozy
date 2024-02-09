@@ -88,7 +88,7 @@ class ConcolicSim(ExplorationTechnique):
         if len(expr.variables) == 0:
             return expr.is_true()
         else:
-            raise RuntimeError("Some symbols were unconstrained when checking for truthiness after substitution. Are you sure that all symbols are present in the set you passed to generate_concrete?")
+            raise RuntimeError("Some symbols were unconstrained when checking for truthiness after substitution. Are you sure that all symbols are present in the set you passed to generate_concrete? Another likely cause of this error is a hook introducing a fresh symbolic variable")
 
     def _set_replacement_dict(self, concrete):
         self.concrete = concrete
@@ -160,14 +160,14 @@ class ConcolicSim(ExplorationTechnique):
         else:
             return self.deferred_stash
 
-class ExploreMode(Enum):
+class _ExploreMode(Enum):
     EXPLORE_LEFT = 0
     EXPLORE_RIGHT = 1
 
 class JointConcolicSim:
     """
-    Jointly runs two SimulationManager objects by concretizing symbols, then running the left and right simulations\
-    with the same concrete input. This joint simulator alternates between the left and right simulations\
+    Jointly runs two SimulationManager objects by concretizing symbols, then running the left and right simulations
+    with the same concrete input. This joint simulator alternates between the left and right simulations
     when generating new concrete inputs.
     """
     def __init__(self, simgr_left: SimulationManager, simgr_right: SimulationManager,
@@ -182,11 +182,11 @@ class JointConcolicSim:
         this exploration technique will be attached to the left simulation manager.
         :param ConcolicSim right_explorer: The second exploration method to use for concolic execution. Note that\
         this exploration technique will be attached to the right simulation manager.
-        :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_left: The heuristic that
+        :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_left: The heuristic that\
         should be used to choose the deferred state that should be explored further. Note that this function should\
         mutate its input list (ie, remove the desired state), and return that desired state. Note that some\
         pre-made candidate heuristic techniques can be found in the :py:mod:`cozy.concolic.heuristics` module.
-        :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_right: The heuristic that
+        :param Callable[[list[angr.SimState]], angr.SimState] | None candidate_heuristic_right: The heuristic that\
         should be used to choose the deferred state that should be explored further. Note that this function should\
         mutate its input list (ie, remove the desired state), and return that desired state. Note that some\
         pre-made candidate heuristic techniques can be found in the :py:mod:`cozy.concolic.heuristics` module.
@@ -194,7 +194,7 @@ class JointConcolicSim:
         self.simgr_left = simgr_left
         self.simgr_right = simgr_right
         self.symbols = symbols
-        self.explore_mode = ExploreMode.EXPLORE_LEFT
+        self.explore_mode = _ExploreMode.EXPLORE_LEFT
         self.left_explorer = left_explorer
         self.right_explorer = right_explorer
         left_explorer._symbols = None
@@ -206,13 +206,13 @@ class JointConcolicSim:
         self.simgr_right.use_technique(self.right_explorer)
 
     def _swap_explore_mode(self):
-        if self.explore_mode == ExploreMode.EXPLORE_LEFT:
-            self.explore_mode = ExploreMode.EXPLORE_RIGHT
+        if self.explore_mode == _ExploreMode.EXPLORE_LEFT:
+            self.explore_mode = _ExploreMode.EXPLORE_RIGHT
         else:
-            self.explore_mode = ExploreMode.EXPLORE_LEFT
+            self.explore_mode = _ExploreMode.EXPLORE_LEFT
 
     def _generate_concrete(self, from_stash_left, from_stash_right):
-        if self.explore_mode == ExploreMode.EXPLORE_LEFT:
+        if self.explore_mode == _ExploreMode.EXPLORE_LEFT:
             primary_explorer = self.left_explorer
             primary_simgr = self.simgr_left
             primary_from_stash = from_stash_left
@@ -255,7 +255,6 @@ class JointConcolicSim:
         functions return True, then exploration is halted and this function returns. If this parameter is None, then\
         the right simulation manager will terminate only when no further exploration is possible (ie, execution is\
         complete). Pre-made termination functions can be found in the :py:mod:`cozy.concolic.heuristics` module.
-
         :return: None
         :rtype: None
         """
@@ -273,9 +272,6 @@ class JointConcolicSim:
                 self.simgr_right.explore()
             else:
                 explore_fun_right(self.simgr_right)
-
-            print("simgr_left", self.simgr_left)
-            print("simgr_right", self.simgr_right)
 
             def swap_and_generate():
                 self._swap_explore_mode()

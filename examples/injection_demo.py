@@ -6,10 +6,6 @@ import claripy
 
 #logging.getLogger('angr').setLevel('DEBUG')
 
-angr.SIM_PROCEDURES["libc"]["strlen"] = cozy.hooks.strlen.strlen
-angr.SIM_PROCEDURES["libc"]["strncmp"] = cozy.hooks.strncmp.strncmp
-angr.SIM_PROCEDURES["libc"]["strtok_r"] = cozy.hooks.strtok_r.strtok_r
-
 proj_prepatched = cozy.project.Project('test_programs/injection_demo/injectionAttack')
 proj_goodpatch = cozy.project.Project('test_programs/injection_demo/injectionAttack-goodPatch')
 
@@ -64,14 +60,14 @@ def setup(sess: cozy.project.Session):
 prepatched_sess = proj_prepatched.session("main")
 goodpatched_sess = proj_goodpatch.session("main")
 
-proj_prepatched.angr_proj.hook_symbol('strlen', cozy.hooks.strlen.strlen(project=proj_prepatched.angr_proj), replace=True)
-proj_goodpatch.angr_proj.hook_symbol('strlen', cozy.hooks.strlen.strlen(project=proj_goodpatch.angr_proj), replace=True)
+proj_prepatched.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
+proj_goodpatch.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
 
-proj_prepatched.angr_proj.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp(project=proj_prepatched.angr_proj), replace=True)
-proj_goodpatch.angr_proj.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp(project=proj_goodpatch.angr_proj), replace=True)
+proj_prepatched.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp, replace=True)
+proj_goodpatch.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp, replace=True)
 
-proj_prepatched.angr_proj.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r(project=proj_prepatched.angr_proj), replace=True)
-proj_goodpatch.angr_proj.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r(project=proj_goodpatch.angr_proj), replace=True)
+proj_prepatched.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r, replace=True)
+proj_goodpatch.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r, replace=True)
 
 prepatched_results = setup(prepatched_sess)
 goodpatched_results = setup(goodpatched_sess)
