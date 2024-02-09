@@ -119,10 +119,10 @@ class ConcolicSim(ExplorationTechnique):
             else:
                 candidate_state = candidate_heuristic(from_stash)
             try:
-                model = claripy_ext.model(candidate_state.solver.constraints, extra_symbols=symbols)
+                models = claripy_ext.model(candidate_state.solver.constraints, extra_symbols=symbols, n=1)
 
-                if model is not None:
-                    self._set_replacement_dict(model)
+                if len(models) > 0:
+                    self._set_replacement_dict(models[0])
                     simgr.active.append(candidate_state)
                     return
                 else:

@@ -58,49 +58,63 @@ def simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bit
 def get_symbol_name(sym):
     return sym.args[0]
 
-# TODO: Support generation of N models, not just one
-def model(constraints, extra_symbols=frozenset(), **kwargs) -> dict[typing.Union[claripy.BVS, claripy.FPS], typing.Union[claripy.BVV, claripy.FPV]] | None:
+def model(constraints,
+          extra_symbols: set[typing.Union[claripy.BVS, claripy.FPS]] | frozenset[typing.Union[claripy.BVS, claripy.FPS]]=frozenset(),
+          n=1,
+          **kwargs) -> list[dict[typing.Union[claripy.BVS, claripy.FPS], typing.Union[claripy.BVV, claripy.FPV]]]:
+    # Computes at most n different satisfying assignments for a set of constraints
     solver = claripy.Solver()
     solver.add(constraints)
-    if solver.satisfiable(**kwargs):
-        models = list(solver._models)
+    extra_constraints = []
+    generated_models = []
+    while len(generated_models) < n:
+        if solver.satisfiable(extra_constraints=extra_constraints, **kwargs):
+            models = list(solver._models)
 
-        ret = dict()
-        
-        def zero(sym):
-            if sym.op == "BVS":
-                return claripy.BVV(0, sym.length)
-            elif sym.op == "FPS":
-                return claripy.FPV(0.0, sym.sort)
-            else:
-                raise ValueError("Unsupported op")
+            ret = dict()
 
-        def value(sym, v):
-            if sym.op == "BVS":
-                return claripy.BVV(v, sym.length)
-            elif sym.op == "FPS":
-                return claripy.FPV(v, sym.sort)
-            else:
-                raise ValueError("Unsupported op")
-        
-        if len(models) > 0:
-            # m maps symbol names to either integers or floats. We want symbols to map
-            # to BVV or FPS, so we need to do that conversion here
-            m = models[0].model
-            for c in constraints:
-                for leaf in c.leaf_asts():
-                    if leaf.symbolic:
-                        leaf_name = get_symbol_name(leaf)
-                        if leaf_name in m:
-                            ret[leaf] = value(leaf, m[leaf_name])
-                        else:
-                            ret[leaf] = zero(leaf)
+            def zero(sym):
+                if sym.op == "BVS":
+                    return claripy.BVV(0, sym.length)
+                elif sym.op == "FPS":
+                    return claripy.FPV(0.0, sym.sort)
+                else:
+                    raise ValueError("Unsupported op")
 
-        # Set any symbols not in the model to 0
-        for extra in extra_symbols:
-            if extra not in ret:
-                ret[extra] = zero(extra)
+            def value(sym, v):
+                if sym.op == "BVS":
+                    return claripy.BVV(v, sym.length)
+                elif sym.op == "FPS":
+                    return claripy.FPV(v, sym.sort)
+                else:
+                    raise ValueError("Unsupported op")
 
-        return ret
-    else:
-        return None
+            if len(models) > 0:
+                # m maps symbol names to either integers or floats. We want symbols to map
+                # to BVV or FPS, so we need to do that conversion here
+                m = models[0].model
+                for c in constraints:
+                    for leaf in c.leaf_asts():
+                        if leaf.symbolic:
+                            leaf_name = get_symbol_name(leaf)
+                            if leaf_name in m:
+                                ret[leaf] = value(leaf, m[leaf_name])
+                            else:
+                                ret[leaf] = zero(leaf)
+
+            # Set any symbols not in the model to 0
+            for extra in extra_symbols:
+                if extra not in ret:
+                    ret[extra] = zero(extra)
+
+            generated_models.append(ret)
+
+            if len(generated_models) < n:
+                # We need to find a solution that is different from the model we just found in at least one variable
+                extra_constraints.append(claripy.Or(*[sym != val for (sym, val) in ret.items()]))
+                # We don't want to accumulate models between calls to .satisfiable(), so clear out the model we
+                # just found here
+                solver._models.clear()
+        else:
+            return generated_models
+    return generated_models

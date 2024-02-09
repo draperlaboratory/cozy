@@ -13,16 +13,20 @@ def _concretize(solver, state_bundle, n=1):
 
     extra_symbols = preorder_fold(state_bundle, traverse, set())
 
-    model = claripy_ext.model(solver.constraints, extra_symbols=extra_symbols)
-    replacement_dict = {sym.cache_key: val for (sym, val) in model.items()}
+    models = claripy_ext.model(solver.constraints, extra_symbols=extra_symbols, n=n)
+    ret = []
+    for model in models:
+        replacement_dict = {sym.cache_key: val for (sym, val) in model.items()}
 
-    def f(elem):
-        if isinstance(elem, claripy.ast.Base):
-            return elem.replace_dict(replacement_dict)
-        else:
-            return elem
+        def f(elem):
+            if isinstance(elem, claripy.ast.Base):
+                return elem.replace_dict(replacement_dict)
+            else:
+                return elem
 
-    return [fmap(state_bundle, f)]
+        ret.append(fmap(state_bundle, f))
+
+    return ret
 
 class CompatiblePairInput:
     """
