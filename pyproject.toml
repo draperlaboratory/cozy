@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cozy-re"
-version = "1.0.3"
+version = "1.1"
 authors = [
   { name="Caleb Helbling", email="chelbling@draper.com" },
   { name="Graham Leach-Krouse", email="gleach-krouse@draper.com"},
