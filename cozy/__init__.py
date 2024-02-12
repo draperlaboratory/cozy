@@ -4,6 +4,7 @@ from . import directive
 from . import execution_graph
 from . import primitives
 from . import project
+from . import session
 from . import claripy_ext
 from . import functools_ext
 from . import concrete
