@@ -535,9 +535,13 @@ class MemoryDifference extends Component {
       ? props.leftFocus.bot.data().compatibilities[rightId].memdiff
       : conc_adiffs[state.view]
     for (const addr in adiffs) {
+      const addrparts = addr
+        .split('\n')
+        .map(part => [part, html`<br/>`])
+        .flat()
       addresses.push(html`
         <span class="grid-diff-left">${adiffs[addr][0]}</span>
-        <span class="grid-diff-label">${addr.replace('\n','<br>')}</span>
+        <span class="grid-diff-label">${addrparts}</span>
         <span class="grid-diff-right">${adiffs[addr][1]}</span>`)
     }
     return html`<div>
