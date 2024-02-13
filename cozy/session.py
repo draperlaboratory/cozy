@@ -19,11 +19,14 @@ class RunResult:
     :ivar list[AssertFailed] asserts_failed: States where an assertion was able to be falsified.
     :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
     """
-    def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState], asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]]):
+    def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
+                 asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
+                 malloced_names: P.IntervalDict[tuple[str, P.Interval]]):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
         self.assume_warnings = assume_warnings
+        self.malloced_names = malloced_names
 
     @property
     def assertion_triggered(self) -> bool:
@@ -144,8 +147,6 @@ def _on_mem_write(state):
     ip_frozenset = frozenset([state.ip])
     if start_addrs is not None and length is not None:
         for st_addr in start_addrs:
-            if not isinstance(length, int):
-                print("Gotcha")
             write_range = P.closedopen(st_addr, st_addr + length)
             if len(start_addrs) > 1:
                 existing_ip = [ip_set for (n, ip_set) in mem_writes[write_range].values()]
@@ -273,6 +274,8 @@ class _SessionBasicExploration(_SessionExploration):
             if self.cache_intermediate_states:
                 _save_states(simgr.active)
 
+_name_ctr = 0
+
 class Session:
     """
     A session is a particular run of a project, consisting of attached directives (asserts/assumes).
@@ -313,6 +316,8 @@ class Session:
         self.directives = []
         self.has_run = False
 
+        self.malloced_names = P.IntervalDict()
+
     def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
         """
         Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments to state.fs.insert.
@@ -324,7 +329,7 @@ class Session:
         """
         self.state.fs.insert(filename, simfile)
 
-    def malloc(self, num_bytes: int) -> int:
+    def malloc(self, num_bytes: int, name=None) -> int:
         """
         Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory before the :py:meth:`~cozy.project.Project.run` method is called.
 
@@ -332,7 +337,14 @@ class Session:
         :return: A pointer to the allocated memory block.
         :rtype: int
         """
-        return self.state.heap._malloc(num_bytes)
+        global _name_ctr
+        addr = self.state.heap._malloc(num_bytes)
+        if name is None:
+            name = "malloced_mem_{}_bytes_{}".format(num_bytes, _name_ctr)
+            _name_ctr += 1
+        interval = P.closedopen(addr, addr + num_bytes)
+        self.malloced_names[interval] = (name, interval)
+        return addr
 
     def store(self, addr: int, data: claripy.ast.bits, **kwargs):
         """
@@ -438,7 +450,7 @@ class Session:
         deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
 
-        return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings)
+        return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings, self.malloced_names)
 
     def run(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, ret_addr: int | None=None) -> RunResult:
         """

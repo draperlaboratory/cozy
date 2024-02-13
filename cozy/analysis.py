@@ -38,6 +38,45 @@ def _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range
         stop = max(invalid_stack_left.stop, invalid_stack_right.stop)
     return range(start, stop)
 
+def _stack_addrs(st: SimState) -> range:
+    stack_start = st.arch.initial_sp
+    curr_sp = st.callstack.stack_ptr
+
+    if st.arch.stack_change < 0:
+        # The stack grows down
+        return range(curr_sp, stack_start + 1)
+    else:
+        # The stack grows up
+        return range(stack_start, curr_sp + 1)
+
+def nice_name(state: SimState, malloced_names: P.IntervalDict[tuple[str, P.Interval]], addr: int) -> str | None:
+    """
+    This function attempts to create a human understandable name for an address, or returns None if it can't figure
+    one out.
+    """
+
+    # Python malloced blocks
+    malloced_mem_info = malloced_names.get(addr)
+    if malloced_mem_info is not None:
+        (name, interval) = malloced_mem_info
+        start_addr = interval.lower
+        offset = addr - start_addr
+        return "{}+{}".format(name, hex(offset))
+
+    # Stack addresses
+    stack_range = _stack_addrs(state)
+    # Expand the range slightly as a heuristic
+    wider_range = range(stack_range.start - 1024, stack_range.stop + 1024)
+    if addr in wider_range:
+        stack_ptr = state.callstack.stack_ptr
+        offset = addr - stack_ptr
+        if offset < 0:
+            return "sp{}".format(hex(offset))
+        else:
+            return "sp+{}".format(hex(offset))
+
+    return None
+
 class StateDiff:
     """
     StateDiff encapsulates the memoized state used by the difference method. This class is used internally by\

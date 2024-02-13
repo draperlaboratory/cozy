@@ -22,13 +22,26 @@ command_symbols.append(claripy.BVV(0, 8))
 role_symbols.append(claripy.BVV(0, 8))
 data_symbols.append(claripy.BVV(0, 8))
 
+# This function ensures that once a null terminating byte is seen, all subsequent bytes in the string
+# must be null (\0) bytes
+def add_str_constraints(sess: cozy.project.Session):
+    def constrain_lst(lst):
+        for i in range(len(lst) - 2):
+            sym_a = lst[i]
+            sym_b = lst[i + 1]
+            # Constrain the subsequent byte only if the first byte is \0
+            sess.add_constraints(sym_b == claripy.If(sym_a == 0, 0, sym_b))
+    constrain_lst(command_symbols)
+    constrain_lst(role_symbols)
+    constrain_lst(data_symbols)
+
 def setup(sess: cozy.project.Session):
     sess.state.libc.simple_strtok = False
     sess.state.libc.max_symbolic_strstr = 60
 
-    command = sess.malloc(20)
-    role = sess.malloc(20)
-    data = sess.malloc(20)
+    command = sess.malloc(20, name="command")
+    role = sess.malloc(20, name="role")
+    data = sess.malloc(20, name="data")
 
     for (i, sym) in enumerate(command_symbols):
         sess.mem[command + i].char = sym
@@ -54,6 +67,8 @@ def setup(sess: cozy.project.Session):
     argc = 4
     argv = str_array
     args = [argc, argv]
+
+    add_str_constraints(sess)
 
     return sess.run(args, cache_intermediate_states=True)
 

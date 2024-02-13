@@ -1,21 +1,38 @@
+import functools
+
 import angr.errors
 import claripy
 import networkx as nx
 import json
 import sys
+
+from angr import SimState
 from angr.block import Block
 from collections.abc import Callable
 
+import cozy.analysis
 from .functools_ext import fmap
 from .project import Project
 from .session import RunResult
 from . import analysis
 from .server import start_viz_server
 
-def _serialize_diff(diff):
+def _serialize_diff(diff, nice_name_a: Callable[[int], str | None] | None = None, nice_name_b: Callable[[int], str | None] | None = None):
     def convert_key(k) -> str:
         if isinstance(k, range):
-            return "{} .. {}".format(hex(k.start), hex(k.stop - 1))
+            ret = "{} .. {}".format(hex(k.start), hex(k.stop - 1))
+            if nice_name_a is not None and nice_name_b is not None:
+                nice_start_a = nice_name_a(k.start)
+                nice_end_a = nice_name_a(k.stop - 1)
+                nice_start_b = nice_name_b(k.start)
+                nice_end_b = nice_name_b(k.stop - 1)
+                if nice_start_a == nice_start_b and nice_end_a == nice_end_b:
+                    if nice_start_a is not None or nice_end_a is not None:
+                        ret += "\n{} .. {}".format(nice_start_a, nice_end_a)
+                else:
+                    if nice_start_a is not None or nice_end_a is not None or nice_start_b is not None or nice_end_b is not None:
+                        ret += "\n{}/{} .. {}/{}".format(nice_start_a, nice_start_b, nice_end_a, nice_end_b)
+            return ret
         elif isinstance(k, int):
             return str(hex(k))
         else:
@@ -211,6 +228,9 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
         for nb in leaves_b:
             state_b = g_b.nodes[nb]["state"]
             if comparison_results.is_compatible(state_a, state_b):
+                nice_name_a = functools.partial(cozy.analysis.nice_name, state_a, rslt_a.malloced_names)
+                nice_name_b = functools.partial(cozy.analysis.nice_name, state_b, rslt_b.malloced_names)
+
                 comp = comparison_results.get_pair(state_a, state_b)
                 concretion = comp.concrete_examples(args, num_examples=num_examples)
 
@@ -221,9 +241,9 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 concrete_args = fmap(concrete_args, lambda x: x.concrete_value if isinstance(x, claripy.ast.Bits) else x)
 
                 info = {
-                    "memdiff": _serialize_diff(comp.mem_diff),
+                    "memdiff": _serialize_diff(comp.mem_diff, nice_name_a, nice_name_b),
                     "regdiff": _serialize_diff(comp.reg_diff),
-                    "conc_memdiff": [_serialize_diff(x.mem_diff) for x in concretion],
+                    "conc_memdiff": [_serialize_diff(x.mem_diff, nice_name_a, nice_name_b) for x in concretion],
                     "conc_regdiff": [_serialize_diff(x.reg_diff) for x in concretion],
                     "conc_args": concrete_args
                 }
