@@ -534,11 +534,11 @@ class MemoryDifference extends Component {
     const adiffs = state.view === "symbolic"
       ? props.leftFocus.bot.data().compatibilities[rightId].memdiff
       : conc_adiffs[state.view]
-    for (const reg in adiffs) {
+    for (const addr in adiffs) {
       addresses.push(html`
-        <span class="grid-diff-left">${adiffs[reg][0]}</span>
-        <span class="grid-diff-label">${reg}</span>
-        <span class="grid-diff-right">${adiffs[reg][1]}</span>`)
+        <span class="grid-diff-left">${adiffs[addr][0]}</span>
+        <span class="grid-diff-label">${addr.replace('\n','<br>')}</span>
+        <span class="grid-diff-right">${adiffs[addr][1]}</span>`)
     }
     return html`<div>
       <${ConcretionSelector} 
