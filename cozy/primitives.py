@@ -5,7 +5,7 @@ from archinfo import Arch
 
 from .constants import *
 
-_name_ctr = 0
+_malloc_name_ctr = 0
 
 def sym_ptr(arch: Type[Arch], name: str | None=None) -> claripy.BVS:
     """
@@ -16,7 +16,7 @@ def sym_ptr(arch: Type[Arch], name: str | None=None) -> claripy.BVS:
     :return: A fresh symbolic bitvector whose size is appropriate for the input architecture.
     :rtype: claripy.BVS
     """
-    global _name_ctr
+    global _malloc_name_ctr
     if name is None:
         name = "symbolic_ptr_{}".format(_name_ctr)
         _name_ctr += 1

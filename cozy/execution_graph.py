@@ -31,7 +31,8 @@ def _serialize_diff(diff, nice_name_a: Callable[[int], str | None] | None = None
                         ret += "\n{} .. {}".format(nice_start_a, nice_end_a)
                 else:
                     if nice_start_a is not None or nice_end_a is not None or nice_start_b is not None or nice_end_b is not None:
-                        ret += "\n{}/{} .. {}/{}".format(nice_start_a, nice_start_b, nice_end_a, nice_end_b)
+                        ret += "\n{} .. {} (pre)".format(nice_start_a, nice_end_a)
+                        ret += "\n{} .. {} (post)".format(nice_start_b, nice_end_b)
             return ret
         elif isinstance(k, int):
             return str(hex(k))
@@ -228,8 +229,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
         for nb in leaves_b:
             state_b = g_b.nodes[nb]["state"]
             if comparison_results.is_compatible(state_a, state_b):
-                nice_name_a = functools.partial(cozy.analysis.nice_name, state_a, rslt_a.malloced_names)
-                nice_name_b = functools.partial(cozy.analysis.nice_name, state_b, rslt_b.malloced_names)
+                nice_name_a = functools.partial(cozy.analysis.nice_name, state_a, state_a.globals['malloced_names'])
+                nice_name_b = functools.partial(cozy.analysis.nice_name, state_b, state_b.globals['malloced_names'])
 
                 comp = comparison_results.get_pair(state_a, state_b)
                 concretion = comp.concrete_examples(args, num_examples=num_examples)

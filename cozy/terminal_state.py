@@ -72,7 +72,17 @@ class TerminalState:
         :getter: An interval dictionary, with the keys being ranges and the values being tuple[int, frozenset[int]]. The first element of the tuple is a unique placeholder, the second element of the tuple are the possible instruction pointer values that wrote to this memory.
         :type: P.IntervalDict
         """
-        return self.state.globals['mem_writes']
+        if 'mem_writes' in self.state.globals:
+            return self.state.globals['mem_writes']
+        else:
+            return P.IntervalDict()
+
+    @property
+    def malloced_names(self) -> P.IntervalDict:
+        if 'malloced_names' in self.state.globals:
+            return self.state.globals['malloced_names']
+        else:
+            return P.IntervalDict()
 
     def concrete_examples(self, args: any, num_examples=3) -> list[TerminalStateInput]:
         """
@@ -86,7 +96,6 @@ class TerminalState:
         state_bundle = (args, self.virtual_prints)
         solver = claripy.Solver()
         solver.add(self.state.solver.constraints)
-        # self.state.solver does not seem to support the batch_eval method, so we can't use that here
         concrete_results = _concretize(solver, state_bundle, n=num_examples)
         return [TerminalStateInput(conc_args, conc_vprints) for (conc_args, conc_vprints) in concrete_results]
 

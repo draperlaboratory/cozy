@@ -20,13 +20,11 @@ class RunResult:
     :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
     """
     def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
-                 asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
-                 malloced_names: P.IntervalDict[tuple[str, P.Interval]]):
+                 asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]]):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
         self.assume_warnings = assume_warnings
-        self.malloced_names = malloced_names
 
     @property
     def assertion_triggered(self) -> bool:
@@ -158,6 +156,24 @@ def _on_mem_write(state):
                 _mem_write_ctr += 1
     state.globals['mem_writes'] = mem_writes
 
+_malloc_name_ctr = 0
+
+def _on_simprocedure(state):
+    global _malloc_name_ctr
+    if state.inspect.simprocedure_name == "malloc":
+        num_bytes = state.inspect.simprocedure.arguments[0]
+        max_num_bytes = state.solver.max(num_bytes)
+        name = "malloced_{}_bytes_{}".format(max_num_bytes, _malloc_name_ctr)
+        if 'malloced_names' in state.globals:
+            malloc_calls = state.globals['malloced_names'].copy()
+        else:
+            malloc_calls = P.IntervalDict()
+        addr = state.inspect.simprocedure_result
+        interval = P.closedopen(addr, addr + max_num_bytes)
+        malloc_calls[interval] = (name, interval)
+        _malloc_name_ctr += 1
+        state.globals['malloced_names'] = malloc_calls
+
 def _save_states(states):
     for state in states:
         # SimStateHistory already has a variable named strongref_state that is used when EFFICIENT_STATE_MERGING
@@ -274,8 +290,6 @@ class _SessionBasicExploration(_SessionExploration):
             if self.cache_intermediate_states:
                 _save_states(simgr.active)
 
-_name_ctr = 0
-
 class Session:
     """
     A session is a particular run of a project, consisting of attached directives (asserts/assumes).
@@ -311,12 +325,13 @@ class Session:
             self.state = self.proj.angr_proj.factory.blank_state(add_options=state_options)
 
         self.state.inspect.b('mem_write', when=angr.BP_AFTER, action=_on_mem_write)
+        self.state.globals['mem_writes'] = P.IntervalDict()
+        self.state.inspect.b('simprocedure', when=angr.BP_AFTER, action=_on_simprocedure)
+        self.state.globals['malloced_names'] = P.IntervalDict()
 
         # Initialize mutable state related to this session
         self.directives = []
         self.has_run = False
-
-        self.malloced_names = P.IntervalDict()
 
     def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
         """
@@ -337,13 +352,18 @@ class Session:
         :return: A pointer to the allocated memory block.
         :rtype: int
         """
-        global _name_ctr
+        global _malloc_name_ctr
         addr = self.state.heap._malloc(num_bytes)
         if name is None:
-            name = "malloced_mem_{}_bytes_{}".format(num_bytes, _name_ctr)
-            _name_ctr += 1
+            name = "malloced_{}_bytes_{}".format(num_bytes, _malloc_name_ctr)
+            _malloc_name_ctr += 1
         interval = P.closedopen(addr, addr + num_bytes)
-        self.malloced_names[interval] = (name, interval)
+        if 'malloced_names' in self.state.globals:
+            malloced_names = self.state.globals['malloced_names']
+        else:
+            malloced_names = P.IntervalDict()
+        malloced_names[interval] = (name, interval)
+        self.state.globals['malloced_names'] = malloced_names
         return addr
 
     def store(self, addr: int, data: claripy.ast.bits, **kwargs):
@@ -450,7 +470,7 @@ class Session:
         deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
 
-        return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings, self.malloced_names)
+        return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings)
 
     def run(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, ret_addr: int | None=None) -> RunResult:
         """
