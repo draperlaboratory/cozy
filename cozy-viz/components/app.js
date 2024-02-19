@@ -8,6 +8,7 @@ import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
+import { closeGhidraServer } from '../util/ghidra.js'
 import { tidyGraph, removeBranch } from '../util/graph-tidy.js';
 import { Status, Tidiness } from '../data/cozy-data.js'
 
@@ -48,15 +49,17 @@ export default class App extends Component {
     this.toggleAsserts = this.toggleAsserts.bind(this)
     this.getJSON = this.getJSON.bind(this)
 
+    const urlParams = new URLSearchParams(window.location.search);
+    this.isServedPre = urlParams.get('pre')
+    this.isServedPost = urlParams.get('post')
+    this.ghidraPort = urlParams.get('ghidra')
+
     window.app = this
   }
 
   componentDidMount() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isServedPre = urlParams.get('pre')
-    const isServedPost = urlParams.get('post')
-    if (isServedPre) {
-      fetch(isServedPre)
+    if (this.isServedPre) {
+      fetch(this.isServedPre)
         .then(rslt => rslt.json())
         .then(raw => {
           const obj = JSON.parse(raw)
@@ -65,8 +68,8 @@ export default class App extends Component {
         })
         .catch(e => console.error(e))
     }
-    if (isServedPost) {
-      fetch(isServedPost)
+    if (this.isServedPost) {
+      fetch(this.isServedPost)
         .then(rslt => rslt.json())
         .then(raw => {
           const obj = JSON.parse(raw)
@@ -75,6 +78,10 @@ export default class App extends Component {
         })
         .catch(e => console.error(e))
 
+    }
+    if (this.ghidraPort) {
+      console.log("adding ghidra listener!")
+      window.addEventListener('beforeunload', closeGhidraServer)
     }
   }
 

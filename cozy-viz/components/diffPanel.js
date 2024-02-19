@@ -2,6 +2,7 @@ import * as Diff from 'https://cdn.jsdelivr.net/npm/diff@5.1.0/+esm'
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import { getNodesFromEnds, getEdgesFromEnds } from '../util/segmentation.js'
+import { gotoAddrInGhidra } from '../util/ghidra.js'
 
 export default class DiffPanel extends Component {
   constructor() {
@@ -461,11 +462,14 @@ function hunkFormat(hunk, className) {
 
 
 function Hunk({ dim, highlight, hunkCtx, curLeft, curRight, leftContent, leftClass, rightContent, rightClass }) {
+  //TODO disable this if there's no ghidra server
+  const hasAddr = leftContent[0].match(/^[a-f0-9]+\s$/)
   const hunk = html`<div
         onMouseEnter=${highlight} 
         onMouseLeave=${dim}
         >
         <div
+          onClick=${hasAddr ? () => gotoAddrInGhidra(hasAddr[0]) : null}
           title=${hunkCtx?.leftMsgs[curLeft]}
           class=${leftClass}
         >${leftContent}</div>
