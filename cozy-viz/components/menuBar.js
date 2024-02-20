@@ -98,7 +98,15 @@ function noStdDiffs(leaf, other) {
 }
 
 const matchRegex = (regexStr) => (leaf, other) => {
-  const regex = new RegExp(regexStr)
+  let regex
+  try { 
+    regex = new RegExp(regexStr)
+  } catch (e) { 
+    if (matchRegex.debounce) return
+    matchRegex.debounce = true
+    alert("Unreadable Regular Expression") 
+    setTimeout(() => matchRegex.debounce = false,500)
+  }
   if (!leaf.data().stdout.match(regex)) return false
   if (!other.data().stdout.match(regex)) return false
   else return noErrors(leaf, other)
