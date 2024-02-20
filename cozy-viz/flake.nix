@@ -1,5 +1,5 @@
 {
-  description = "visualizations for hungr";
+  description = "visualizations for cozy";
 
   inputs.flake-utils.url  = "github:numtide/flake-utils";
 
@@ -41,7 +41,6 @@
       };
 
       apps.bundle = let
-
         # this is a shell script for running bundler.mjs in that environment
         name = "bundle-cozy-viz";
         script = pkgs.writeShellScriptBin name ''
