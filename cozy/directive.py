@@ -11,8 +11,34 @@ class Directive:
     pass
 
 class AssertType(Enum):
+    """
+    An enum to determine the type of assertion.
+    """
+
     ASSERT_MUST = 0
+    """
+    This type of assert will be triggered if the assertion condition can be falsified. This assertion type replicates
+    the behaviour of assertions as used in a typical testing environment. More precisely, this assertion uses
+    universal quantification. The assertion fails if the following condition does not hold: forall x . P(x), where
+    x is the program input, and P is the assertion condition.
+    """
+
     ASSERT_CAN = 1
+    """
+    This type of assert will be triggered if the assertion condition cannot be satisfied, under the constraints of
+    the local state. This assertion type is a dual to ASSERT_MUST, and an exact analogue does not exist from
+    typical testing environments. More precisely, this assertion uses existential quantification. The assertion
+    fails if the following condition does not hold: exists x . P(x), where x is the program input, P is the
+    assertion condition, and C is the state's constraints.
+    """
+
+    ASSERT_CAN_GLOBAL = 2
+    """
+    This is type of assert is like ASSERT_CAN, but is computed under a global setting. If on any path the local
+    assertion exists x . P(x) holds, then all cases where the assertion failed will be scrubbed from the output.
+    This is much the same E from computation tree logic, which is also a global property. Note that this assertion
+    type should only be used in cases where the exploration is complete - ie all states can be explored. 
+    """
 
 class Assert(Directive):
     """
@@ -23,7 +49,7 @@ class Assert(Directive):
     SimState will be passed to this function, and an assertion condition should be returned. This is then used\
     internally by the SAT solver, along with the state's accumulated constraints.
     :ivar str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
-    :ivar AssertType assert_type: The type of assert
+    :ivar AssertType assert_type: The type of assert.
     """
     def __init__(self, addr: int, condition_fun: Callable[[SimState], claripy.ast.bool], info_str: str | None=None,
                  assert_type: AssertType=AssertType.ASSERT_MUST):
@@ -36,11 +62,7 @@ class Assert(Directive):
         internally by the SAT solver, along with the state's accumulated constraints.
         :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is\
         triggered.
-        :param AssertType assert_type: The type of assert to construct. If this value is ASSERT_MUST, then this assert\
-        will be triggered if the assertion condition can be falsified. If this value is ASSERT_CAN, then this assert\
-        will be triggered if the assertion condition cannot be satisfied. ASSERT_MUST functions the same as a\
-        traditional assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally\
-        quantifies over the input state, whereas ASSERT_CAN existentially quantifies.
+        :param AssertType assert_type: The type of assert to construct.
         """
         self.addr = addr
         self.condition_fun = condition_fun
@@ -60,12 +82,7 @@ class Assert(Directive):
         SimState will be passed to this function, and an assertion condition should be returned. This is then used\
         internally by the SAT solver, along with the state's accumulated constraints.
         :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
-        :param AssertType assert_type: The type of assert to construct. If this value is ASSERT_MUST, then this assert\
-        will be triggered if the assertion condition can be falsified. If this value is ASSERT_CAN, then this assert\
-        will be triggered if the assertion condition cannot be satisfied. ASSERT_MUST functions the same as a\
-        traditional assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally\
-        quantifies over the input state, whereas ASSERT_CAN existentially quantifies.
-        :return: A new Assert object at the desired function offset.
+        :param AssertType assert_type: The type of assert to construct.
         :rtype: Assert
         """
         return Assert(project.find_symbol_addr(fun_name) + offset, condition_fun, info_str=info_str, assert_type=assert_type)

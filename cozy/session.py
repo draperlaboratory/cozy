@@ -187,6 +187,7 @@ class _SessionExploration:
         self.assume_warnings: list[tuple[Assume, SimState]] = []
         self.asserts_failed: list[AssertFailedState] = []
         self.cache_intermediate_states = cache_intermediate_states
+        self.asserts_to_scrub: set[Assert] = set()
 
     def explore(self, simgr):
         raise NotImplementedError()
@@ -251,7 +252,7 @@ class _SessionDirectiveExploration(_SessionExploration):
                                     # If false_branch is not satisfiable, then there is no way for the assertion to fail.
                                 # In any case, we should prune out the original state
                                 prune_states.add(found_state)
-                            elif directive.assert_type == AssertType.ASSERT_CAN:
+                            elif directive.assert_type == AssertType.ASSERT_CAN or directive.assert_type == AssertType.ASSERT_CAN_GLOBAL:
                                 # ASSERT_CAN can be thought of a "catch and release", the original state should
                                 # continue execution regardless of what happens
                                 true_branch = found_state.copy()
@@ -261,6 +262,9 @@ class _SessionDirectiveExploration(_SessionExploration):
                                         _save_states([true_branch])
                                     af = AssertFailedState(directive, cond, true_branch, len(self.asserts_failed))
                                     self.asserts_failed.append(af)
+                                else:
+                                    if directive.assert_type == AssertType.ASSERT_CAN_GLOBAL:
+                                        self.asserts_to_scrub.add(directive)
                         elif isinstance(directive, VirtualPrint):
                             if 'virtual_prints' in found_state.globals:
                                 accum_prints = found_state.globals['virtual_prints'].copy()
@@ -480,8 +484,10 @@ class Session:
     def _run_result(self, simgr: SimulationManager, sess_exploration: _SessionExploration) -> RunResult:
         deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
+        asserts_failed = [assert_failed for assert_failed in sess_exploration.asserts_failed
+                          if assert_failed.assertion not in sess_exploration.asserts_to_scrub]
 
-        return RunResult(deadended, errored, sess_exploration.asserts_failed, sess_exploration.assume_warnings)
+        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings)
 
     def run(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, ret_addr: int | None=None) -> RunResult:
         """
