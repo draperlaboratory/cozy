@@ -57,7 +57,7 @@ def setup(sess: cozy.project.Session):
 
     str_array = sess.malloc(4 * ptr_size_bits)
 
-    endness = sess.proj.angr_proj.arch.memory_endness
+    endness = sess.proj.arch.memory_endness
 
     sess.store(str_array, claripy.BVV(0, ptr_size_bits))
     sess.store(str_array + ptr_size_bytes, claripy.BVV(command, ptr_size_bits), endness=endness)
