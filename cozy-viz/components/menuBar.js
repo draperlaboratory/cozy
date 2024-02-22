@@ -97,6 +97,21 @@ function noStdDiffs(leaf, other) {
   else return noErrors(leaf, other)
 }
 
+const matchRegex = (regexStr) => (leaf, other) => {
+  let regex
+  try { 
+    regex = new RegExp(regexStr)
+  } catch (e) { 
+    if (matchRegex.debounce) return
+    matchRegex.debounce = true
+    alert("Unreadable Regular Expression") 
+    setTimeout(() => matchRegex.debounce = false,500)
+  }
+  if (!leaf.data().stdout.match(regex)) return false
+  if (!other.data().stdout.match(regex)) return false
+  else return noErrors(leaf, other)
+}
+
 function MenuBadge(props) {
   return html`<svg width="10" height="10">
     <rect x="1" y="1" rx="2" ry="2" width="8" height="8"
@@ -113,6 +128,8 @@ export default class MenuBar extends Component {
       pruningStdout: false,
       pruningRegisters: false,
       pruningCorrect: false,
+      pruningDoRegex: false,
+      pruningRegex: ".*",
     }
   }
 
@@ -153,6 +170,7 @@ export default class MenuBar extends Component {
       || this.state.pruningStdout
       || this.state.pruningRegisters
       || this.state.pruningCorrect
+      || this.state.pruningDoRegex
 
     const extendTest = (f,g) => (l,r) => f(l,r) && g(l,r)
 
@@ -160,6 +178,7 @@ export default class MenuBar extends Component {
     if (this.state.pruningStdout) test = extendTest(noStdDiffs, test)
     if (this.state.pruningRegisters) test = extendTest(noRegisterDiffs, test)
     if (this.state.pruningCorrect) test = extendTest(noErrors, test)
+    if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
 
     this.props.prune(test)
 
@@ -169,6 +188,8 @@ export default class MenuBar extends Component {
       pruningStdout: false,
       pruningRegisters: false,
       pruningCorrect: false,
+      pruningDoRegex: false,
+      pruningRegex: ".*"
     })
   }
 
@@ -258,23 +279,29 @@ export default class MenuBar extends Component {
         title="Prune"
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} onClick=${() => this.setState({pruningMemory: !state.pruningMemory})}>
-          <input type="checkbox" checked=${state.pruningMemory}/> Branches with Identical Memory
+          <input type="checkbox" checked=${state.pruningMemory}/> Identical Memory
         <//>
         <${MenuOption} onClick=${() => this.setState({pruningRegisters: !state.pruningRegisters})}>
-          <input type="checkbox" checked=${state.pruningRegisters}/> Branches with Identical Register Contents 
+          <input type="checkbox" checked=${state.pruningRegisters}/> Identical Register Contents 
         <//>
         <${MenuOption} onClick=${() => this.setState({pruningStdout: !state.pruningStdout})}>
-          <input type="checkbox" checked=${state.pruningStdout}/> Branches with Identical Stdout/Stderr
+          <input type="checkbox" checked=${state.pruningStdout}/> Identical Stdout/Stderr
         <//>
         <${MenuOption} onClick=${() => this.setState({pruningCorrect: !state.pruningCorrect})}>
-          <input type="checkbox" checked=${state.pruningCorrect}/> Error-free Branches
+          <input type="checkbox" checked=${state.pruningCorrect}/> Error-free
+        <//>
+        <${MenuOption} onClick=${() => this.setState({pruningDoRegex: !state.pruningDoRegex})}>
+          <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
+            onClick=${e => e.stopPropagation()}
+            onInput=${e => this.setState({pruningRegex: e.target.value})} 
+            value=${state.pruningRegex}/>
         <//>
         <hr/>
         <${MenuOption} onClick=${() => this.prune()}>
           Prune branches matching all conditions above
         <//>
-        <${MenuOption} onClick=${props.unprune}>
-          Revert Pruning
+        <${MenuOption} onClick=${() => { props.unprune(); this.setState({open: null})}}>
+          Revert All Pruning
         <//>
       <//>
       <${Menu} 
