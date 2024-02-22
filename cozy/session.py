@@ -7,7 +7,7 @@ import angr, claripy
 from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
-from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective
+from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState
 
 class RunResult:
@@ -231,23 +231,37 @@ class _SessionDirectiveExploration(_SessionExploration):
                                     print(directive.info_str)
                         elif isinstance(directive, Assert):
                             cond = directive.condition_fun(found_state)
-                            # Split execution into two states: one where the assertion holds and one where it
-                            # doesn't hold
-                            true_branch = found_state.copy()
-                            true_branch.add_constraints(cond)
-                            add_states.add(true_branch)
+                            if directive.assert_type == AssertType.ASSERT_MUST:
+                                # Split execution into two states: one where the assertion holds and one where it
+                                # doesn't hold
+                                true_branch = found_state.copy()
+                                true_branch.add_constraints(cond)
+                                add_states.add(true_branch)
 
-                            # To check for validity, we need to check that (not cond) is unsatisfiable
-                            false_branch = found_state.copy()
-                            false_branch.add_constraints(~cond)
-                            if false_branch.satisfiable():
-                                if self.cache_intermediate_states:
-                                    _save_states([false_branch])
-                                # If the false branch is satisfiable, add it to the list of failed assert states
-                                # This essentially halts execution on the false branch
-                                af = AssertFailedState(directive, cond, false_branch, len(self.asserts_failed))
-                                self.asserts_failed.append(af)
-                                # If false_branch is not satisfiable, then there is no way for the assertion to fail.
+                                # To check for validity, we need to check that (not cond) is unsatisfiable
+                                false_branch = found_state.copy()
+                                false_branch.add_constraints(~cond)
+                                if false_branch.satisfiable():
+                                    if self.cache_intermediate_states:
+                                        _save_states([false_branch])
+                                    # If the false branch is satisfiable, add it to the list of failed assert states
+                                    # This essentially halts execution on the false branch
+                                    af = AssertFailedState(directive, cond, false_branch, len(self.asserts_failed))
+                                    self.asserts_failed.append(af)
+                                    # If false_branch is not satisfiable, then there is no way for the assertion to fail.
+                            elif directive.assert_type == AssertType.ASSERT_CAN:
+                                false_branch = found_state.copy()
+                                false_branch.add_constraints(~cond)
+                                add_states.add(false_branch)
+
+                                true_branch = found_state.copy()
+                                true_branch.add_constraints(cond)
+                                if true_branch.satisfiable():
+                                    if self.cache_intermediate_states:
+                                        _save_states([true_branch])
+                                    af = AssertFailedState(directive, cond, true_branch, len(self.asserts_failed))
+                                    self.asserts_failed.append(af)
+
                             # In any case, we should prune out the original state
                             prune_states.add(found_state)
                         elif isinstance(directive, VirtualPrint):

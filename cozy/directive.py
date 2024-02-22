@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from enum import Enum
 
 import claripy
 from angr import SimState
@@ -9,40 +10,65 @@ class Directive:
     """
     pass
 
+class AssertType(Enum):
+    ASSERT_MUST = 0
+    ASSERT_CAN = 1
+
 class Assert(Directive):
     """
-    An assert directive sets a breakpoint at a certain address. An assert is triggered if there is a concrete input which would cause the assertion condition to be satisfied.
+    An assert directive sets a breakpoint at a certain address.
 
     :ivar int addr: The program address this assert is attached to.
-    :ivar Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the SimState will be passed to this function, and an assertion condition should be returned. This is then used internally by the SAT solver, along with the state's accumulated constraints.
+    :ivar Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the\
+    SimState will be passed to this function, and an assertion condition should be returned. This is then used\
+    internally by the SAT solver, along with the state's accumulated constraints.
     :ivar str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
+    :ivar AssertType assert_type: The type of assert
     """
-    def __init__(self, addr: int, condition_fun: Callable[[SimState], claripy.ast.bool], info_str: str | None=None):
+    def __init__(self, addr: int, condition_fun: Callable[[SimState], claripy.ast.bool], info_str: str | None=None,
+                 assert_type: AssertType=AssertType.ASSERT_MUST):
         """
         Constructor for an Assert object.
 
         :param int addr: The address at which the assert will be triggered.
-        :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the SimState will be passed to this function, and an assertion condition should be returned. This is then used internally by the SAT solver, along with the state's accumulated constraints.
-        :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
+        :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the\
+        SimState will be passed to this function, and an assertion condition should be returned. This is then used\
+        internally by the SAT solver, along with the state's accumulated constraints.
+        :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is\
+        triggered.
+        :param AssertType assert_type: The type of assert to construct. If this value is ASSERT_MUST, then this assert\
+        will be triggered if the assertion condition can be falsified. If this value is ASSERT_CAN, then this assert\
+        will be triggered if the assertion conditon can be satisifed. ASSERT_MUST functions the same as a traditional\
+        assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally quantifies\
+        over the input state, whereas ASSERT_CAN existentially quantifies.
         """
         self.addr = addr
         self.condition_fun = condition_fun
         self.info_str = info_str
+        self.assert_type = assert_type
 
     @staticmethod
-    def from_fun_offset(project, fun_name: str, offset: int, condition_fun: Callable[[SimState], claripy.ast.bool], info_str: str | None=None):
+    def from_fun_offset(project, fun_name: str, offset: int, condition_fun: Callable[[SimState], claripy.ast.bool],
+                        info_str: str | None=None, assert_type: AssertType=AssertType.ASSERT_MUST):
         """
         Factory for an Assert object set at a certain offset from a function start.
 
         :param cozy.project.Project project: The project which this assert is attached to. The project is used to compute the address of the assert.
         :param fun_name str: The name of the function in which this assert will be located.
         :param offset int: The offset into the function in which this assert will be located.
-        :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the SimState will be passed to this function, and an assertion condition should be returned. This is then used internally by the SAT solver, along with the state's accumulated constraints.
+        :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the\
+        SimState will be passed to this function, and an assertion condition should be returned. This is then used\
+        internally by the SAT solver, along with the state's accumulated constraints.
         :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
+        :param AssertType assert_type: The type of assert to construct. If this value is ASSERT_MUST, then this assert\
+        will be triggered if the assertion condition can be falsified. If this value is ASSERT_CAN, then this assert\
+        will be triggered if the assertion conditon can be satisifed. ASSERT_MUST functions the same as a traditional\
+        assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally quantifies\
+        over the input state, whereas ASSERT_CAN existentially quantifies.
         :return: A new Assert object at the desired function offset.
         :rtype: Assert
         """
-        return Assert(project.find_symbol_addr(fun_name) + offset, condition_fun, info_str=info_str)
+        return Assert(project.find_symbol_addr(fun_name) + offset, condition_fun, info_str=info_str, assert_type=assert_type)
 
 class Assume(Directive):
     """
