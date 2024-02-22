@@ -463,7 +463,9 @@ function hunkFormat(hunk, className) {
 
 function Hunk({ dim, highlight, hunkCtx, curLeft, curRight, leftContent, leftClass, rightContent, rightClass }) {
   //TODO disable this if there's no ghidra server
-  const hasAddr = leftContent[0].match(/^[a-f0-9]+\s$/)
+  const hasAddr = 
+    leftContent.split?.(' ')[0].match(/^[a-f0-9]+$/) ||
+    leftContent[0].match(/^[a-f0-9]+\s$/)
   const hunk = html`<div
         onMouseEnter=${highlight} 
         onMouseLeave=${dim}
