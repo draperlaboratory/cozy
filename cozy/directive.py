@@ -38,9 +38,9 @@ class Assert(Directive):
         triggered.
         :param AssertType assert_type: The type of assert to construct. If this value is ASSERT_MUST, then this assert\
         will be triggered if the assertion condition can be falsified. If this value is ASSERT_CAN, then this assert\
-        will be triggered if the assertion conditon can be satisifed. ASSERT_MUST functions the same as a traditional\
-        assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally quantifies\
-        over the input state, whereas ASSERT_CAN existentially quantifies.
+        will be triggered if the assertion condition cannot be satisfied. ASSERT_MUST functions the same as a\
+        traditional assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally\
+        quantifies over the input state, whereas ASSERT_CAN existentially quantifies.
         """
         self.addr = addr
         self.condition_fun = condition_fun
@@ -62,9 +62,9 @@ class Assert(Directive):
         :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
         :param AssertType assert_type: The type of assert to construct. If this value is ASSERT_MUST, then this assert\
         will be triggered if the assertion condition can be falsified. If this value is ASSERT_CAN, then this assert\
-        will be triggered if the assertion conditon can be satisifed. ASSERT_MUST functions the same as a traditional\
-        assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally quantifies\
-        over the input state, whereas ASSERT_CAN existentially quantifies.
+        will be triggered if the assertion condition cannot be satisfied. ASSERT_MUST functions the same as a\
+        traditional assert, whereas ASSERT_CAN has no traditional analogue. More precisely, ASSERT_MUST universally\
+        quantifies over the input state, whereas ASSERT_CAN existentially quantifies.
         :return: A new Assert object at the desired function offset.
         :rtype: Assert
         """

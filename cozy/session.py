@@ -249,21 +249,18 @@ class _SessionDirectiveExploration(_SessionExploration):
                                     af = AssertFailedState(directive, cond, false_branch, len(self.asserts_failed))
                                     self.asserts_failed.append(af)
                                     # If false_branch is not satisfiable, then there is no way for the assertion to fail.
+                                # In any case, we should prune out the original state
+                                prune_states.add(found_state)
                             elif directive.assert_type == AssertType.ASSERT_CAN:
-                                false_branch = found_state.copy()
-                                false_branch.add_constraints(~cond)
-                                add_states.add(false_branch)
-
+                                # ASSERT_CAN can be thought of a "catch and release", the original state should
+                                # continue execution regardless of what happens
                                 true_branch = found_state.copy()
                                 true_branch.add_constraints(cond)
-                                if true_branch.satisfiable():
+                                if not true_branch.satisfiable():
                                     if self.cache_intermediate_states:
                                         _save_states([true_branch])
                                     af = AssertFailedState(directive, cond, true_branch, len(self.asserts_failed))
                                     self.asserts_failed.append(af)
-
-                            # In any case, we should prune out the original state
-                            prune_states.add(found_state)
                         elif isinstance(directive, VirtualPrint):
                             if 'virtual_prints' in found_state.globals:
                                 accum_prints = found_state.globals['virtual_prints'].copy()
