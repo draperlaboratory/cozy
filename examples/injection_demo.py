@@ -107,10 +107,10 @@ def setup(proj: cozy.project.Project):
 
 if use_concolic:
     joint_sess = cozy.concolic.session.JointConcolicSession(prepatched_sess, postpatched_sess)
-    (prepatched_results, postpatched_results) = joint_sess.run(args_prepatched, args_postpatched, symbols, cache_intermediate_states=True)
+    (prepatched_results, postpatched_results) = joint_sess.run(args_prepatched, args_postpatched, symbols)
 else:
-    prepatched_results = prepatched_sess.run(args_prepatched, cache_intermediate_states=True)
-    postpatched_results = postpatched_sess.run(args_postpatched, cache_intermediate_states=True)
+    prepatched_results = prepatched_sess.run(args_prepatched)
+    postpatched_results = postpatched_sess.run(args_postpatched)
 
 def concrete_arg_mapper(args):
     def transform_str(characters):

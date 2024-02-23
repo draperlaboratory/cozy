@@ -18,7 +18,7 @@ def run(sess: cozy.project.Session):
     sess.mem[arg0].struct.RoverMessage_t.packetData.temp = temp.reversed
     sess.mem[arg0].struct.RoverMessage_t.packetData.cmd = cmd.reversed
 
-    return sess.run([arg0], cache_intermediate_states=True)
+    return sess.run([arg0])
 
 prepatched_results = run(proj_prepatched.session("rover_process"))
 postpatched_results = run(proj_postpatched.session("rover_process"))

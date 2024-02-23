@@ -48,7 +48,7 @@ def run_pre_patched():
     #sess.add_directives(mem_write_okay)
 
     args = construct_args(sess)
-    run_results = sess.run(args, cache_intermediate_states=dump_execution_graphs)
+    run_results = sess.run(args)
     print(run_results.report_asserts_failed(args))
     return (proj, run_results)
 
@@ -77,7 +77,7 @@ def run_post_patched():
     sess = proj.session('my_fun')
     sess.add_directives(*directives)
     args = construct_args(sess)
-    run_results = sess.run(args, cache_intermediate_states=dump_execution_graphs)
+    run_results = sess.run(args)
     print(run_results.report_asserts_failed(args))
     return (proj, run_results)
 
@@ -94,7 +94,7 @@ print("There are {} deadended states, {} assert failed states, and {} errored st
 args = [arg0]
 comparison_results = analysis.Comparison(pre_patched, post_patched)
 
-if (dump_execution_graphs):
+if dump_execution_graphs:
     execution_graph.dump_comparison(pre_proj, post_proj, pre_patched, post_patched, comparison_results, "null_pre.json", "null_post.json", args=args, num_examples=2)
 
 print("\nComparison Results:\n")

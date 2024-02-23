@@ -105,7 +105,7 @@ def run_orig_and_1():
                                       termination_heuristic_left=CyclomaticComplexityTermination.from_session(sess_orig),
                                       termination_heuristic_right=CyclomaticComplexityTermination.from_session(sess_1))
 
-    return joint_sess.run([], [], symbols, cache_intermediate_states=True)
+    return joint_sess.run([], [], symbols)
 
 def concrete_mapper(concrete_args):
     (latest_data_init, rows) = concrete_args

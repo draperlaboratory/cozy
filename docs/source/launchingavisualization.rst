@@ -65,13 +65,12 @@ We now define a run function, which will run a prepatched or postpatched session
         sess.mem[arg0].struct.RoverMessage_t.packetData.temp = temp.reversed
         sess.mem[arg0].struct.RoverMessage_t.packetData.cmd = cmd.reversed
 
-        return sess.run([arg0], cache_intermediate_states=True)
+        return sess.run([arg0])
 
 In this case we are mutating the memory by changing the memory of the angr state before
 cozy runs. In this case we use angr's API to mutate the temp and cmd fields. Since the
 incoming network packet uses network order endianness, we store ``temp.reversed`` and
-``cmd.reversed`` to swap the endianness. Additionally we set ``cache_intermediate_states``
-to True, which is required for the visualization.
+``cmd.reversed`` to swap the endianness.
 
 Let's use our new run function to run the prepatched and postpatched session::
 

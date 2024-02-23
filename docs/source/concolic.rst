@@ -57,7 +57,7 @@ heuristics::
                                       candidate_heuristic_right=BBTransitionCandidate(),
                                       termination_heuristic_left=CyclomaticComplexityTermination.from_session(sess_prepatched),
                                       termination_heuristic_right=CyclomaticComplexityTermination.from_session(sess_postpatched))
-    (prepatched_results, postpatched_results) = joint_sess.run([], [], symbols, cache_intermediate_states=True)
+    (prepatched_results, postpatched_results) = joint_sess.run([], [], symbols)
 
 Here we are setting heuristics so that we do not explore every state. Instead, our candidate
 heuristic will pick states with the most unique basic block edge transitions in their history,

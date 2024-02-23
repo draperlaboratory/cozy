@@ -76,7 +76,7 @@ joint_sess = JointConcolicSession(pre_sess, post_sess,
                                   candidate_heuristic_right=BBTransitionCandidate(),
                                   termination_heuristic_left=CompleteTermination(),
                                   termination_heuristic_right=CompleteTermination())
-(pre_patched, post_patched) = joint_sess.run(args, args, set(args), cache_intermediate_states=True)
+(pre_patched, post_patched) = joint_sess.run(args, args, set(args))
 
 print(pre_patched.report_asserts_failed(args))
 print(post_patched.report_asserts_failed(args))

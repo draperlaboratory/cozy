@@ -76,7 +76,7 @@ def totalram_exceeded_assert(st):
 def log_lr(st):
     return st.regs.lr
 
-def run(sess, use_assert, cache_intermediate_states=False):
+def run(sess, use_assert):
     len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C, "Requested size is too large!")
     sess.add_directives(cozy.directive.VirtualPrint.from_fun_offset(sess.proj, onMessageLength_mangled, 0x0, log_lr, concrete_mapper=lambda x: hex(x.concrete_value), info_str="Initial link register"))
     sess.add_directives(len_too_big)
@@ -97,7 +97,7 @@ def run(sess, use_assert, cache_intermediate_states=False):
     sess.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
 
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
-    result = sess.run([this_obj, 0x0, size_ptr_ptr, 4, 1], cache_intermediate_states=cache_intermediate_states)
+    result = sess.run([this_obj, 0x0, size_ptr_ptr, 4, 1])
 
     if use_assert:
         print(result.report_asserts_failed({"size": size, "totalram": totalram}))
@@ -112,7 +112,7 @@ def run_prepatched():
 
     def run_without_assert():
         sess = proj_prepatched.session(onMessageLength_mangled)
-        return run(sess, False, cache_intermediate_states=True)
+        return run(sess, False)
 
     run_with_assert()
     return run_without_assert()
@@ -126,7 +126,7 @@ def run_attempted_patch():
 
     def run_without_assert():
         sess = proj_attempted_patch.session(onMessageLength_mangled)
-        return run(sess, False, cache_intermediate_states=True)
+        return run(sess, False)
 
     run_with_assert()
     return run_without_assert()
@@ -135,11 +135,11 @@ def run_postpatched():
     def run_with_assert():
         print("Running postpatched with assertion that size <= totalram...")
         sess = proj_postpatched.session(onMessageLength_mangled)
-        return run(sess, True, cache_intermediate_states=True)
+        return run(sess, True)
 
     def run_without_assert():
         sess = proj_postpatched.session(onMessageLength_mangled)
-        return run(sess, False, cache_intermediate_states=True)
+        return run(sess, False)
 
     run_with_assert()
     return run_without_assert()
@@ -158,7 +158,7 @@ def run_evil():
     sess.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=proj_prepatched.angr_proj.arch.memory_endness)
 
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
-    return sess.run([this_obj, 0x0, size_ptr_ptr, 4, 1], cache_intermediate_states=True)
+    return sess.run([this_obj, 0x0, size_ptr_ptr, 4, 1])
 
 
 pre_patched_results = run_prepatched()

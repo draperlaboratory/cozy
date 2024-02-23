@@ -306,10 +306,7 @@ class ExecutionGraph:
         for state in leaves:
             target = state
             for hist in reversed(list(state.history.parents)):
-                if hasattr(hist, "custom_strongref_state"):
-                    source = hist.custom_strongref_state
-                else:
-                    raise AttributeError("An input state did not have the 'custom_strongref_state' attribute. Did you forget to enable caching of intermediate states when running a session?")
+                source = hist
                 self.graph.add_node(source)
                 self.graph.add_edge(source, target)
                 target = source
@@ -388,30 +385,25 @@ class ExecutionGraph:
         """
         g = nx.convert_node_labels_to_integers(self.graph, label_attribute='state')
         for (node_i, attr) in g.nodes.items():
-            node = g.nodes[node_i]['state']
-            # Assuming utf-8 character encoding,
-            stdout = node.posix.dumps(sys.stdout.fileno())
+            # Note that the data used by this function is saved in cozy.session._save_states
+            node_history = g.nodes[node_i]['state']
+            if isinstance(node_history, SimState):
+                node_history = node_history.history
+
+            stdout = node_history.cozy_stdout
             try:
                 attr['stdout'] = stdout.decode('utf-8')
             except UnicodeDecodeError:
                 attr['stdout'] = str(stdout)
-            stderr = node.posix.dumps(sys.stderr.fileno())
+
+            stderr = node_history.cozy_stderr
             try:
                 attr['stderr'] = stderr.decode('utf-8')
             except UnicodeDecodeError:
                 attr['stderr'] = str(stderr)
-            if node.project.simos.is_syscall_addr(node.addr):
-                # Here we are inside of a syscall implementation. The address that
-                # angr jumps to when it executes a syscall does not actually contain
-                # the code that is executed. Instead a Python hook is executed
-                # to simulate the syscall.
-                attr['contents'] = ""
-            else:
-                try:
-                    attr['contents'] = node.block()
-                except angr.errors.SimEngineError as exc:
-                    attr['contents'] = ""
-            attr['constraints'] = node.solver.constraints
+
+            attr['contents'] = node_history.cozy_contents
+            attr["constraints"] = node_history.cozy_constraints
         return g
 
     def reconstruct_bbl_pp_graph(self):

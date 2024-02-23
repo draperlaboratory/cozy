@@ -176,17 +176,27 @@ def _on_simprocedure(state):
 
 def _save_states(states):
     for state in states:
-        # SimStateHistory already has a variable named strongref_state that is used when EFFICIENT_STATE_MERGING
-        # is enabled. However strongref_state in SimStateHistory may be set to None as part of a state cleanup
-        # process. It seems that the primary usecase for strongref_state in angr is to help with merging states
-        state.history.custom_strongref_state = state
+        state.history.cozy_stdout = state.posix.dumps(sys.stdout.fileno())
+        state.history.cozy_stderr = state.posix.dumps(sys.stderr.fileno())
+        if state.project.simos.is_syscall_addr(state.addr):
+            # Here we are inside of a syscall implementation. The address that
+            # angr jumps to when it executes a syscall does not actually contain
+            # the code that is executed. Instead a Python hook is executed
+            # to simulate the syscall.
+            state.history.cozy_contents = ""
+        else:
+            try:
+                state.history.cozy_contents = state.block()
+            except angr.errors.SimEngineError as exc:
+                state.history.cozy_contents = ""
+        state.history.cozy_constraints = state.solver.constraints
 
 class _SessionExploration:
-    def __init__(self, session: 'Session', cache_intermediate_states: bool=False):
+    def __init__(self, session: 'Session', cache_intermediate_info: bool=True):
         self.session = session
         self.assume_warnings: list[tuple[Assume, SimState]] = []
         self.asserts_failed: list[AssertFailedState] = []
-        self.cache_intermediate_states = cache_intermediate_states
+        self.cache_intermediate_info = cache_intermediate_info
         self.asserts_to_scrub: set[Assert] = set()
 
     def explore(self, simgr):
@@ -243,7 +253,7 @@ class _SessionDirectiveExploration(_SessionExploration):
                                 false_branch = found_state.copy()
                                 false_branch.add_constraints(~cond)
                                 if false_branch.satisfiable():
-                                    if self.cache_intermediate_states:
+                                    if self.cache_intermediate_info:
                                         _save_states([false_branch])
                                     # If the false branch is satisfiable, add it to the list of failed assert states
                                     # This essentially halts execution on the false branch
@@ -258,7 +268,7 @@ class _SessionDirectiveExploration(_SessionExploration):
                                 true_branch = found_state.copy()
                                 true_branch.add_constraints(cond)
                                 if not true_branch.satisfiable():
-                                    if self.cache_intermediate_states:
+                                    if self.cache_intermediate_info:
                                         _save_states([true_branch])
                                     af = AssertFailedState(directive, cond, true_branch, len(self.asserts_failed))
                                     self.asserts_failed.append(af)
@@ -287,14 +297,14 @@ class _SessionDirectiveExploration(_SessionExploration):
             for state in add_states:
                 simgr.found.append(state)
 
-            if self.cache_intermediate_states:
+            if self.cache_intermediate_info:
                 _save_states(simgr.found)
             # We need to step over all the found states so that we don't immediately halt
             # execution of these states in the next interation of the loop
             simgr.step(num_inst=1, stash="found")
             simgr.move(from_stash='found', to_stash="active")
             errored_states = [error_record.state for error_record in simgr.errored]
-            if self.cache_intermediate_states:
+            if self.cache_intermediate_info:
                 _save_states(simgr.active)
                 _save_states(errored_states)
 
@@ -302,7 +312,7 @@ class _SessionBasicExploration(_SessionExploration):
     def explore(self, simgr):
         while len(simgr.active) > 0:
             simgr.step()
-            if self.cache_intermediate_states:
+            if self.cache_intermediate_info:
                 _save_states(simgr.active)
 
 class Session:
@@ -432,13 +442,13 @@ class Session:
         else:
             return None
 
-    def _call(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False,
+    def _call(self, args: list[claripy.ast.bits], cache_intermediate_info: bool=True,
               ret_addr: int | None=None) -> SimulationManager:
         if self.has_run:
             raise RuntimeError("This session has already been run once. Make a new session to run again.")
         self.has_run = True
 
-        if cache_intermediate_states:
+        if cache_intermediate_info:
             _save_states([self.state])
 
         fun_addr = self.start_fun_addr
@@ -462,7 +472,7 @@ class Session:
         else:
             state = self.state
 
-        if cache_intermediate_states:
+        if cache_intermediate_info:
             _save_states([state])
 
         # This concretization strategy is necessary for nullable symbolic pointers. The default
@@ -475,11 +485,11 @@ class Session:
 
         return self.proj.angr_proj.factory.simulation_manager(state)
 
-    def _session_exploration(self, cache_intermediate_states: bool=False) -> _SessionExploration:
+    def _session_exploration(self, cache_intermediate_info: bool=True) -> _SessionExploration:
         if len(self.directives) > 0:
-            return _SessionDirectiveExploration(self, cache_intermediate_states=cache_intermediate_states)
+            return _SessionDirectiveExploration(self, cache_intermediate_info=cache_intermediate_info)
         else:
-            return _SessionBasicExploration(self, cache_intermediate_states=cache_intermediate_states)
+            return _SessionBasicExploration(self, cache_intermediate_info=cache_intermediate_info)
 
     def _run_result(self, simgr: SimulationManager, sess_exploration: _SessionExploration) -> RunResult:
         deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
@@ -489,7 +499,7 @@ class Session:
 
         return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings)
 
-    def run(self, args: list[claripy.ast.bits], cache_intermediate_states: bool=False, ret_addr: int | None=None) -> RunResult:
+    def run(self, args: list[claripy.ast.bits], cache_intermediate_info: bool=True, ret_addr: int | None=None) -> RunResult:
         """
         Runs a session to completion, either starting from the start_fun used to create the session, or from the\
         program start. Note that currently a session may be run only once. If run is called multiple times, a\
@@ -497,16 +507,15 @@ class Session:
 
         :param list[claripy.ast.bits] args: The arguments to pass to the function. angr will utilize the function's\
         type signature to figure out the calling convention to use with the arguments.
-        :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached,\
-        preventing their garbage collection. This is required for dumping the execution graph which is used in\
-        visualization.
+        :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be
+        cached. This is required for dumping the execution graph which is used in visualization.
         :param int | None ret_addr: What address to return to if calling as a function
         :return: The result of running this session.
         :rtype: RunResult
         """
 
-        simgr = self._call(list(args), cache_intermediate_states=cache_intermediate_states, ret_addr=ret_addr)
+        simgr = self._call(list(args), cache_intermediate_info=cache_intermediate_info, ret_addr=ret_addr)
 
-        sess_exploration = self._session_exploration(cache_intermediate_states=cache_intermediate_states)
+        sess_exploration = self._session_exploration(cache_intermediate_info=cache_intermediate_info)
         sess_exploration.explore(simgr)
         return self._run_result(simgr, sess_exploration)

@@ -28,7 +28,7 @@ class JointConcolicSession:
 
     def run(self, args_left: list[claripy.ast.bits], args_right: list[claripy.ast.bits],
             symbols: set[claripy.BVS] | frozenset[claripy.BVS],
-            cache_intermediate_states: bool=False,
+            cache_intermediate_info: bool=True,
             ret_addr_left: int | None=None, ret_addr_right: int | None = None) -> tuple[RunResult, RunResult]:
         """
         Jointly run two sessions.
@@ -39,9 +39,8 @@ class JointConcolicSession:
         symbols may be passed as arguments, or may have been pre-stored in the memory of the session before this\
         method was called. This set is required during the concretization step where we need to generate concrete\
         values for all symbolic values in the program.
-        :param bool cache_intermediate_states: If this flag is True, then intermediate execution states will be cached,\
-        preventing their garbage collection. This is required for dumping the execution graph which is used in\
-        visualization.
+        :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be
+        cached. This is required for dumping the execution graph which is used in visualization.
         :param int | None ret_addr_left: What address to return to if calling as a function
         :param int | None ret_addr_right: What address to return to if calling as a function
 
@@ -50,13 +49,13 @@ class JointConcolicSession:
         :rtype: tuple[RunResult, RunResult]
         """
 
-        simgr_left = self.sess_left._call(args_left, cache_intermediate_states=cache_intermediate_states,
+        simgr_left = self.sess_left._call(args_left, cache_intermediate_info=cache_intermediate_info,
                                           ret_addr=ret_addr_left)
-        simgr_right = self.sess_right._call(args_right, cache_intermediate_states=cache_intermediate_states,
-                                          ret_addr=ret_addr_right)
+        simgr_right = self.sess_right._call(args_right, cache_intermediate_info=cache_intermediate_info,
+                                            ret_addr=ret_addr_right)
 
-        sess_exploration_left = self.sess_left._session_exploration(cache_intermediate_states=cache_intermediate_states)
-        sess_exploration_right = self.sess_right._session_exploration(cache_intermediate_states=cache_intermediate_states)
+        sess_exploration_left = self.sess_left._session_exploration(cache_intermediate_info=cache_intermediate_info)
+        sess_exploration_right = self.sess_right._session_exploration(cache_intermediate_info=cache_intermediate_info)
 
         concolic_explorer_left = ConcolicSim(symbols)
         concolic_explorer_right = ConcolicSim(symbols)

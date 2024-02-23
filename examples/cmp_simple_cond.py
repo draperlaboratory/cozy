@@ -13,8 +13,8 @@ sess_post = proj_post.session("my_fun")
 
 arg = claripy.BVS('n', 4 * 8)
 
-rslt_pre = sess_pre.run([arg], cache_intermediate_states=True)
-rslt_post = sess_post.run([arg], cache_intermediate_states=True)
+rslt_pre = sess_pre.run([arg])
+rslt_post = sess_post.run([arg])
 
 comparison = Comparison(rslt_pre, rslt_post)
 
