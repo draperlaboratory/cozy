@@ -184,9 +184,9 @@ class StateDiff:
                     if joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right]):
                         # It is possible that there is a symbolic value stored in memory.
                         # Here we want to simplify this with respect to the joint constraints
-                        simpl_bytes_left = claripy_ext.simplify_kb(bytes_left, joint_solver.constraints)
-                        simpl_bytes_right = claripy_ext.simplify_kb(bytes_right, joint_solver.constraints)
-                        ret_mem_diff[addr_range] = (simpl_bytes_left, simpl_bytes_right)
+                        #simpl_bytes_left = claripy_ext.simplify_kb(bytes_left, joint_solver.constraints)
+                        #simpl_bytes_right = claripy_ext.simplify_kb(bytes_right, joint_solver.constraints)
+                        ret_mem_diff[addr_range] = (bytes_left, bytes_right)
 
         # Loop over all the registers that could possibly be different and save the ones that are actually different
         ret_reg_diff = dict()
@@ -203,9 +203,9 @@ class StateDiff:
 
                 if reg_left is not reg_right:
                     if joint_solver.satisfiable(extra_constraints=[reg_left != reg_right]):
-                        simpl_reg_left = claripy_ext.simplify_kb(reg_left, joint_solver.constraints)
-                        simpl_reg_right = claripy_ext.simplify_kb(reg_right, joint_solver.constraints)
-                        ret_reg_diff[reg_name] = (simpl_reg_left, simpl_reg_right)
+                        #simpl_reg_left = claripy_ext.simplify_kb(reg_left, joint_solver.constraints)
+                        #simpl_reg_right = claripy_ext.simplify_kb(reg_right, joint_solver.constraints)
+                        ret_reg_diff[reg_name] = (reg_left, reg_right)
 
         return (ret_mem_diff, ret_reg_diff)
 
