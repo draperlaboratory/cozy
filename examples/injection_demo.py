@@ -100,6 +100,17 @@ def setup(proj: cozy.project.Project):
 
     add_str_constraints(sess)
 
+    def assertion_condition(state):
+        # Assert that at this point in the program, the role the user originally inputted must be "root\0"
+        return ((role_symbols[0] == ord('r')) &
+                (role_symbols[1] == ord('o')) &
+                (role_symbols[2] == ord('o')) &
+                (role_symbols[3] == ord('t')) &
+                (role_symbols[4] == 0))
+
+    directive = cozy.directive.Assert.from_fun_offset(proj, "delete", 0x0, assertion_condition, "Role is root at delete")
+    sess.add_directives(directive)
+
     return (args, sess)
 
 (args_prepatched, prepatched_sess) = setup(proj_prepatched)
