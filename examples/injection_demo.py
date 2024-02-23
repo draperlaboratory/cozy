@@ -1,22 +1,46 @@
-import angr
 import cozy
-from cozy.concolic.exploration import ConcolicSim
-import logging
+import cozy.concolic
 import claripy
 
-#logging.getLogger('angr').setLevel('DEBUG')
+def select_program():
+    print("a. injectionAttack")
+    print("b. injectionAttack-badPatch-patcherex")
+    print("c. injectionAttack-goodPatch-patcherex")
+    selection = input("Enter a, b or c")
+    if selection == 'a':
+        return 'test_programs/injection_demo/injectionAttack'
+    elif selection == 'b':
+        return 'test_programs/injection_demo/injectionAttack-badPatch-patcherex'
+    elif selection == 'c':
+        return 'test_programs/injection_demo/injectionAttack-goodPatch-patcherex'
+    else:
+        print("Bad selection. Please try again.")
+        return select_program()
 
-proj_prepatched = cozy.project.Project('test_programs/injection_demo/injectionAttack')
-proj_goodpatch = cozy.project.Project('test_programs/injection_demo/injectionAttack-goodPatch')
+print("Enter the first program to compare:")
+first_prog = select_program()
+
+print("Enter the second program to compare:")
+second_prog = select_program()
+
+use_concolic = input("Would you like to use complete concolic execution? (y/n)") == "y"
+
+proj_prepatched = cozy.project.Project(first_prog)
+proj_postpatched = cozy.project.Project(second_prog)
 
 proj_prepatched.add_prototype("main", "int main(int argc, char **argv)")
-proj_goodpatch.add_prototype("main", "int main(int argc, char **argv)")
+proj_postpatched.add_prototype("main", "int main(int argc, char **argv)")
 
 INPUT_LEN = 20
 
 command_symbols = [claripy.BVS('command', 8) for _ in range(INPUT_LEN - 1)]
 role_symbols = [claripy.BVS('role', 8) for _ in range(INPUT_LEN - 1)]
 data_symbols = [claripy.BVS('data', 8) for _ in range(INPUT_LEN - 1)]
+
+symbols = set()
+symbols.update(command_symbols)
+symbols.update(role_symbols)
+symbols.update(data_symbols)
 
 command_symbols.append(claripy.BVV(0, 8))
 role_symbols.append(claripy.BVV(0, 8))
@@ -35,7 +59,13 @@ def add_str_constraints(sess: cozy.project.Session):
     constrain_lst(role_symbols)
     constrain_lst(data_symbols)
 
-def setup(sess: cozy.project.Session):
+def setup(proj: cozy.project.Project):
+    proj.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
+    proj.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp, replace=True)
+    proj.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r, replace=True)
+
+    sess = proj.session("main")
+
     sess.state.libc.simple_strtok = False
     sess.state.libc.max_symbolic_strstr = 60
 
@@ -70,32 +100,27 @@ def setup(sess: cozy.project.Session):
 
     add_str_constraints(sess)
 
-    return sess.run(args, cache_intermediate_states=True)
+    return (args, sess)
 
-prepatched_sess = proj_prepatched.session("main")
-goodpatched_sess = proj_goodpatch.session("main")
+(args_prepatched, prepatched_sess) = setup(proj_prepatched)
+(args_postpatched, postpatched_sess) = setup(proj_postpatched)
 
-proj_prepatched.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
-proj_goodpatch.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
-
-proj_prepatched.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp, replace=True)
-proj_goodpatch.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp, replace=True)
-
-proj_prepatched.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r, replace=True)
-proj_goodpatch.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r, replace=True)
-
-prepatched_results = setup(prepatched_sess)
-goodpatched_results = setup(goodpatched_sess)
+if use_concolic:
+    joint_sess = cozy.concolic.session.JointConcolicSession(prepatched_sess, postpatched_sess)
+    (prepatched_results, postpatched_results) = joint_sess.run(args_prepatched, args_postpatched, symbols, cache_intermediate_states=True)
+else:
+    prepatched_results = prepatched_sess.run(args_prepatched, cache_intermediate_states=True)
+    postpatched_results = postpatched_sess.run(args_postpatched, cache_intermediate_states=True)
 
 def concrete_arg_mapper(args):
     def transform_str(characters):
         return [chr(n.concrete_value) if (n.concrete_value >= 32 and n.concrete_value <= 126) else n.concrete_value for n in characters]
     return [transform_str(cs) for cs in args]
 
-comparison = cozy.analysis.Comparison(prepatched_results, goodpatched_results, use_unsat_core=False)
+comparison = cozy.analysis.Comparison(prepatched_results, postpatched_results, use_unsat_core=False)
 
-cozy.execution_graph.visualize_comparison(proj_prepatched, proj_goodpatch,
-                                          prepatched_results, goodpatched_results,
+cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
+                                          prepatched_results, postpatched_results,
                                           comparison,
                                           concrete_arg_mapper=concrete_arg_mapper,
                                           args=[command_symbols, role_symbols, data_symbols],
