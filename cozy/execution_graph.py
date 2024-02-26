@@ -10,6 +10,8 @@ from angr import SimState
 from angr.block import Block
 from collections.abc import Callable
 
+from angr.state_plugins import SimStateHistory
+
 import cozy.analysis
 from .functools_ext import fmap
 from .project import Project
@@ -363,7 +365,7 @@ class ExecutionGraph:
         except:
             return None
 
-    def _list_actions(self, child: angr.SimState, parent: angr.SimState):
+    def _list_actions(self, child: angr.SimState | SimStateHistory, parent: angr.SimState):
         # Actions are only recorded in history, not attached to the
         # SimState where they occurred. So we need to look at the history
         # of the child to get the actions occuring on the parent
@@ -372,7 +374,11 @@ class ExecutionGraph:
         # parents took - for example if an action includes narrowing
         # a constraint. So we attach the actions a child associates with
         # their parent to an edge.
-        return list(map(str,filter(lambda x: x.bbl_addr == child.history.addr, child.history.actions)))
+        if isinstance(child, angr.SimState):
+            history = child.history
+        else:
+            history = child
+        return list(map(str,filter(lambda x: x.bbl_addr == history.addr, history.actions)))
 
     def reconstruct_bbl_addr_graph(self):
         """

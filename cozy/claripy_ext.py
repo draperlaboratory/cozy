@@ -65,10 +65,9 @@ def model(constraints,
     # Computes at most n different satisfying assignments for a set of constraints
     solver = claripy.Solver()
     solver.add(constraints)
-    extra_constraints = []
     generated_models = []
     while len(generated_models) < n:
-        if solver.satisfiable(extra_constraints=extra_constraints, **kwargs):
+        if solver.satisfiable(**kwargs):
             models = list(solver._models)
 
             ret = dict()
@@ -93,7 +92,7 @@ def model(constraints,
                 # m maps symbol names to either integers or floats. We want symbols to map
                 # to BVV or FPS, so we need to do that conversion here
                 m = models[0].model
-                for c in constraints:
+                for c in solver.constraints:
                     for leaf in c.leaf_asts():
                         if leaf.symbolic:
                             leaf_name = get_symbol_name(leaf)
@@ -101,6 +100,8 @@ def model(constraints,
                                 ret[leaf] = value(leaf, m[leaf_name])
                             else:
                                 ret[leaf] = zero(leaf)
+            else:
+                raise ValueError("Failed to generate a model for a satisfiable solution")
 
             # Set any symbols not in the model to 0
             for extra in extra_symbols:
@@ -111,7 +112,7 @@ def model(constraints,
 
             if len(generated_models) < n:
                 # We need to find a solution that is different from the model we just found in at least one variable
-                extra_constraints.append(claripy.Or(*[sym != val for (sym, val) in ret.items()]))
+                solver.add(claripy.Or(*[sym != val for (sym, val) in ret.items()]))
                 # We don't want to accumulate models between calls to .satisfiable(), so clear out the model we
                 # just found here
                 solver._models.clear()
