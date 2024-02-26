@@ -120,3 +120,13 @@ class Project:
         if symbol_name in angr.SIM_PROCEDURES["libc"]:
             angr.SIM_PROCEDURES["libc"][symbol_name] = simproc_class
         return self.angr_proj.hook_symbol(symbol_name, simproc_class(project=self.angr_proj), kwargs=kwargs, replace=replace)
+
+    def hook_syscall(self, syscall_name: str, simproc_class: type[SimProcedure]):
+        """
+        Hooks a syscall in the angr project.
+
+        :param str syscall_name: The name of the syscall to hook.
+        :param type[SimProcedure] simproc_class: The class to use to hook the symbol. Note that this is not an instance\
+        of SimProcedure, but is instead a reference to the class itself.
+        """
+        return self.angr_proj.simos.syscall_library.add(syscall_name, simproc_class)
