@@ -66,6 +66,20 @@ def setup(proj: cozy.project.Project):
 
     sess = proj.session("main")
 
+    root_cond = ((role_symbols[0] == ord('r')) &
+                 (role_symbols[1] == ord('o')) &
+                 (role_symbols[2] == ord('o')) &
+                 (role_symbols[3] == ord('t')) &
+                 (role_symbols[4] == 0))
+    guest_cond = ((role_symbols[0] == ord('g')) &
+                  (role_symbols[1] == ord('u')) &
+                  (role_symbols[2] == ord('e')) &
+                  (role_symbols[3] == ord('s')) &
+                  (role_symbols[4] == ord('t')) &
+                  (role_symbols[5] == 0))
+
+    sess.add_constraints(root_cond | guest_cond)
+
     sess.state.libc.simple_strtok = False
     sess.state.libc.max_symbolic_strstr = 60
 
