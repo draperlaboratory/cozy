@@ -16,17 +16,18 @@ export const focusMixin = {
         .predecessors()
         .addClass('pathHighlight');
     }
-    
+
     return this
   },
-  
+
   // focus a range of nodes, and set its lower tips to be the loci
   focusRange(nodes) {
 
     this.elements().removeClass("pathHighlight")
     this.elements().removeClass("availablePath")
 
-    this.loci = nodes.filter(ele => ele.outgoers("node").intersection(nodes).length == 0)
+    this.loci = nodes.filter(
+      ele => ele.outgoers("node").intersection(nodes).length == 0)
 
     nodes.addClass('pathHighlight')
 
