@@ -18,6 +18,7 @@
     };
 
     devShells.x86_64-linux.testing = let 
+
       portion = pyPkgs.buildPythonPackage rec {
         pname = "portion";
         version = "2.4.1";
@@ -27,14 +28,39 @@
         };
         doCheck = false;
       };
+
+      patcherex2 = pyPkgs.buildPythonPackage rec {
+        pname = "patcherex2";
+        version = "0.1.8";
+        src = pyPkgs.fetchPypi {
+          inherit pname version;
+          sha256 = "sha256-tgzmOh0Ivb1yMAr1eivh0bHNBP1w5sLrZkkNFugglgI=";
+        };
+        pyproject = true;
+        nativeBuildInputs = [
+          pyPkgs.setuptools
+        ];
+        propagatedBuildInputs = [
+          pyPkgs.keystone-engine
+          pyPkgs.intelhex
+        ];
+      };
+
+      lld_15 = pkgs.lld_15.overrideAttrs (oa: {
+        postInstall = "ln -s $out/bin/ld.lld $out/bin/ld.lld-15";
+      });
+
     in pkgs.mkShell {
       buildInputs = [ 
         pkgs.python311
-        pkgs.python311Packages.angr
-        pkgs.python311Packages.networkx
-        pkgs.python311Packages.sphinx
-        pkgs.python311Packages.sphinx-autoapi
+        pyPkgs.angr
+        pyPkgs.networkx
+        pyPkgs.sphinx
+        pyPkgs.sphinx-autoapi
+        pkgs.clang_15
         portion
+        lld_15
+        patcherex2
         self.packages.x86_64-linux.default
       ];
     };
