@@ -8,7 +8,7 @@ def select_program():
     print("a. injectionAttack")
     print("b. injectionAttack-badPatch-patcherex")
     print("c. injectionAttack-goodPatch-patcherex")
-    selection = input("Enter a, b or c")
+    selection = input("Enter a, b or c\n")
     if selection == 'a':
         return 'test_programs/injection_demo/injectionAttack'
     elif selection == 'b':
@@ -190,7 +190,7 @@ def concrete_arg_mapper(args):
         return [chr(n.concrete_value) if (n.concrete_value >= 32 and n.concrete_value <= 126) else n.concrete_value for n in characters]
     return [transform_str(cs) for cs in args]
 
-comparison = cozy.analysis.Comparison(prepatched_results, postpatched_results, use_unsat_core=False)
+comparison = cozy.analysis.Comparison(prepatched_results, postpatched_results)
 
 cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
                                           prepatched_results, postpatched_results,
