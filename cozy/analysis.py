@@ -6,7 +6,7 @@ from angr import SimState
 
 import portion as P
 
-from . import claripy_ext, logging
+from . import claripy_ext, log
 from .functools_ext import *
 import collections.abc
 from .session import RunResult
@@ -368,7 +368,7 @@ class Comparison:
             for (j, state_post) in enumerate(states_post_patched):
                 count += 1
                 percentage = (count / total_num_pairs) * 100.0
-                logging.info("Comparing state pair %d of %d (%.0f%% complete)", count, total_num_pairs, percentage)
+                log.info("Comparing state pair %d of %d (%.0f%% complete)", count, total_num_pairs, percentage)
 
                 if ignore_invalid_stack:
                     stack_change = state_pre.state.arch.stack_change

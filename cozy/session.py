@@ -7,7 +7,7 @@ import angr, claripy
 from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
-from . import logging
+from . import log
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState
 
@@ -218,7 +218,7 @@ class _SessionDirectiveExploration(_SessionExploration):
             # Explore seems to check the find list BEFORE stepping
             simgr.explore(find=find_addrs, n=1)
 
-            logging.info("Running %s: %s", self.session.proj.angr_proj.filename, str(simgr))
+            log.info("Running %s: %s", self.session.proj.angr_proj.filename, str(simgr))
 
             # When using explore with a find key, angr will only put 1 state into the found stash at a time
             # This is problematic since we could create more than one error state triggered for every
@@ -239,7 +239,7 @@ class _SessionDirectiveExploration(_SessionExploration):
                             if not found_state.satisfiable():
                                 self.assume_warnings.append((directive, found_state))
                                 info_str = "(unknown)" if directive.info_str is None else directive.info_str
-                                logging.warning(
+                                log.warning(
                                     "Assume %s for address %s was not satisfiable. In this path of execution there is no possible way for execution to proceed past this point: %s",
                                     info_str,
                                     hex(directive.addr),
@@ -316,7 +316,7 @@ class _SessionBasicExploration(_SessionExploration):
     def explore(self, simgr):
         while len(simgr.active) > 0:
             simgr.step()
-            logging.info("Running %s: %s", self.session.proj.angr_proj.filename, str(simgr))
+            log.info("Running %s: %s", self.session.proj.angr_proj.filename, str(simgr))
             if self.cache_intermediate_info:
                 _save_states(simgr.active)
 
