@@ -6,7 +6,7 @@ from angr import SimState
 
 import portion as P
 
-from . import claripy_ext
+from . import claripy_ext, logging
 from .functools_ext import *
 import collections.abc
 from .session import RunResult
@@ -361,8 +361,15 @@ class Comparison:
             inv_addrs_pre_patched = None
             inv_addrs_post_patched = None
 
+        total_num_pairs = len(states_pre_patched) * len(states_post_patched)
+        count = 0
+
         for (i, state_pre) in enumerate(states_pre_patched):
             for (j, state_post) in enumerate(states_post_patched):
+                count += 1
+                percentage = (count / total_num_pairs) * 100.0
+                logging.info("Comparing state pair %d of %d (%.0f%% complete)", count, total_num_pairs, percentage)
+
                 if ignore_invalid_stack:
                     stack_change = state_pre.state.arch.stack_change
                     pair_ignore_addrs = ignore_addrs + [_invalid_stack_overlap(inv_addrs_pre_patched[i], inv_addrs_post_patched[j], stack_change)]
