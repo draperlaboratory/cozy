@@ -7,6 +7,8 @@ made by a micropatch, specifically to registers, memory and stdout/stderr. The f
 has the ability to dump diff information in both a textual human-readable report and
 via a browser based rich user interface.
 
+![Screenshot](screenshots/cozy-viz-1.png)
+
 ## Install
 
 cozy is now available as a Python package on PyPI under the name `cozy-re`. Install with pip via the following command:
