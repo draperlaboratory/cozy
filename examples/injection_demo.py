@@ -1,3 +1,5 @@
+import angr
+
 import cozy
 import cozy.concolic
 import claripy
@@ -59,7 +61,53 @@ def add_str_constraints(sess: cozy.project.Session):
     constrain_lst(role_symbols)
     constrain_lst(data_symbols)
 
+class sprintf(angr.SimProcedure):
+    # pylint: disable=arguments-differ
+    def run(self, dst, format_str):
+        strlen = angr.SIM_PROCEDURES["libc"]["strlen"]
+        strncpy = angr.SIM_PROCEDURES["libc"]["strncpy"]
+
+        command = self.va_arg("char *")
+        role = self.va_arg("char *")
+        data = self.va_arg("char *")
+
+        command_len = self.inline_call(strlen, command).ret_expr
+        role_len = self.inline_call(strlen, role).ret_expr
+        data_len = self.inline_call(strlen, data).ret_expr
+
+        addr = dst
+
+        self.state.mem[addr].char = ord('c')
+        addr = addr + 1
+        self.state.mem[addr].char = ord(':')
+        addr = addr + 1
+
+        self.inline_call(strncpy, addr, command, command_len + 1, src_len=command_len)
+        addr = addr + command_len
+
+        self.state.mem[addr].char = ord(';')
+        addr = addr + 1
+        self.state.mem[addr].char = ord('r')
+        addr = addr + 1
+        self.state.mem[addr].char = ord(':')
+        addr = addr + 1
+
+        self.inline_call(strncpy, addr, role, role_len + 1, src_len=role_len)
+        addr = addr + role_len
+
+        self.state.mem[addr].char = ord(';')
+        addr = addr + 1
+        self.state.mem[addr].char = ord('d')
+        addr = addr + 1
+        self.state.mem[addr].char = ord(':')
+        addr = addr + 1
+
+        self.inline_call(strncpy, addr, data, data_len + 1, src_len=data_len)
+
+        return command_len + role_len + data_len + 8
+
 def setup(proj: cozy.project.Project):
+    proj.hook_symbol('sprintf', sprintf, replace=True)
     proj.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
     proj.hook_symbol('strncmp', cozy.hooks.strncmp.strncmp, replace=True)
     proj.hook_symbol('strtok_r', cozy.hooks.strtok_r.strtok_r, replace=True)
