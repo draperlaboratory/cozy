@@ -124,12 +124,6 @@ export default class MenuBar extends Component {
     super()
     this.state = {
       open: null,
-      pruningMemory: false,
-      pruningStdout: false,
-      pruningRegisters: false,
-      pruningCorrect: false,
-      pruningDoRegex: false,
-      pruningRegex: ".*",
       searchStdoutRegex: ".*",
     }
   }
