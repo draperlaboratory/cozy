@@ -70,4 +70,10 @@ export function removeBranch(node) {
     node = node.incomers('node')[0]
     target.remove()
   }
+  if (target &&
+    node.outgoers('node').length == 0 && 
+    node.incomers('node').length == 0) {
+    node.remove()
+  }
+    
 }
