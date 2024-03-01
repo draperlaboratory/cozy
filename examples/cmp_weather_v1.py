@@ -111,7 +111,7 @@ def run_weather_3():
         fun_name='scan_temperatures',
         offset=0x46,
         log_fun=lambda st: st.regs.eax,
-        info_str="Computed Average: ",
+        info_str="Computed Average",
         concrete_mapper=lambda eax_val: primitives.from_twos_comp(eax_val.concrete_value, 32)
     )
 

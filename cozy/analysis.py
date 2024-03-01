@@ -11,6 +11,7 @@ from .functools_ext import *
 import collections.abc
 from .session import RunResult
 from .concrete import _concretize, CompatiblePairInput
+from .side_effect import PerformedSideEffect, ConcretePerformedSideEffect
 from .terminal_state import TerminalState, DeadendedState
 
 # Given a state, returns a range of addresses that were used as part of the stack but are no longer
@@ -293,14 +294,14 @@ class CompatiblePair:
         joint_solver.add(sr.solver.constraints)
 
         rangeless_mem_diff = {(rng.start, rng.stop): val for (rng, val) in self.mem_diff.items()}
-        state_bundle = (args, rangeless_mem_diff, self.reg_diff, self.state_left.virtual_prints, self.state_right.virtual_prints)
+        state_bundle = (args, rangeless_mem_diff, self.reg_diff, self.state_left.side_effects, self.state_right.side_effects)
         concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
 
         ret = []
-        for (conc_args, conc_mem_diff, conc_reg_diff, conc_vprints_left, conc_vprints_right) in concrete_results:
+        for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right) in concrete_results:
             range_conc_mem_diff = {range(start, stop): val for ((start, stop), val) in conc_mem_diff.items()}
             ret.append(CompatiblePairInput(conc_args, range_conc_mem_diff, conc_reg_diff,
-                                           conc_vprints_left, conc_vprints_right))
+                                           conc_side_effects_left, conc_side_effects_right))
 
         return ret
 
@@ -545,18 +546,18 @@ class Comparison:
                             output += "\tConcrete mem diff: {}\n".format(str(hexify(concrete_input.mem_diff)))
                         if len(concrete_input.reg_diff) > 0:
                             output += "\tConcrete reg diff: {}\n".format(str(hexify(concrete_input.reg_diff)))
-                        def print_vprints(vprints):
+                        def print_side_effects(side_effects: dict[str, list[ConcretePerformedSideEffect]]):
                             nonlocal output
-                            for (pdirective, conc_print_val) in vprints:
-                                if pdirective.concrete_mapper is not None:
-                                    conc_print_val = pdirective.concrete_mapper(conc_print_val)
-                                output += "{}: {}\n".format(pdirective.info_str, conc_print_val)
-                        if len(concrete_input.left_vprints) > 0:
-                            output += "Prepatched virtual prints:\n"
-                            print_vprints(concrete_input.left_vprints)
-                        if len(concrete_input.right_vprints) > 0:
-                            output += "Postpatched virtual prints:\n"
-                            print_vprints(concrete_input.right_vprints)
+                            for (channel, effects) in side_effects.items():
+                                output += "Channel {}:\n".format(channel)
+                                for eff in effects:
+                                    output += str(eff.mapped_body) + "\n"
+                        if len(concrete_input.left_side_effects) > 0:
+                            output += "Prepatched side effects:\n"
+                            print_side_effects(concrete_input.left_side_effects)
+                        if len(concrete_input.right_side_effects) > 0:
+                            output += "Postpatched side effects:\n"
+                            print_side_effects(concrete_input.right_side_effects)
 
                 output += "\n"
 
@@ -576,12 +577,12 @@ class Comparison:
                     input_args = hexify(concrete_input.args)
                 output += "{}.\n".format(k + 1)
                 output += "\tInput arguments: {}\n".format(str(input_args))
-                if len(concrete_input.vprints) > 0:
-                    output += "Prepatched virtual prints:\n"
-                    for (pdirective, conc_print_val) in concrete_input.vprints:
-                        if pdirective.concrete_mapper is not None:
-                            conc_print_val = pdirective.concrete_mapper(conc_print_val)
-                        output += "({}, {})\n".format(pdirective.info_str, conc_print_val)
+                if len(concrete_input.side_effects) > 0:
+                    output += "Side effects:\n"
+                    for (channel, effects) in concrete_input.side_effects.items():
+                        output += "Channel {}:\n".format(channel)
+                        for eff in effects:
+                            output += str(eff.mapped_body) + "\n"
 
         if len(self.orphans_left) == 0:
             output += "There are no prepatched orphans\n"

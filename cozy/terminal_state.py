@@ -5,9 +5,11 @@ import portion as P
 
 from angr.sim_manager import ErrorRecord
 
+from . import side_effect
 from .concrete import _concretize, TerminalStateInput
 import claripy
 from .directive import Assert, VirtualPrint
+from .side_effect import PerformedSideEffect
 
 
 class TerminalState:
@@ -52,17 +54,18 @@ class TerminalState:
         return self._std_err
 
     @property
-    def virtual_prints(self) -> list[tuple[VirtualPrint, claripy.ast.Base]]:
+    def side_effects(self) -> dict[str, list[PerformedSideEffect]]:
+        return side_effect.get_effects(self.state)
+
+    @property
+    def virtual_prints(self) -> list[PerformedSideEffect]:
         """
         Returns the output of the virtual prints that occurred while reaching this state.
 
         :getter: A list of VirtualPrint directives, along with the values they produced.
         :type: list[tuple[VirtualPrint, claripy.ast.Base]]
         """
-        if 'virtual_prints' in self.state.globals:
-            return self.state.globals['virtual_prints']
-        else:
-            return []
+        return side_effect.get_channel(self.state, 'virtual_prints')
 
     @property
     def mem_writes(self) -> P.IntervalDict:

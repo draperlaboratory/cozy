@@ -145,6 +145,11 @@ class VirtualPrint(Directive):
         self.info_str = info_str
         self.concrete_mapper = concrete_mapper
 
+    def effect_concrete_mapper(self, concrete_value):
+        if self.concrete_mapper is not None:
+            concrete_value = self.concrete_mapper(concrete_value)
+        return "{}: {}".format(self.info_str, concrete_value)
+
     @staticmethod
     def from_fun_offset(project, fun_name: str, offset: int, log_fun: Callable[[SimState], claripy.ast.Base], concrete_mapper: Callable[[claripy.ast.Base], any] | None=None, info_str: str | None = None):
         """

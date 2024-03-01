@@ -7,7 +7,7 @@ import angr, claripy
 from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
-from . import log
+from . import log, side_effect
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState
 
@@ -96,12 +96,12 @@ class RunResult:
                         concrete_args = concrete_input.args
                     output += "{}.\n".format(i + 1)
                     output += "\t{}\n".format(str(concrete_args))
-                    if len(concrete_input.vprints) > 0:
-                        output += "Virtual prints:\n"
-                        for (pdirective, conc_print_val) in concrete_input.vprints:
-                            if pdirective.concrete_mapper is not None:
-                                conc_print_val = pdirective.concrete_mapper(conc_print_val)
-                            output += "{}: {}\n".format(pdirective.info_str, conc_print_val)
+                    if len(concrete_input.side_effects) > 0:
+                        output += "Side effects:\n"
+                        for (channel, effects) in concrete_input.side_effects.items():
+                            output += "Channel {}:\n".format(channel)
+                            for eff in effects:
+                                output += str(eff.mapped_body) + "\n"
                 output += "\n\n"
             return output
 
@@ -280,12 +280,7 @@ class _SessionDirectiveExploration(_SessionExploration):
                                     if directive.assert_type == AssertType.ASSERT_CAN_GLOBAL:
                                         self.asserts_to_scrub.add(directive)
                         elif isinstance(directive, VirtualPrint):
-                            if 'virtual_prints' in found_state.globals:
-                                accum_prints = found_state.globals['virtual_prints'].copy()
-                            else:
-                                accum_prints = []
-                            accum_prints.append((directive, directive.log_fun(found_state)))
-                            found_state.globals['virtual_prints'] = accum_prints
+                            side_effect.perform(found_state, 'virtual_prints', directive.log_fun(found_state), concrete_mapper=directive.effect_concrete_mapper)
                         elif isinstance(directive, ErrorDirective):
                             prune_states.add(found_state)
                             simgr.errored.append(
@@ -358,6 +353,7 @@ class Session:
         self.state.globals['mem_writes'] = P.IntervalDict()
         self.state.inspect.b('simprocedure', when=angr.BP_AFTER, action=_on_simprocedure)
         self.state.globals['malloced_names'] = P.IntervalDict()
+        self.state.globals['side_effects'] = dict()
 
         # Initialize mutable state related to this session
         self.directives = []

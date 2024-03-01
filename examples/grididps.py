@@ -26,7 +26,8 @@ class usb_serial_getchar(angr.SimProcedure):
 class usb_serial_write(angr.SimProcedure):
     # pylint: disable=arguments-differ
     def run(self, str, str_len):
-        print('doing usb_serial_write')
+        puts = angr.SIM_PROCEDURES["libc"]["puts"]
+        self.inline_call(puts, str)
         return 0
 
 class println(angr.SimProcedure):
