@@ -162,37 +162,6 @@ export default class MenuBar extends Component {
     }
   }
 
-  prune() {
-    // I think the user expectation is going to be that with nothing selected,
-    // nothing is pruned. But once something is selected, the more pruning
-    // requirements we add, the less we prune
-    let test = () =>
-      this.state.pruningMemory
-      || this.state.pruningStdout
-      || this.state.pruningRegisters
-      || this.state.pruningCorrect
-      || this.state.pruningDoRegex
-
-    const extendTest = (f, g) => (l, r) => f(l, r) && g(l, r)
-
-    if (this.state.pruningMemory) test = extendTest(noMemoryDiffs, test)
-    if (this.state.pruningStdout) test = extendTest(noStdDiffs, test)
-    if (this.state.pruningRegisters) test = extendTest(noRegisterDiffs, test)
-    if (this.state.pruningCorrect) test = extendTest(noErrors, test)
-    if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
-
-    this.props.prune(test)
-
-    this.setState({
-      open: null,
-      pruningMemory: false,
-      pruningStdout: false,
-      pruningRegisters: false,
-      pruningCorrect: false,
-      pruningDoRegex: false,
-      pruningRegex: ".*"
-    })
-  }
 
   setTidiness(level) {
     this.props.setTidiness(level)
@@ -205,7 +174,7 @@ export default class MenuBar extends Component {
   }
 
   updateSearch(e) {
-    this.setState({ searchStdoutRegex: e.target.value}, () => {
+    this.setState({ searchStdoutRegex: e.target.value }, () => {
       const cyLeft = this.props.cyLeft.cy
       const cyRight = this.props.cyRight.cy
       cyLeft.dim()
@@ -226,7 +195,7 @@ export default class MenuBar extends Component {
   }
 
   clearSearch() {
-    this.setState({ searchStdoutRegex: '.*'}, () => {
+    this.setState({ searchStdoutRegex: '.*' }, () => {
       const cyLeft = this.props.cyLeft.cy
       const cyRight = this.props.cyRight.cy
       cyLeft.dim()
@@ -305,37 +274,13 @@ export default class MenuBar extends Component {
             <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
         <//>
       <//>
-      <${Menu} 
-        enabled=${enabled}
+      <${PruneMenu} 
+        enabled=${enabled} 
+        prune=${props.prune}
+        unprune=${props.unprune}
         open=${state.open}
-        title="Prune"
-        setOpen=${o => this.setOpen(o)}>
-        <${MenuOption} onClick=${() => this.setState({ pruningMemory: !state.pruningMemory })}>
-          <input type="checkbox" checked=${state.pruningMemory}/> Identical Memory
-        <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningRegisters: !state.pruningRegisters })}>
-          <input type="checkbox" checked=${state.pruningRegisters}/> Identical Register Contents 
-        <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningStdout: !state.pruningStdout })}>
-          <input type="checkbox" checked=${state.pruningStdout}/> Identical Stdout/Stderr
-        <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningCorrect: !state.pruningCorrect })}>
-          <input type="checkbox" checked=${state.pruningCorrect}/> Error-free
-        <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningDoRegex: !state.pruningDoRegex })}>
-          <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
-            onClick=${e => e.stopPropagation()}
-            onInput=${e => this.setState({ pruningRegex: e.target.value })} 
-            value=${state.pruningRegex}/>
-        <//>
-        <hr/>
-        <${MenuOption} onClick=${() => this.prune()}>
-          Prune branches matching all conditions above
-        <//>
-        <${MenuOption} onClick=${() => { props.unprune(); this.setState({ open: null }) }}>
-          Revert All Pruning
-        <//>
-      <//>
+        setOpen=${o => this.setOpen(o)}
+      />
       <${Menu} 
         enabled=${enabled}
         open=${state.open}
@@ -361,5 +306,85 @@ export default class MenuBar extends Component {
         <//>
       <//>
     </div>`
+  }
+}
+
+class PruneMenu extends Component {
+  constructor() {
+    super()
+    this.state = {
+      pruningMemory: false,
+      pruningStdout: false,
+      pruningRegisters: false,
+      pruningCorrect: false,
+      pruningDoRegex: false,
+      pruningRegex: ".*",
+    }
+  }
+
+  prune() {
+    // I think the user expectation is going to be that with nothing selected,
+    // nothing is pruned. But once something is selected, the more pruning
+    // requirements we add, the less we prune
+    let test = () =>
+      this.state.pruningMemory
+      || this.state.pruningStdout
+      || this.state.pruningRegisters
+      || this.state.pruningCorrect
+      || this.state.pruningDoRegex
+
+    const extendTest = (f, g) => (l, r) => f(l, r) && g(l, r)
+
+    if (this.state.pruningMemory) test = extendTest(noMemoryDiffs, test)
+    if (this.state.pruningStdout) test = extendTest(noStdDiffs, test)
+    if (this.state.pruningRegisters) test = extendTest(noRegisterDiffs, test)
+    if (this.state.pruningCorrect) test = extendTest(noErrors, test)
+    if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
+
+    this.props.prune(test)
+    this.props.setOpen(null)
+
+    this.setState({
+      pruningMemory: false,
+      pruningStdout: false,
+      pruningRegisters: false,
+      pruningCorrect: false,
+      pruningDoRegex: false,
+      pruningRegex: ".*"
+    })
+  }
+
+  render(props, state) { 
+    return html`<${Menu} 
+        enabled=${props.enabled}
+        open=${props.open}
+        title="Prune"
+        setOpen=${o => props.setOpen(o)}>
+        <${MenuOption} onClick=${() => this.setState({ pruningMemory: !state.pruningMemory })}>
+          <input type="checkbox" checked=${state.pruningMemory}/> Identical Memory
+        <//>
+        <${MenuOption} onClick=${() => this.setState({ pruningRegisters: !state.pruningRegisters })}>
+          <input type="checkbox" checked=${state.pruningRegisters}/> Identical Register Contents 
+        <//>
+        <${MenuOption} onClick=${() => this.setState({ pruningStdout: !state.pruningStdout })}>
+          <input type="checkbox" checked=${state.pruningStdout}/> Identical Stdout/Stderr
+        <//>
+        <${MenuOption} onClick=${() => this.setState({ pruningCorrect: !state.pruningCorrect })}>
+          <input type="checkbox" checked=${state.pruningCorrect}/> Error-free
+        <//>
+        <${MenuOption} onClick=${() => this.setState({ pruningDoRegex: !state.pruningDoRegex })}>
+          <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
+            onClick=${e => e.stopPropagation()}
+            onInput=${e => this.setState({ pruningRegex: e.target.value })} 
+            value=${state.pruningRegex}/>
+        <//>
+        <hr/>
+        <${MenuOption} onClick=${() => this.prune()}>
+          Prune branches matching all conditions above
+        <//>
+        <${MenuOption} onClick=${() => { props.unprune(); props.setOpen(null) }}>
+          Revert All Pruning
+        <//>
+      <//>`
   }
 }
