@@ -395,6 +395,8 @@ export default class App extends Component {
       <${Tooltip} ref=${this.tooltip}/>
       <${MenuBar} 
         setTidiness=${level => this.startRender(() => this.setTidiness(level))}
+        cyLeft=${this.cy1}
+        cyRight=${this.cy2}
         prune=${this.prune}
         unprune=${this.unprune}
         resetLayout=${this.resetLayout}
