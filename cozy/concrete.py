@@ -26,7 +26,7 @@ def _concretize(solver, state_bundle, n=1):
             if isinstance(elem, claripy.ast.Base):
                 return elem.replace_dict(replacement_dict)
             elif isinstance(elem, PerformedSideEffect):
-                return ConcretePerformedSideEffect(elem.state_history, fmap(elem.body, f), concrete_mapper=elem.concrete_mapper)
+                return ConcretePerformedSideEffect(elem, elem.state_history, fmap(elem.body, f), concrete_mapper=elem.concrete_mapper)
             else:
                 return elem
 

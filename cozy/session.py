@@ -179,6 +179,7 @@ def _save_states(states):
     for state in states:
         state.history.cozy_stdout = state.posix.dumps(sys.stdout.fileno())
         state.history.cozy_stderr = state.posix.dumps(sys.stderr.fileno())
+        state.history.cozy_side_effects = state.globals['side_effects']
         if state.project.simos.is_syscall_addr(state.addr):
             # Here we are inside of a syscall implementation. The address that
             # angr jumps to when it executes a syscall does not actually contain
