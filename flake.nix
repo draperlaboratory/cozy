@@ -51,6 +51,9 @@
       });
 
     in pkgs.mkShell {
+      shellHook = ''
+        export PYTHONPATH="$(git rev-parse --show-toplevel)":$PYTHONPATH
+      '';
       buildInputs = [ 
         pkgs.python311
         pyPkgs.angr
@@ -61,7 +64,6 @@
         portion
         lld_15
         patcherex2
-        self.packages.x86_64-linux.default
       ];
     };
   };
