@@ -129,9 +129,10 @@ class VirtualPrint(Directive):
     :ivar int addr: The program address this virutal print is attached to.
     :ivar Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a claripy AST which should be logged. This value may be symbolic.
     :ivar str info_str: Human readable label for this virtual print.
+    :ivar str label: Internal label used for side effect alignment. Side effects (including virtual prints) are diffed if they have the same label.
     :ivar Callable[[claripy.ast.Base], any] | None concrete_mapper: concrete_mapper takes as input a concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to pretty print to negative number. This is where concrete_mapper is useful. In this example concrete_mapper would take a concrete bit vector representing a possible value of EAX and return a Python integer (which can be negative). This is what is shown to the user.
     """
-    def __init__(self, addr: int, log_fun: Callable[[SimState], claripy.ast.Base], concrete_mapper: Callable[[claripy.ast.Base], any] | None=None, info_str: str="Unknown Virtual Print: "):
+    def __init__(self, addr: int, log_fun: Callable[[SimState], claripy.ast.Base], concrete_mapper: Callable[[claripy.ast.Base], any] | None=None, info_str: str="Unknown Virtual Print: ", label=None):
         """
         Constructor for a VirtualPrint object.
 
@@ -139,11 +140,14 @@ class VirtualPrint(Directive):
         :param Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a claripy AST which should be logged. This value may be symbolic.
         :param Callable[[claripy.ast.Base], any] | None concrete_mapper: concrete_mapper takes as input a concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to pretty print to negative number. This is where concrete_mapper is useful. In this example concrete_mapper would take a concrete bit vector representing a possible value of EAX and return a Python integer (which can be negative). This is what is shown to the user.
         :param str info_str: Human readable label for this virtual print.
+        :param str label: Internal label used for side effect alignment. Side effects (including virtual prints) are\
+        diffed if they have the same label.
         """
         self.addr = addr
         self.log_fun = log_fun
         self.info_str = info_str
         self.concrete_mapper = concrete_mapper
+        self.label = label
 
     def effect_concrete_mapper(self, concrete_value):
         if self.concrete_mapper is not None:
@@ -151,7 +155,7 @@ class VirtualPrint(Directive):
         return "{}: {}".format(self.info_str, concrete_value)
 
     @staticmethod
-    def from_fun_offset(project, fun_name: str, offset: int, log_fun: Callable[[SimState], claripy.ast.Base], concrete_mapper: Callable[[claripy.ast.Base], any] | None=None, info_str: str | None = None):
+    def from_fun_offset(project, fun_name: str, offset: int, log_fun: Callable[[SimState], claripy.ast.Base], concrete_mapper: Callable[[claripy.ast.Base], any] | None=None, info_str: str | None = None, label=None):
         """
         Factory for VirtualPrint object set at a certain offset from a function start.
 
@@ -160,10 +164,12 @@ class VirtualPrint(Directive):
         :param int offset: The offset into the function in which this virtual print will be located.
         :param Callable[[claripy.ast.Base], any] | None concrete_mapper: concrete_mapper takes as input a concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to pretty print to negative number. This is where concrete_mapper is useful. In this example concrete_mapper would take a concrete bit vector representing a possible value of EAX and return a Python integer (which can be negative). This is what is shown to the user.
         :param str info_str: Human readable label for this virtual print.
+        :param str label: Internal label used for side effect alignment. Side effects (including virtual prints) are\
+        diffed if they have the same label.
         :return: A new VirtualPrint object at the desired function offset.
         :rtype: VirtualPrint
         """
-        return VirtualPrint(project.find_symbol_addr(fun_name) + offset, log_fun, concrete_mapper=concrete_mapper, info_str=info_str)
+        return VirtualPrint(project.find_symbol_addr(fun_name) + offset, log_fun, concrete_mapper=concrete_mapper, info_str=info_str, label=label)
 
 class ErrorDirective(Directive):
     """
