@@ -84,16 +84,18 @@ export const segmentationMixin = {
     // If there's only one leaf, it's the strongest thing that is implied by each member of leaves
     if (leaves.size === 1) return canonicalLeaf
     // Otherwise, we walk down the predecessors from the root of the tree until
-    // we hit a fork, or run out of predecessors (which happens if the fork is
-    // right above a leaf) and then back up one.
-    while (true) for (const leaf of leaves) {
-      // only look up once per loop. Could be much further optimized.
-      const preds = leaf.predecessors('node')
-      if (depth > preds.length || preds[preds.length - depth] !== canonicalPreds[canonicalPreds.length - depth]) {
-        return canonicalPreds[canonicalPreds.length - (depth - 1)]
-      } else {
-        depth += 1
-      }
+    // we hit a place where the predecessors of one of our leaves separates
+    // from our canonical list of predecessors or run out of predecessors
+    // (which happens if the fork is right above a leaf) and then back up one.
+    while (true) { 
+      for (const leaf of leaves) {
+        // only look up once per loop. Could be much further optimized.
+        const preds = leaf.predecessors('node')
+        if (depth > preds.length || preds[preds.length - depth] !== canonicalPreds[canonicalPreds.length - depth]) {
+          return canonicalPreds[canonicalPreds.length - (depth - 1)]
+        }
+      } 
+      depth += 1
     }
   },
 }

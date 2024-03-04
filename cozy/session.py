@@ -281,7 +281,7 @@ class _SessionDirectiveExploration(_SessionExploration):
                                     if directive.assert_type == AssertType.ASSERT_CAN_GLOBAL:
                                         self.asserts_to_scrub.add(directive)
                         elif isinstance(directive, VirtualPrint):
-                            side_effect.perform(found_state, 'virtual_prints', directive.log_fun(found_state), concrete_mapper=directive.effect_concrete_mapper)
+                            side_effect.perform(found_state, 'virtual_prints', directive.log_fun(found_state), concrete_mapper=directive.effect_concrete_mapper, label=directive.label)
                         elif isinstance(directive, ErrorDirective):
                             prune_states.add(found_state)
                             simgr.errored.append(

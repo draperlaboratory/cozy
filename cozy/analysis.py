@@ -311,26 +311,18 @@ class StateDiff:
             for channel in all_channels:
                 left_channel = left_effects.get(channel, [])
                 right_channel = right_effects.get(channel, [])
-                max_len = max(len(left_channel), len(right_channel))
+
+                aligned_channels = side_effect.levenshtein_alignment(left_channel, right_channel, key=lambda effect: effect.label)
+
                 diff = []
-                # zip over the channel lists
-                for i in range(max_len):
-                    if i < len(left_channel):
-                        left_effect = left_channel[i]
-                        left_val = left_effect.body
-                    else:
-                        left_effect = None
-                        left_val = None
-                    if i < len(right_channel):
-                        right_effect = right_channel[i]
-                        right_val = right_effect.body
-                    else:
-                        right_effect = None
-                        right_val = None
+                for (left_effect, right_effect) in aligned_channels:
                     if left_effect is not None and right_effect is not None:
-                        diff.append((left_effect, right_effect, compare_side_effect(left_val, right_val)))
+                        diff.append((left_effect, right_effect, compare_side_effect(left_effect.body, right_effect.body)))
                     else:
+                        left_val = left_effect.body if left_effect is not None else None
+                        right_val = right_effect.body if right_effect is not None else None
                         diff.append((left_effect, right_effect, NotEqLeaf(left_val, right_val)))
+
                 ret_side_effect_diff[channel] = diff
 
         return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff)
