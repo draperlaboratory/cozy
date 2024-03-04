@@ -6,7 +6,7 @@ from angr import SimState
 
 import portion as P
 
-from . import claripy_ext, log
+from . import claripy_ext, log, side_effect
 from .functools_ext import *
 import collections.abc
 from .session import RunResult
@@ -78,6 +78,42 @@ def nice_name(state: SimState, malloced_names: P.IntervalDict[tuple[str, P.Inter
 
     return None
 
+class FieldDiff:
+    pass
+
+class EqFieldDiff(FieldDiff):
+    """
+    For a field to be equal, all subcomponents of the body must be equal. In this case, left_body and right_body
+    should not hold any further FieldDiffs within themselves. Rather left_body and right_body should be the entire
+    fields for which differencing was checked (and it was determined that all subfields are equal).
+    """
+    def __init__(self, left_body, right_body):
+        self.left_body = left_body
+        self.right_body = right_body
+
+class NotEqLeaf(FieldDiff):
+    def __init__(self, left_leaf, right_leaf):
+        self.left_leaf = left_leaf
+        self.right_leaf = right_leaf
+
+class NotEqFieldDiff(FieldDiff):
+    """
+    For a field to be not equal, there must be at least one subcomponent of the body that was not equal. In this case,
+    body_diff will hold further FieldDiffs within itself. Equal subfields of the bodies will be
+    represented by EqFieldDiff, whereas unequal subfields will be represented by further nested NotEqFieldDiff.
+    """
+    def __init__(self, body_diff):
+        self.body_diff = body_diff
+
+class DiffResult:
+    def __init__(self,
+                 mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]],
+                 reg_diff: dict[str, tuple[claripy.ast.bits, claripy.ast.bits]],
+                 side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]]):
+        self.mem_diff = mem_diff
+        self.reg_diff = reg_diff
+        self.side_effect_diff = side_effect_diff
+
 class StateDiff:
     """
     StateDiff encapsulates the memoized state used by the difference method. This class is used internally by\
@@ -92,8 +128,8 @@ class StateDiff:
                    ignore_addrs: collections.abc.Iterable[range] | None = None,
                    compute_mem_diff=True,
                    compute_reg_diff=True,
-                   use_unsat_core=True) -> (
-            tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None):
+                   compute_side_effect_diff=True,
+                   use_unsat_core=True) -> DiffResult | None:
         """
         Compares two states to find differences in memory. This function will return None if the two states have\
         non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are\
@@ -112,9 +148,9 @@ class StateDiff:
         second element of the return tuple will be None.
         :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
         comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
-        :return: None if the two states are not compatible, otherwise returns a tuple containing the memory and\
-        register differences.
-        :rtype: tuple[dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], dict[str, tuple[claripy.ast.bits, claripy.ast.bits]]] | None
+        :return: None if the two states are not compatible, otherwise returns an object containing the memory,\
+        register differences, and side effect differences.
+        :rtype: DiffResult | None
         """
 
         # If any previously discovered unsat core is a subset of the current constraints, then the current
@@ -208,7 +244,96 @@ class StateDiff:
                         #simpl_reg_right = claripy_ext.simplify_kb(reg_right, joint_solver.constraints)
                         ret_reg_diff[reg_name] = (reg_left, reg_right)
 
-        return (ret_mem_diff, ret_reg_diff)
+        # Compute side effect difference
+        ret_side_effect_diff = dict()
+        if compute_side_effect_diff:
+            def compare_side_effect(left_se, right_se) -> FieldDiff:
+                both_lists = isinstance(left_se, list) and isinstance(right_se, list)
+                both_tuples = isinstance(left_se, tuple) and isinstance(right_se, tuple)
+                if both_lists or both_tuples:
+                    max_len = max(len(left_se), len(right_se))
+                    subfields_equal = True
+                    diff = []
+                    for i in range(max_len):
+                        if i < len(left_se):
+                            left_val = left_se[i]
+                        else:
+                            left_val = None
+                        if i < len(right_se):
+                            right_val = right_se[i]
+                        else:
+                            right_val = None
+                        rec_result = compare_side_effect(left_val, right_val)
+                        if not isinstance(rec_result, EqFieldDiff):
+                            subfields_equal = False
+                        diff.append(rec_result)
+                    if subfields_equal:
+                        return EqFieldDiff(left_se, right_se)
+                    else:
+                        if both_tuples:
+                            diff = tuple(diff)
+                        return NotEqFieldDiff(diff)
+                elif isinstance(left_se, dict) and isinstance(right_se, dict):
+                    all_keys = set(left_se.keys())
+                    all_keys.update(right_se.keys())
+                    subfields_equal = True
+                    diff = dict()
+                    for key in all_keys:
+                        left_val = left_se.get(key, None)
+                        right_val = right_se.get(key, None)
+                        rec_result = compare_side_effect(left_val, right_val)
+                        if not isinstance(rec_result, EqFieldDiff):
+                            subfields_equal = False
+                        diff[key] = rec_result
+                    if subfields_equal:
+                        return EqFieldDiff(left_se, right_se)
+                    else:
+                        return NotEqFieldDiff(diff)
+                elif isinstance(left_se, claripy.ast.Bits) and isinstance(right_se, claripy.ast.Bits):
+                    if left_se is not right_se and joint_solver.satisfiable(extra_constraints=[left_se != right_se]):
+                        return NotEqLeaf(left_se, right_se)
+                    else:
+                        return EqFieldDiff(left_se, right_se)
+                elif (isinstance(left_se, int) and isinstance(right_se, int)) or (isinstance(left_se, str) and isinstance(right_se, str)):
+                    if left_se == right_se:
+                        return EqFieldDiff(left_se, right_se)
+                    else:
+                        return NotEqLeaf(left_se, right_se)
+                else:
+                    return NotEqLeaf(left_se, right_se)
+
+            # Loop over all the different effect channels, then zip the effects in each channel and compare them
+            # TODO: Better alignment of effects using effect labels
+            left_effects = side_effect.get_effects(sl)
+            right_effects = side_effect.get_effects(sr)
+            all_channels = set(left_effects.keys())
+            all_channels.update(right_effects.keys())
+            for channel in all_channels:
+                left_channel = left_effects.get(channel, [])
+                right_channel = right_effects.get(channel, [])
+                max_len = max(len(left_channel), len(right_channel))
+                diff = []
+                # zip over the channel lists
+                for i in range(max_len):
+                    if i < len(left_channel):
+                        left_effect = left_channel[i]
+                        left_val = left_effect.body
+                    else:
+                        left_effect = None
+                        left_val = None
+                    if i < len(right_channel):
+                        right_effect = right_channel[i]
+                        right_val = right_effect.body
+                    else:
+                        right_effect = None
+                        right_val = None
+                    if left_effect is not None and right_effect is not None:
+                        diff.append((left_effect, right_effect, compare_side_effect(left_val, right_val)))
+                    else:
+                        diff.append((left_effect, right_effect, NotEqLeaf(left_val, right_val)))
+                ret_side_effect_diff[channel] = diff
+
+        return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff)
 
 def hexify(val0):
     """
@@ -250,6 +375,7 @@ class CompatiblePair:
                  mem_diff: dict[range, tuple[claripy.ast.Base, claripy.ast.Base]],
                  # TODO: Expose the subregister structure somewhere
                  reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]],
+                 side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
                  mem_diff_ip: dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
                  compare_std_out: bool,
                  compare_std_err: bool):
@@ -257,9 +383,17 @@ class CompatiblePair:
         self.state_right = state_right
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
+        self.side_effect_diff = side_effect_diff
         self.mem_diff_ip = mem_diff_ip
         self.compare_std_out = compare_std_out
         self.compare_std_err = compare_std_err
+
+    def equal_side_effects(self) -> bool:
+        for channel in self.side_effect_diff.values():
+            for (left_performed_effect, right_performed_effect, field_diff) in channel:
+                if not isinstance(field_diff, EqFieldDiff):
+                    return False
+        return True
 
     def equal(self) -> bool:
         """
@@ -269,10 +403,12 @@ class CompatiblePair:
         :return: True if the two compatible states are observationally equal, and False otherwise.
         :rtype: bool
         """
+
         if isinstance(self.state_left, DeadendedState) and isinstance(self.state_right, DeadendedState):
             return (len(self.mem_diff) == 0 and len(self.reg_diff) == 0 and
                     ((not self.compare_std_out) or (self.state_left.std_out == self.state_right.std_out)) and
-                    ((not self.compare_std_err) or (self.state_left.std_err == self.state_right.std_err)))
+                    ((not self.compare_std_err) or (self.state_left.std_err == self.state_right.std_err)) and
+                    self.equal_side_effects())
         else:
             return False
 
@@ -319,8 +455,8 @@ class Comparison:
     """
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
-                 ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_std_out=False,
-                 compare_std_err=False, use_unsat_core=True):
+                 ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_side_effects=True,
+                 compare_std_out=False, compare_std_err=False, use_unsat_core=True):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
 
@@ -331,6 +467,7 @@ class Comparison:
         occupied by the stack are ignored.
         :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
         :param bool compare_registers: If True, then the analysis will compare registers used by the program.
+        :param bool compare_side_effects: If True, then the analysis will compare side effects outputted by the program.
         :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results.\
         Note that angr currently concretizes values written to stdout, so these values will be binary strings.
         :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
@@ -383,6 +520,7 @@ class Comparison:
                     state_pre.state, state_post.state, pair_ignore_addrs,
                     compute_mem_diff=compare_memory if is_deadended_comparison else False,
                     compute_reg_diff=compare_registers if is_deadended_comparison else False,
+                    compute_side_effect_diff=compare_side_effects if is_deadended_comparison else False,
                     use_unsat_core=use_unsat_core
                 )
 
@@ -391,7 +529,9 @@ class Comparison:
                     self.orphans_left.discard(state_pre)
                     self.orphans_right.discard(state_post)
 
-                    (mem_diff, reg_diff) = diff
+                    mem_diff = diff.mem_diff
+                    reg_diff = diff.reg_diff
+                    side_effect_diff = diff.side_effect_diff
 
                     def get_ip_set(interval_dict, r: range):
                         # Query the interval dictionary for all entries in the desired range, then union
@@ -404,7 +544,8 @@ class Comparison:
                         for addr_range in mem_diff.keys()
                     }
 
-                    comparison = CompatiblePair(state_pre, state_post, mem_diff, reg_diff, mem_diff_ip, compare_std_out, compare_std_err)
+                    comparison = CompatiblePair(state_pre, state_post, mem_diff, reg_diff, side_effect_diff,
+                                                mem_diff_ip, compare_std_out, compare_std_err)
                     self.pairs[(state_pre.state, state_post.state)] = comparison
 
     def get_pair(self, state_left: SimState, state_right: SimState) -> CompatiblePair:
