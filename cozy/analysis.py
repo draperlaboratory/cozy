@@ -361,6 +361,10 @@ class CompatiblePair:
     :ivar dict[str, tuple[claripy.ast.Base, claripy.ast.Base]] reg_diff: Similar to mem_diff, except that the dict is\
     keyed by register names. Note that some registers may be subparts of another. For example in x64, EAX is a\
     subregister of RAX.
+    :ivar dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]] side_effect_diff: \
+    Maps side effect channels to a list of 3 element tuples, where the first element is the performed side effect\
+    from the left binary, the second element is the performed side effect from the right binary, and the third element\
+    is the diff between the body of the side effects.
     :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses\
     to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the\
     frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
