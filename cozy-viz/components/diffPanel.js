@@ -244,7 +244,6 @@ class AssemblyDifference extends Component {
   }
 
   highlightNodes(idLeft, idRight) {
-    console.log(idLeft, idRight)
     const cyLeft = this.props.leftFocus.top.cy()
     const cyRight = this.props.rightFocus.top.cy()
     cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
