@@ -566,16 +566,23 @@ class SideEffectDifference extends Component {
     this.state = { view: 0 }
   }
 
-  diffableSideEffects(effects) {
+  diffableSideEffects(effects, presence) {
       
     let contents = ""
     let msg = ""
+    let effectIdx = 0
     const lines = []
     const ids = []
     const msgs = []
-    for (const effect of effects) {
-      contents += effect + '\n'
-      lines.push(effect)
+    for (const isPresent of presence) {
+      if (isPresent) {
+        contents += effects[effectIdx] + '\n'
+        lines.push(effects[effectIdx])
+        effectIdx++
+      } else {
+        contents += '\n'
+        lines.push("")
+      }
       msgs.push(msg)
       ids.push("")
     }
@@ -609,19 +616,27 @@ class SideEffectDifference extends Component {
   render(props, state) {
 
     const rightId = props.rightFocus.bot.id()
-    const conc_sediffs = props.leftFocus.bot.data().compatibilities[rightId].conc_sediff ?? []
-    const se_diffs = conc_sediffs[state.view]
+    const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_sediff ?? []
+    const conc_sediffs = concretions[state.view]
+    const presence = props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
     const chandivs = []
-    //TODO
-    // 1. Proper comparator - requires labels, right now we assume sequencing is correct
-    for (const channel in se_diffs) {
+    // Note, line-diffing is handled on the python side, because of the
+    // complexity of diffing non-concrete side effects. Hence, we have
+    // a trivial comparator here.
+    for (const channel in conc_sediffs) {
       const chandiv = html`<div class="side-effect-channel">
         <h3>${channel}</h3>
         <${LineDiffView} 
-          leftLines=${this.diffableSideEffects(se_diffs[channel].left)}
-          rightLines=${this.diffableSideEffects(se_diffs[channel].right)}
+          leftLines=${this.diffableSideEffects(
+            conc_sediffs[channel].left, 
+            presence[channel].map(([x,]) => x)
+          )}
+          rightLines=${this.diffableSideEffects(
+            conc_sediffs[channel].right, 
+            presence[channel].map(([,y]) => y)
+          )}
           diffWords=${(l,r) => this.diffWords(l,r)}
-          comparator=${(l,r) => l.length > 0 && r.length > 0}
+          comparator=${() => true}
         />
       </div>`
       chandivs.push(chandiv)
@@ -630,7 +645,7 @@ class SideEffectDifference extends Component {
       <${ConcretionSelector} 
         view=${state.view} 
         setView=${view => this.setState({ view })} 
-        concretionCount=${conc_sediffs.length}/>
+        concretionCount=${concretions.length}/>
       ${chandivs}
       </div>`
   }

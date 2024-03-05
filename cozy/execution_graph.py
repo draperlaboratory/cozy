@@ -265,7 +265,13 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                         }
                     conc_sediff.append(channels)
 
+                simplified_side_effect_diff = {}
+
+                for channel in comp.side_effect_diff:
+                    simplified_side_effect_diff[channel] = list(map(lambda x: [x[0] != None, x[1] != None], comp.side_effect_diff[channel]))
+
                 info = {
+                    "sediff": simplified_side_effect_diff,
                     "memdiff": _serialize_diff(comp.mem_diff, nice_name_a, nice_name_b),
                     "regdiff": _serialize_diff(comp.reg_diff),
                     "conc_memdiff": [_serialize_diff(x.mem_diff, nice_name_a, nice_name_b) for x in concretion],

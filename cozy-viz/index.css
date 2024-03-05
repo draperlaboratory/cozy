@@ -140,6 +140,14 @@ button:disabled {
   font-family: monospace;
 }
 
+/* When a full line is added in a single hunk, we highlight to the end 
+ * Maybe this should not be restricted to just the side effect channel?
+ */
+.side-effect-channel .hunkAdded:first-child:last-child,
+.side-effect-channel .hunkRemoved:first-child:last-child {
+  display:block;
+}
+
 .search-input {
   border: 1px solid #ccc;
   display: inline-block;
