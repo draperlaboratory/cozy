@@ -256,12 +256,20 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
 
                 conc_sediff = []
 
+                def serialize_effect(effect, graph):
+                    try:
+                        id = [x for x,y in graph.nodes(data=True) if y["state"] == effect.state_history][0]
+                        body = effect.mapped_body
+                        return { "id": id, "body": body }
+                    except:
+                        return { "body": effect.mapped_body }
+
                 for c in concretion:
                     channels = {}
                     for channel in c.left_side_effects:
                         channels[channel] = {
-                            "left": list(map(lambda x: x.mapped_body, c.left_side_effects[channel])),
-                            "right": list(map(lambda x: x.mapped_body, c.right_side_effects[channel]))
+                            "left": list(map(lambda x: serialize_effect(x, g_a), c.left_side_effects[channel])),
+                            "right": list(map(lambda x: serialize_effect(x, g_b), c.right_side_effects[channel]))
                         }
                     conc_sediff.append(channels)
 

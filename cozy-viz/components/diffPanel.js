@@ -244,6 +244,7 @@ class AssemblyDifference extends Component {
   }
 
   highlightNodes(idLeft, idRight) {
+    console.log(idLeft, idRight)
     const cyLeft = this.props.leftFocus.top.cy()
     const cyRight = this.props.rightFocus.top.cy()
     cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
@@ -574,23 +575,35 @@ class SideEffectDifference extends Component {
     const lines = []
     const ids = []
     const msgs = []
+
     for (const isPresent of presence) {
       if (isPresent) {
-        contents += effects[effectIdx] + '\n'
-        lines.push(effects[effectIdx])
+        contents += effects[effectIdx].body + '\n'
+        lines.push(effects[effectIdx].body)
+        ids.push(effects[effectIdx].id)
         effectIdx++
       } else {
         contents += '\n'
         lines.push("")
+        ids.push(null)
       }
       msgs.push(msg)
-      ids.push("")
     }
 
     return { contents, lines, ids, msgs }
-
   }
 
+  highlightNodes(idLeft, idRight) {
+    const cyLeft = this.props.leftFocus.top.cy()
+    const cyRight = this.props.rightFocus.top.cy()
+    if (idLeft) cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
+    if (idRight) cyRight.highlight(cyRight.nodes(`#${idRight}`))
+  }
+
+  dimAll() {
+    this.props.leftFocus.top.cy().dim()
+    this.props.rightFocus.top.cy().dim()
+  }
 
   diffWords(leftLine, rightLine) {
 
@@ -609,6 +622,7 @@ class SideEffectDifference extends Component {
         newLeft.push(html`<span>${diff.value}</span>`)
       }
     }
+
     return [newLeft, newRight]
   }
 
@@ -620,6 +634,7 @@ class SideEffectDifference extends Component {
     const conc_sediffs = concretions[state.view]
     const presence = props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
     const chandivs = []
+    
     // Note, line-diffing is handled on the python side, because of the
     // complexity of diffing non-concrete side effects. Hence, we have
     // a trivial comparator here.
@@ -637,10 +652,13 @@ class SideEffectDifference extends Component {
           )}
           diffWords=${(l,r) => this.diffWords(l,r)}
           comparator=${() => true}
+          highlight=${(idLeft,idRight) => this.highlightNodes(idLeft, idRight)}
+          dim=${() => this.dimAll()}
         />
       </div>`
       chandivs.push(chandiv)
     }
+
     return html`<div>
       <${ConcretionSelector} 
         view=${state.view} 
@@ -657,11 +675,13 @@ class Concretions extends Component {
     const rightId = props.rightFocus.bot.id()
     const examples = []
     const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_args
+
     for (const concretion of concretions) {
       examples.push(html`
         <pre class="concrete-example">${JSON.stringify(concretion, undefined, 2)}</pre>
       `)
     }
+
     return html`<div id="concretion-header">
       Viewing ${concretions.length} concrete input examples
     </div>
@@ -681,6 +701,7 @@ class ConcretionSelector {
       onClick=${() => props.setView("symbolic")}
       >Symbolic</button>`
     ]
+
     for (let i = 0; i < props.concretionCount; i++) {
       buttons.push(html`<button 
         data-selected=${props.view == i} 
@@ -688,6 +709,7 @@ class ConcretionSelector {
         >Example ${i + 1}</button>`
       )
     }
+
     return html`<div class="subordinate-buttons">${buttons}</div>`
   }
 }
