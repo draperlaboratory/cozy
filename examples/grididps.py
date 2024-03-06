@@ -37,12 +37,23 @@ class println(angr.SimProcedure):
     def run(self, arg):
         return 0
 
+class setup_hook(angr.SimProcedure):
+    def run(self):
+        return None
+
+class yield_hook(angr.SimProcedure):
+    def run(self):
+        return None
+
 def run(proj: cozy.project.Project):
     proj.hook_symbol('usb_serial_available', usb_serial_available)
     proj.hook_symbol('usb_serial_getchar', usb_serial_getchar)
     proj.hook_symbol('usb_serial_write', usb_serial_write)
     proj.hook_symbol('_ZN5Print7printlnEv', println)
+    proj.hook_symbol('setup', setup_hook)
+    proj.hook_symbol('yield', yield_hook)
     proj.add_prototype('loop', 'void loop()')
+    proj.add_prototype('main', 'int main()')
 
     sess = proj.session('loop')
 
@@ -55,8 +66,15 @@ def run(proj: cozy.project.Project):
     class process_command(angr.SimProcedure):
         def run(self, cmd_str):
             # Instead of doing the code to process the string, just store it in the command_log buffer
-            strncpy = angr.SIM_PROCEDURES["libc"]["strncpy"]
-            self.inline_call(strncpy, command_log_addr, cmd_str, 3 * BUFFER_SIZE)
+            #strncpy = angr.SIM_PROCEDURES["libc"]["strncpy"]
+            #self.inline_call(strncpy, command_log_addr, cmd_str, 3 * BUFFER_SIZE)
+            strlen = angr.SIM_PROCEDURES["libc"]["strlen"]
+            max_len = self.state.solver.max(self.inline_call(strlen, cmd_str).ret_expr)
+            cmd = [self.state.memory.load(cmd_str + i, 1) for i in range(max_len)]
+            def concrete_mapper(concrete_cmd):
+                return [chr(r.concrete_value) for r in concrete_cmd]
+            cozy.side_effect.perform(self.state, "process_command", cmd, concrete_mapper=concrete_mapper)
+    
     proj.hook_symbol('_Z15process_commandPKc', process_command)
 
     buffer_position_addr = proj.find_symbol_addr('bufferPosition')
@@ -98,6 +116,7 @@ cozy.execution_graph.visualize_comparison(proj_prepatched, proj_goodpatch,
                                           results_prepatched, results_goodpatch,
                                           comparison_results,
                                           include_actions=True,
+                                          include_side_effects=True,
                                           args={"bufferPosition": buffer_position_sym, "inputBuffer": inputBuffer_sym,
                                                 'read_sym': read_symbols, 'available': available_symbols},
                                           num_examples=2, open_browser=True, concrete_arg_mapper=concrete_arg_mapper)

@@ -130,9 +130,22 @@ button:disabled {
 /* Diff panel */
 
 #action-diff,
-#assembly-diff {
+#assembly-diff,
+.side-effect-channel {
   padding: 5px 1em 0vw 1em;
   width: calc(100vw - 2em);
+}
+
+.side-effect-channel h3 {
+  font-family: monospace;
+}
+
+/* When a full line is added in a single hunk, we highlight to the end 
+ * Maybe this should not be restricted to just the side effect channel?
+ */
+.side-effect-channel .hunkAdded:first-child:last-child,
+.side-effect-channel .hunkRemoved:first-child:last-child {
+  display:block;
 }
 
 .search-input {
@@ -177,19 +190,19 @@ button:disabled {
 }
 
 #diff-panel.resizing {
-  overflow:hidden;
+  overflow: hidden;
 }
 
 #diff-drag-handle {
-  top:0px;
-  position:sticky;
+  top: 0px;
+  position: sticky;
   height: 5px;
   cursor: grab;
 }
 
 #diff-drag-handle.grabbed {
   background: black;
-  cursor:grabbing;
+  cursor: grabbing;
 }
 
 #diff-panel button {

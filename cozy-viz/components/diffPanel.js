@@ -41,16 +41,18 @@ export default class DiffPanel extends Component {
   render(props, state) {
     const assemblyAvailable = props.leftFocus || props.rightFocus
     const registersAvailable = props.leftFocus && props.rightFocus &&
-      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].regdiff
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.regdiff
     const memoryAvailable = props.leftFocus && props.rightFocus &&
-      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].memdiff
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.memdiff
     const concretionAvailable = props.leftFocus && props.rightFocus &&
-      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()].conc_args
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.conc_args
     const actionsAvailable =
       props.rightFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0 ||
       props.leftFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0
+    const sideEffectsAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.conc_sediff
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter} ref=${this.diffPanel}>
-      <div id="diff-drag-handle" 
+      <div id="diff-drag-handle"
         onPointerDown=${e => this.startResize(e)} 
         onPointerUp=${e => this.stopResize(e)} 
         ref=${this.dragHandle}
@@ -78,6 +80,10 @@ export default class DiffPanel extends Component {
           onClick=${() => this.toggleMode("actions")}>
           Events
         </button>
+        <button disabled=${!sideEffectsAvailable}
+          onClick=${() => this.toggleMode("side-effects")}>
+          Side Effects
+        </button>
       </div>
       ${state.mode == "assembly" && assemblyAvailable && html`
         <${AssemblyDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
@@ -93,6 +99,9 @@ export default class DiffPanel extends Component {
       }
       ${state.mode == "actions" && actionsAvailable && html`
         <${ActionDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+      }
+      ${state.mode == "side-effects" && sideEffectsAvailable && html`
+        <${SideEffectDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       </div>`
   }
@@ -368,8 +377,12 @@ class LineDiffView extends Component {
     let curLeft = 0
     let curRight = 0
     let mkHunk = ({ curLeft, curRight, leftContent, rightContent, leftClass, rightClass }) => Hunk({
-      highlight: () => this.props.highlight(leftIds[curLeft], rightIds[curRight]),
-      dim: () => this.props.dim(),
+      highlight: this.props.highlight 
+        ? () => this.props.highlight(leftIds[curLeft], rightIds[curRight])
+        : () => {},
+      dim: this.props.dim
+        ? () => this.props.dim()
+        : () => {},
       hunkCtx,
       curLeft,
       curRight,
@@ -487,10 +500,6 @@ class RegisterDifference extends Component {
     this.state = { view: "symbolic" }
   }
 
-  setView(view) {
-    this.setState({ view })
-  }
-
   render(props, state) {
     const rightId = props.rightFocus.bot.id()
     const registers = []
@@ -507,7 +516,7 @@ class RegisterDifference extends Component {
     return html`<div>
       <${ConcretionSelector} 
         view=${state.view} 
-        setView=${view => this.setView(view)} 
+        setView=${view => this.setState({ view })} 
         concretionCount=${conc_regdiffs.length}/>
       <div id="grid-diff-data"> ${registers.length > 0
         ? registers
@@ -517,14 +526,9 @@ class RegisterDifference extends Component {
 }
 
 class MemoryDifference extends Component {
-
   constructor() {
     super();
     this.state = { view: "symbolic" }
-  }
-
-  setView(view) {
-    this.setState({ view })
   }
 
   render(props, state) {
@@ -547,7 +551,7 @@ class MemoryDifference extends Component {
     return html`<div>
       <${ConcretionSelector} 
         view=${state.view} 
-        setView=${view => this.setView(view)} 
+        setView=${view => this.setState({ view })} 
         concretionCount=${conc_adiffs.length}/>
       <div id="grid-diff-data"> ${addresses.length > 0
         ? addresses
@@ -556,16 +560,128 @@ class MemoryDifference extends Component {
   }
 }
 
+class SideEffectDifference extends Component {
+  constructor() {
+    super();
+    this.state = { view: 0 }
+  }
+
+  diffableSideEffects(effects, presence) {
+      
+    let contents = ""
+    let msg = ""
+    let effectIdx = 0
+    const lines = []
+    const ids = []
+    const msgs = []
+
+    for (const isPresent of presence) {
+      if (isPresent) {
+        contents += effects[effectIdx].body + '\n'
+        lines.push(effects[effectIdx].body)
+        ids.push(effects[effectIdx].id)
+        effectIdx++
+      } else {
+        contents += '\n'
+        lines.push("")
+        ids.push(null)
+      }
+      msgs.push(msg)
+    }
+
+    return { contents, lines, ids, msgs }
+  }
+
+  highlightNodes(idLeft, idRight) {
+    const cyLeft = this.props.leftFocus.top.cy()
+    const cyRight = this.props.rightFocus.top.cy()
+    if (idLeft) cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
+    if (idRight) cyRight.highlight(cyRight.nodes(`#${idRight}`))
+  }
+
+  dimAll() {
+    this.props.leftFocus.top.cy().dim()
+    this.props.rightFocus.top.cy().dim()
+  }
+
+  diffWords(leftLine, rightLine) {
+
+    const diffs = Diff.diffWords(leftLine, rightLine)
+    const newLeft = []
+    const newRight = []
+
+    for (const diff of diffs) {
+      if (diff?.added) {
+        newRight.push(html`<span class="hunkAdded">${diff.value}</span>`)
+      }
+      else if (diff?.removed) {
+        newLeft.push(html`<span class="hunkRemoved">${diff.value}</span>`)
+      } else {
+        newRight.push(html`<span>${diff.value}</span>`)
+        newLeft.push(html`<span>${diff.value}</span>`)
+      }
+    }
+
+    return [newLeft, newRight]
+  }
+
+
+  render(props, state) {
+
+    const rightId = props.rightFocus.bot.id()
+    const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_sediff ?? []
+    const conc_sediffs = concretions[state.view]
+    const presence = props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
+    const chandivs = []
+
+    // Note, line-diffing is handled on the python side, because of the
+    // complexity of diffing non-concrete side effects. Hence, we have
+    // a trivial comparator here.
+    for (const channel in conc_sediffs) {
+      if (!(channel in presence)) continue
+      const chandiv = html`<div class="side-effect-channel">
+        <h3>${channel}</h3>
+        <${LineDiffView} 
+          leftLines=${this.diffableSideEffects(
+            conc_sediffs[channel].left, 
+            presence[channel].map(([x,]) => x)
+          )}
+          rightLines=${this.diffableSideEffects(
+            conc_sediffs[channel].right, 
+            presence[channel].map(([,y]) => y)
+          )}
+          diffWords=${(l,r) => this.diffWords(l,r)}
+          comparator=${() => true}
+          highlight=${(idLeft,idRight) => this.highlightNodes(idLeft, idRight)}
+          dim=${() => this.dimAll()}
+        />
+      </div>`
+      chandivs.push(chandiv)
+    }
+
+    return html`<div>
+      <${ConcretionSelector} 
+        view=${state.view} 
+        setView=${view => this.setState({ view })} 
+        concretionCount=${concretions.length}/>
+      ${chandivs}
+      </div>`
+  }
+
+}
+
 class Concretions extends Component {
   render(props) {
     const rightId = props.rightFocus.bot.id()
     const examples = []
     const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_args
+
     for (const concretion of concretions) {
       examples.push(html`
         <pre class="concrete-example">${JSON.stringify(concretion, undefined, 2)}</pre>
       `)
     }
+
     return html`<div id="concretion-header">
       Viewing ${concretions.length} concrete input examples
     </div>
@@ -585,6 +701,7 @@ class ConcretionSelector {
       onClick=${() => props.setView("symbolic")}
       >Symbolic</button>`
     ]
+
     for (let i = 0; i < props.concretionCount; i++) {
       buttons.push(html`<button 
         data-selected=${props.view == i} 
@@ -592,6 +709,7 @@ class ConcretionSelector {
         >Example ${i + 1}</button>`
       )
     }
+
     return html`<div class="subordinate-buttons">${buttons}</div>`
   }
 }

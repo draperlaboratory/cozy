@@ -59,7 +59,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                     concrete_arg_mapper: Callable [[any], any] | None = None,
                     include_vex: bool = False, include_simprocs: bool = False,
                     flag_syscalls: bool = False, include_actions: bool = False,
-                    include_debug: bool = False,
+                    include_debug: bool = False, include_side_effects: bool = True,
                     args: any = [], num_examples: int = 0) -> None:
     """
     Generates and saves JSON data for Cozy-Viz.
@@ -89,6 +89,8 @@ def dump_comparison(proj_a: Project, proj_b: Project,
         read/write operations on memory and registers. Default False.
     :param bool, optional include_debug: whether to include debugging information
         recovered from DWARF metadata. Default False.
+    :param bool, optional include_side_effects: whether to include cozy side effects,
+        like virtual prints, if present. Default True.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -102,6 +104,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                                     include_simprocs=include_simprocs,
                                     include_actions=include_actions,
                                     include_debug=include_debug,
+                                    include_side_effects=include_side_effects,
                                     flag_syscalls=flag_syscalls,
                                     args=args, num_examples=num_examples)
     def write_graph(g, file_name):
@@ -117,7 +120,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
                          concrete_arg_mapper: Callable [[any], any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False, include_actions: bool = False,
-                         include_debug: bool = False,
+                         include_debug: bool = False, include_side_effects: bool = True,
                          args: any = [], num_examples: int = 0,
                          open_browser=False, port=8080
                          ):
@@ -145,6 +148,8 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
         read/write operations on memory and registers. Default False.
     :param bool, optional include_debug: whether to include debugging information
         recovered from DWARF metadata. Default False.
+    :param bool, optional include_side_effects: whether to include cozy side effects,
+        like virtual prints, if present. Default True.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -161,6 +166,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
                                     flag_syscalls=flag_syscalls,
                                     include_actions = include_actions,
                                     include_debug = include_debug,
+                                    include_side_effects=include_side_effects,
                                     include_simprocs = include_simprocs,
                                     args=args, num_examples=num_examples)
     start_viz_server(json.dumps(nx.cytoscape_data(g_a)), json.dumps(nx.cytoscape_data(g_b)), open_browser=open_browser, port=port)
@@ -174,6 +180,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                          flag_syscalls: bool = False,
                          include_actions: bool = False,
                          include_debug: bool = False,
+                         include_side_effects: bool = True,
                          args: any = [], num_examples: int = 0) -> tuple[nx.DiGraph, nx.DiGraph]:
     """
     Generates JSON data for Cozy-Viz.
@@ -196,6 +203,10 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
         SimProcedures called in each basic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
+    :param bool, optional include_debug: whether to include debugging information
+        recovered from DWARF metadata. Default False.
+    :param bool, optional include_side_effects: whether to include cozy side effects,
+        like virtual prints, if present. Default True.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -214,7 +225,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
     leaves_a = [v for (v, d) in g_a.out_degree() if d == 0]
     leaves_b = [v for (v, d) in g_b.out_degree() if d == 0]
     if include_debug:
-        def attach_sourcemap(g,objs):
+        def attach_sourcemap(g, objs):
             root = [v for (v, d) in g.in_degree() if d == 0]
             sourcemap = {}
             for obj in objs: sourcemap.update(obj.addr_to_line)
@@ -243,15 +254,41 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                     concrete_args = [x.args for x in concretion]
                 concrete_args = fmap(concrete_args, lambda x: x.concrete_value if isinstance(x, claripy.ast.Bits) else x)
 
+                conc_sediff = []
+
+                def serialize_effect(effect, graph):
+                    try:
+                        id = [x for x,y in graph.nodes(data=True) if y["state"] == effect.state_history][0]
+                        return { "id": id, "body": str(effect.mapped_body) }
+                    except:
+                        return { "body": str(effect.mapped_body) }
+
+                for c in concretion:
+                    channels = {}
+                    for channel in c.left_side_effects:
+                        channels[channel] = {
+                            "left": list(map(lambda x: serialize_effect(x, g_a), c.left_side_effects[channel])),
+                            "right": list(map(lambda x: serialize_effect(x, g_b), c.right_side_effects[channel]))
+                        }
+                    conc_sediff.append(channels)
+
+                simplified_side_effect_diff = {}
+
+                for channel in comp.side_effect_diff:
+                    simplified_side_effect_diff[channel] = list(map(lambda x: [x[0] != None, x[1] != None], comp.side_effect_diff[channel]))
+
                 info = {
+                    "sediff": simplified_side_effect_diff,
                     "memdiff": _serialize_diff(comp.mem_diff, nice_name_a, nice_name_b),
                     "regdiff": _serialize_diff(comp.reg_diff),
                     "conc_memdiff": [_serialize_diff(x.mem_diff, nice_name_a, nice_name_b) for x in concretion],
                     "conc_regdiff": [_serialize_diff(x.reg_diff) for x in concretion],
+                    "conc_sediff" : conc_sediff,
                     "conc_args": concrete_args
                 }
                 g_a.nodes[na]["compatibilities"][nb] = info
                 g_b.nodes[nb]["compatibilities"][na] = info
+
     def stringify_attrs(eg, g):
         for ((parent_i, child_i), edge_attr) in g.edges.items():
             child = g.nodes[child_i]["state"]
@@ -409,7 +446,7 @@ class ExecutionGraph:
                 attr['stderr'] = str(stderr)
 
             attr['contents'] = node_history.cozy_contents
-            attr["constraints"] = node_history.cozy_constraints
+            attr['constraints'] = node_history.cozy_constraints
         return g
 
     def reconstruct_bbl_pp_graph(self):
