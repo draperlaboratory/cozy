@@ -633,11 +633,12 @@ class SideEffectDifference extends Component {
     const conc_sediffs = concretions[state.view]
     const presence = props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
     const chandivs = []
-    
+
     // Note, line-diffing is handled on the python side, because of the
     // complexity of diffing non-concrete side effects. Hence, we have
     // a trivial comparator here.
     for (const channel in conc_sediffs) {
+      if (!(channel in presence)) continue
       const chandiv = html`<div class="side-effect-channel">
         <h3>${channel}</h3>
         <${LineDiffView} 

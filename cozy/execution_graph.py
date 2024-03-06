@@ -259,10 +259,9 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 def serialize_effect(effect, graph):
                     try:
                         id = [x for x,y in graph.nodes(data=True) if y["state"] == effect.state_history][0]
-                        body = effect.mapped_body
-                        return { "id": id, "body": body }
+                        return { "id": id, "body": str(effect.mapped_body) }
                     except:
-                        return { "body": effect.mapped_body }
+                        return { "body": str(effect.mapped_body) }
 
                 for c in concretion:
                     channels = {}
