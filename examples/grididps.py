@@ -37,23 +37,12 @@ class println(angr.SimProcedure):
     def run(self, arg):
         return 0
 
-class setup_hook(angr.SimProcedure):
-    def run(self):
-        return None
-
-class yield_hook(angr.SimProcedure):
-    def run(self):
-        return None
-
 def run(proj: cozy.project.Project):
     proj.hook_symbol('usb_serial_available', usb_serial_available)
     proj.hook_symbol('usb_serial_getchar', usb_serial_getchar)
     proj.hook_symbol('usb_serial_write', usb_serial_write)
     proj.hook_symbol('_ZN5Print7printlnEv', println)
-    proj.hook_symbol('setup', setup_hook)
-    proj.hook_symbol('yield', yield_hook)
     proj.add_prototype('loop', 'void loop()')
-    proj.add_prototype('main', 'int main()')
 
     sess = proj.session('loop')
 
@@ -65,7 +54,6 @@ def run(proj: cozy.project.Project):
     command_log_addr = sess.malloc(3 * BUFFER_SIZE)
     class process_command(angr.SimProcedure):
         def run(self, cmd_str):
-            print("doing process_command")
             # Instead of doing the code to process the string, just store it in the command_log buffer
             strncpy = angr.SIM_PROCEDURES["libc"]["strncpy"]
             self.inline_call(strncpy, command_log_addr, cmd_str, 3 * BUFFER_SIZE)
