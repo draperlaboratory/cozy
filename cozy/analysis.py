@@ -337,6 +337,8 @@ def hexify(val0):
     def f(val1):
         if isinstance(val1, int):
             return hex(val1)
+        elif isinstance(val1, range):
+            return "range({}, {})".format(hex(val1.start), hex(val1.stop))
         else:
             return val1
     return fmap(val0, f)

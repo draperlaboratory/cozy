@@ -13,7 +13,7 @@ C = TypeVar('C')
 
 # Simultaneously maps and folds over a nested Python datastructure
 # in preorder traversal order
-def preorder_mapfold(val0: any, f: Callable[[any, T], tuple[any, T]], accum0: T) -> tuple[any, T]:
+def preorder_mapfold(val0: any, f: Callable[[any, T], tuple[any, T]], accum0: T, sort=True) -> tuple[any, T]:
     """
     Simultaneously maps and folds over a nested Python datastructure in preorder traversal order. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.
 
@@ -28,7 +28,7 @@ def preorder_mapfold(val0: any, f: Callable[[any, T], tuple[any, T]], accum0: T)
         ret = []
         accum2 = accum1
         for elem0 in val1:
-            (elem1, accum3) = preorder_mapfold(elem0, f, accum2)
+            (elem1, accum3) = preorder_mapfold(elem0, f, accum2, sort=sort)
             ret.append(elem1)
             accum2 = accum3
         return (ret, accum2)
@@ -37,27 +37,33 @@ def preorder_mapfold(val0: any, f: Callable[[any, T], tuple[any, T]], accum0: T)
         val1_lst = list(val1)
         accum2 = accum1
         for elem0 in val1_lst:
-            (elem1, accum3) = preorder_mapfold(elem0, f, accum2)
+            (elem1, accum3) = preorder_mapfold(elem0, f, accum2, sort=sort)
             ret_lst.append(elem1)
             accum2 = accum3
         return (tuple(ret_lst), accum2)
     elif isinstance(val1, dict):
-        ordered_keys = sorted(val1.keys())
+        if sort:
+            ordered_keys = sorted(val1.keys())
+        else:
+            ordered_keys = val1.keys()
         ret = dict()
         accum2 = accum1
         for k0 in ordered_keys:
-            (k1, accum3) = preorder_mapfold(k0, f, accum2)
+            (k1, accum3) = preorder_mapfold(k0, f, accum2, sort=sort)
             elem0 = val1[k0]
-            (elem1, accum4) = preorder_mapfold(elem0, f, accum3)
+            (elem1, accum4) = preorder_mapfold(elem0, f, accum3, sort=sort)
             ret[k1] = elem1
             accum2 = accum4
         return (ret, accum2)
     elif isinstance(val1, set):
-        ordered_elems = sorted(list(val1))
+        if sort:
+            ordered_elems = sorted(list(val1))
+        else:
+            ordered_elems = val1
         ret = set()
         accum2 = accum1
         for elem0 in ordered_elems:
-            (elem1, accum3) = preorder_mapfold(elem0, f, accum2)
+            (elem1, accum3) = preorder_mapfold(elem0, f, accum2, sort=sort)
             ret.add(elem1)
             accum2 = accum3
         return (ret, accum2)
@@ -91,7 +97,7 @@ def fmap(val0: any, f: Callable[[any], any]) -> any:
     def g(val1, accum1):
         return (f(val1), accum1)
 
-    (val2, accum2) = preorder_mapfold(val0, g, None)
+    (val2, accum2) = preorder_mapfold(val0, g, None, sort=False)
     return val2
 
 def compose(f: Callable[[B], C], g: Callable[[...], B]) -> Callable[[...], C]:
