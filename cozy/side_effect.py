@@ -41,12 +41,14 @@ class ConcretePerformedSideEffect:
         return self.concrete_mapper(self.body) if self.concrete_mapper is not None else self.body
 
 def perform(state: SimState, channel: str, body, concrete_mapper=None, label=None):
+    side_effects_copy = state.globals['side_effects'].copy()
     if channel in state.globals['side_effects']:
-        accum_side_effects = state.globals['side_effects'][channel].copy()
+        accum_channel = side_effects_copy[channel].copy()
     else:
-        accum_side_effects = []
-    accum_side_effects.append(PerformedSideEffect(state.history, body, concrete_mapper=concrete_mapper, label=label))
-    state.globals['side_effects'][channel] = accum_side_effects
+        accum_channel = []
+    accum_channel.append(PerformedSideEffect(state.history, body, concrete_mapper=concrete_mapper, label=label))
+    side_effects_copy[channel] = accum_channel
+    state.globals['side_effects'] = side_effects_copy
 
 def get_effects(state: SimState) -> dict[str, list[PerformedSideEffect]]:
     return state.globals['side_effects']
