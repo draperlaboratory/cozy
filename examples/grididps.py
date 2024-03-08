@@ -7,8 +7,8 @@ from cozy import claripy_ext
 BUFFER_SIZE = 18
 
 proj_prepatched = cozy.project.Project('test_programs/GridIDPS/build/amp_challenge_arm.ino_unstripped.elf')
-proj_goodpatch = cozy.project.Project('test_programs/GridIDPS/build/ids_bin_earlier_patch')
-#proj_goodpatch = cozy.project.Project('test_programs/GridIDPS/build/ids-solved-good')
+#proj_goodpatch = cozy.project.Project('test_programs/GridIDPS/build/amp_challenge_arm.ino_unstripped-badpatch.elf')
+proj_goodpatch = cozy.project.Project('test_programs/GridIDPS/build/amp_challenge_arm.ino_unstripped-goodpatch.elf')
 
 buffer_position_sym = claripy.BVS('bufferPosition', 32)
 available_symbols = [claripy.BVS('SerialAvailable', 32) for i in range(7)]
