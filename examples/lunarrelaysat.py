@@ -81,7 +81,7 @@ def run(proj: cozy.project.Project):
 results_prepatched = run(proj_prepatched)
 results_goodpatch = run(proj_goodpatch)
 
-comparison_results = cozy.analysis.Comparison(results_prepatched, results_goodpatch, ignore_invalid_stack=False)
+comparison_results = cozy.analysis.Comparison(results_prepatched, results_goodpatch)
 
 cozy.execution_graph.visualize_comparison(proj_prepatched, proj_goodpatch,
                                           results_prepatched, results_goodpatch,

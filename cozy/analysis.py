@@ -17,7 +17,14 @@ from .terminal_state import TerminalState, DeadendedState
 # Given a state, returns a range of addresses that were used as part of the stack but are no longer
 # valid stack locations. This will happen if the stack grows, then shrinks.
 def _invalid_stack_addrs(st: SimState) -> range:
-    curr_sp = st.callstack.stack_ptr
+    # Note that state.callback.stack_ptr has given incorrect values in the
+    # lunarrelaysat test case. It seems that state.regs.sp is correct there,
+    # so use that instead. In most cases state.regs.sp should be concrete,
+    # but we take the max anyway
+    #curr_sp = st.callstack.stack_ptr
+
+    curr_sp = st.solver.max(st.regs.sp)
+
     # The red page is at the extrema of the stack, so we can use that to determine
     # the addresses to diqualify
     red_page_addr = st.memory._red_pageno * st.memory.page_size
@@ -41,7 +48,8 @@ def _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range
 
 def _stack_addrs(st: SimState) -> range:
     stack_start = st.arch.initial_sp
-    curr_sp = st.callstack.stack_ptr
+    curr_sp = st.solver.max(st.regs.sp)
+    #curr_sp = st.callstack.stack_ptr
 
     if st.arch.stack_change < 0:
         # The stack grows down
@@ -69,7 +77,13 @@ def nice_name(state: SimState, malloced_names: P.IntervalDict[tuple[str, P.Inter
     # Expand the range slightly as a heuristic
     wider_range = range(stack_range.start - 1024, stack_range.stop + 1024)
     if addr in wider_range:
-        stack_ptr = state.callstack.stack_ptr
+        # Note that state.callback.stack_ptr has given incorrect values in the
+        # lunarrelaysat test case. It seems that state.regs.sp is correct there,
+        # so use that instead. In most cases state.regs.sp should be concrete,
+        # but we take the max anyway
+        #stack_ptr = state.callstack.stack_ptr
+
+        stack_ptr = state.solver.max(state.regs.sp)
         offset = addr - stack_ptr
         if offset < 0:
             return "sp{}".format(hex(offset))
