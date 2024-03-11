@@ -119,6 +119,62 @@ class NotEqFieldDiff(FieldDiff):
     def __init__(self, body_diff):
         self.body_diff = body_diff
 
+def compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff:
+    both_lists = isinstance(left_se, list) and isinstance(right_se, list)
+    both_tuples = isinstance(left_se, tuple) and isinstance(right_se, tuple)
+    if both_lists or both_tuples:
+        max_len = max(len(left_se), len(right_se))
+        subfields_equal = True
+        diff = []
+        for i in range(max_len):
+            if i < len(left_se):
+                left_val = left_se[i]
+            else:
+                left_val = None
+            if i < len(right_se):
+                right_val = right_se[i]
+            else:
+                right_val = None
+            rec_result = compare_side_effect(joint_solver, left_val, right_val)
+            if not isinstance(rec_result, EqFieldDiff):
+                subfields_equal = False
+            diff.append(rec_result)
+        if subfields_equal:
+            return EqFieldDiff(left_se, right_se)
+        else:
+            if both_tuples:
+                diff = tuple(diff)
+            return NotEqFieldDiff(diff)
+    elif isinstance(left_se, dict) and isinstance(right_se, dict):
+        all_keys = set(left_se.keys())
+        all_keys.update(right_se.keys())
+        subfields_equal = True
+        diff = dict()
+        for key in all_keys:
+            left_val = left_se.get(key, None)
+            right_val = right_se.get(key, None)
+            rec_result = compare_side_effect(joint_solver, left_val, right_val)
+            if not isinstance(rec_result, EqFieldDiff):
+                subfields_equal = False
+            diff[key] = rec_result
+        if subfields_equal:
+            return EqFieldDiff(left_se, right_se)
+        else:
+            return NotEqFieldDiff(diff)
+    elif isinstance(left_se, claripy.ast.Bits) and isinstance(right_se, claripy.ast.Bits):
+        if left_se is not right_se and joint_solver.satisfiable(extra_constraints=[left_se != right_se]):
+            return NotEqLeaf(left_se, right_se)
+        else:
+            return EqFieldDiff(left_se, right_se)
+    elif (isinstance(left_se, int) and isinstance(right_se, int)) or (
+            isinstance(left_se, str) and isinstance(right_se, str)):
+        if left_se == right_se:
+            return EqFieldDiff(left_se, right_se)
+        else:
+            return NotEqLeaf(left_se, right_se)
+    else:
+        return NotEqLeaf(left_se, right_se)
+
 class DiffResult:
     def __init__(self,
                  mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]],
@@ -194,27 +250,10 @@ class StateDiff:
 
         ret_mem_diff = dict()
 
+        # Compute memory difference
         if compute_mem_diff:
-            # This is the old version of computing memory difference,
-            # which loops through the allocated pages and compares the bytes.
-            # This is less efficient than the new method, which uses the mem_writes
-            # data saved by the on_mem_write hook. If there are problems with memory
-            # that is different but is not being reported, then the first course
-            # of action should be to uncomment these lines and check for differences
-            #diff_addrs_old: set[int] = sl.memory.changed_bytes(sr.memory)
-            #diff_addrs_old.update(sr.memory.changed_bytes(sl.memory))
-            #if ignore_addrs is not None:
-            #    range_ext.remove_range_list(diff_addrs_old, ignore_addrs)
-
             left_mem_writes = sl.globals['mem_writes']
             right_mem_writes = sr.globals['mem_writes']
-
-            # Note that diffs does not necessarily contain the addresses of the program data itself,
-            # which is what we would expect. Testing with angr showed that the page(s) containing the
-            # program data are loaded lazily, in that they are not stored unless actually used
-            # ex: state.memory.load(fun_addr, 1)
-            # In any case it is probably a good idea to remove any patched addresses just in case
-            # the state's memory actually contains them
 
             # Here we remove the requested intervals from the interval dictionaries
             if ignore_addrs is not None:
@@ -234,14 +273,12 @@ class StateDiff:
                 if bytes_left is not bytes_right:
                     if joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right]):
                         # It is possible that there is a symbolic value stored in memory.
-                        # Here we want to simplify this with respect to the joint constraints
-                        #simpl_bytes_left = claripy_ext.simplify_kb(bytes_left, joint_solver.constraints)
-                        #simpl_bytes_right = claripy_ext.simplify_kb(bytes_right, joint_solver.constraints)
                         ret_mem_diff[addr_range] = (bytes_left, bytes_right)
 
         # Loop over all the registers that could possibly be different and save the ones that are actually different
         ret_reg_diff = dict()
 
+        # Compute register difference
         if compute_reg_diff:
             for reg_name in dir(sl.regs):
                 # Ignore registers that start with underscore and cc pseudoregisters (which appear to be a part of the VEX
@@ -254,70 +291,11 @@ class StateDiff:
 
                 if reg_left is not reg_right:
                     if joint_solver.satisfiable(extra_constraints=[reg_left != reg_right]):
-                        #simpl_reg_left = claripy_ext.simplify_kb(reg_left, joint_solver.constraints)
-                        #simpl_reg_right = claripy_ext.simplify_kb(reg_right, joint_solver.constraints)
                         ret_reg_diff[reg_name] = (reg_left, reg_right)
 
         # Compute side effect difference
         ret_side_effect_diff = dict()
         if compute_side_effect_diff:
-            def compare_side_effect(left_se, right_se) -> FieldDiff:
-                both_lists = isinstance(left_se, list) and isinstance(right_se, list)
-                both_tuples = isinstance(left_se, tuple) and isinstance(right_se, tuple)
-                if both_lists or both_tuples:
-                    max_len = max(len(left_se), len(right_se))
-                    subfields_equal = True
-                    diff = []
-                    for i in range(max_len):
-                        if i < len(left_se):
-                            left_val = left_se[i]
-                        else:
-                            left_val = None
-                        if i < len(right_se):
-                            right_val = right_se[i]
-                        else:
-                            right_val = None
-                        rec_result = compare_side_effect(left_val, right_val)
-                        if not isinstance(rec_result, EqFieldDiff):
-                            subfields_equal = False
-                        diff.append(rec_result)
-                    if subfields_equal:
-                        return EqFieldDiff(left_se, right_se)
-                    else:
-                        if both_tuples:
-                            diff = tuple(diff)
-                        return NotEqFieldDiff(diff)
-                elif isinstance(left_se, dict) and isinstance(right_se, dict):
-                    all_keys = set(left_se.keys())
-                    all_keys.update(right_se.keys())
-                    subfields_equal = True
-                    diff = dict()
-                    for key in all_keys:
-                        left_val = left_se.get(key, None)
-                        right_val = right_se.get(key, None)
-                        rec_result = compare_side_effect(left_val, right_val)
-                        if not isinstance(rec_result, EqFieldDiff):
-                            subfields_equal = False
-                        diff[key] = rec_result
-                    if subfields_equal:
-                        return EqFieldDiff(left_se, right_se)
-                    else:
-                        return NotEqFieldDiff(diff)
-                elif isinstance(left_se, claripy.ast.Bits) and isinstance(right_se, claripy.ast.Bits):
-                    if left_se is not right_se and joint_solver.satisfiable(extra_constraints=[left_se != right_se]):
-                        return NotEqLeaf(left_se, right_se)
-                    else:
-                        return EqFieldDiff(left_se, right_se)
-                elif (isinstance(left_se, int) and isinstance(right_se, int)) or (isinstance(left_se, str) and isinstance(right_se, str)):
-                    if left_se == right_se:
-                        return EqFieldDiff(left_se, right_se)
-                    else:
-                        return NotEqLeaf(left_se, right_se)
-                else:
-                    return NotEqLeaf(left_se, right_se)
-
-            # Loop over all the different effect channels, then zip the effects in each channel and compare them
-            # TODO: Better alignment of effects using effect labels
             left_effects = side_effect.get_effects(sl)
             right_effects = side_effect.get_effects(sr)
             all_channels = set(left_effects.keys())
@@ -331,7 +309,8 @@ class StateDiff:
                 diff = []
                 for (left_effect, right_effect) in aligned_channels:
                     if left_effect is not None and right_effect is not None:
-                        diff.append((left_effect, right_effect, compare_side_effect(left_effect.body, right_effect.body)))
+                        comparison_results = compare_side_effect(joint_solver, left_effect.body, right_effect.body)
+                        diff.append((left_effect, right_effect, comparison_results))
                     else:
                         left_val = left_effect.body if left_effect is not None else None
                         right_val = right_effect.body if right_effect is not None else None

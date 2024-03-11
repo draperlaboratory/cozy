@@ -8,8 +8,14 @@ class PerformedSideEffect:
     """
     def __init__(self, state_history: SimStateHistory, body, concrete_post_processor=None, label=None):
         """
+        :param SimStateHistory state_history: The point in execution at which the side effect was performed.
         :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and\
         claripy concrete and symbolic values.
+        :param concrete_post_processor: The optional post processing function to apply to concretized versions of the
+        side effect's body if post processing is required.
+        :param label: The label to apply to the side effect, used to align instances of side effects when making\
+        comparisons. For example, if you have two call sites to a network send function, you would want different\
+        labels for the two different call locations.
         """
         self.state_history = state_history
         self.body = body
@@ -27,8 +33,15 @@ class ConcretePerformedSideEffect:
     """
     def __init__(self, base_effect: PerformedSideEffect, state_history: SimStateHistory, body, concrete_post_processor=None, label=None):
         """
+        :param PerformedSideEffect base_effect: The non-symbolic side effect that was concretized.
+        :param SimStateHistory state_history: The point in execution at which the side effect was performed.
         :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and\
         claripy concrete values.
+        :param concrete_post_processor: The optional post processing function to apply to concretized versions of the
+        side effect's body if post processing is required.
+        :param label: The label to apply to the side effect, used to align instances of side effects when making\
+        comparisons. For example, if you have two call sites to a network send function, you would want different\
+        labels for the two different call locations.
         """
         self.base_effect = base_effect
         self.state_history = state_history
@@ -41,6 +54,21 @@ class ConcretePerformedSideEffect:
         return self.concrete_post_processor(self.body) if self.concrete_post_processor is not None else self.body
 
 def perform(state: SimState, channel: str, body, concrete_post_processor=None, label=None):
+    """
+    Attaches a side effect to the passed state.
+
+    :param SimState state: The state in which the side effect should be performed and attached to.
+    :param str channel: The name of the channel in which the side effect should be performed. Different side effects\
+    should be sent down different channels. For example, the virtual print side effect channel is different from the\
+    networking side effect channel.
+    :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, \
+    claripy concrete values, and claripy symbolic values. This should represent the payload of the side effect.
+    :param concrete_post_processor: The optional post processing function to apply to concretized versions of the side\
+    effect's body if post processing is required.
+    :param label: The label to apply to the side effect, used to align instances of side effects when making\
+    comparisons. For example, if you have two call sites to a network send function, you would want different labels\
+    for the two different call locations.
+    """
     side_effects_copy = state.globals['side_effects'].copy()
     if channel in state.globals['side_effects']:
         accum_channel = side_effects_copy[channel].copy()
@@ -51,11 +79,26 @@ def perform(state: SimState, channel: str, body, concrete_post_processor=None, l
     state.globals['side_effects'] = side_effects_copy
 
 def get_effects(state: SimState) -> dict[str, list[PerformedSideEffect]]:
+    """
+    Gets the side effects attached to a specific state
+
+    :param SimState state: The state from which we should retrieve the side effects.
+    :rtype: dict[str, list[PerformedSideEffect]]
+    :return: All side effects attached to this state. Each entry in the dictionary is a different channel.
+    """
     return state.globals['side_effects']
 
 def get_channel(state: SimState, channel: str) -> list[PerformedSideEffect]:
-    return state.globals['side_effects'].get(channel, [])
+    """
+    Gets the side effects from the given channel attached to a specific state. An empty list is returned for channels
+    in which the channel has not yet been used.
 
+    :param SimState state: The state from which we should retrieve the side effects channel.
+    :param str channel: The name of the channel
+    :rtype: list[PerformedSideEffect]
+    :return: A list of side effects for the requested channel.
+    """
+    return state.globals['side_effects'].get(channel, [])
 
 # Memoized recursive implementation of a Levenshtein alignment algorithm,
 # except that we do not do 'replacements'
