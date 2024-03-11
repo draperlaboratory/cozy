@@ -1,0 +1,40 @@
+:py:mod:`cozy.hooks.strncmp`
+============================
+
+.. py:module:: cozy.hooks.strncmp
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.hooks.strncmp.strncmp
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   cozy.hooks.strncmp.l
+
+
+.. py:data:: l
+
+   
+
+.. py:class:: strncmp
+
+
+   Bases: :py:obj:`angr.SimProcedure`
+
+   .. py:method:: run(a_addr, b_addr, limit, a_len=None, b_len=None, wchar=False, ignore_case=False)
+
+
+

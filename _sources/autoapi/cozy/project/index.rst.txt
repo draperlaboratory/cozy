@@ -1,0 +1,104 @@
+:py:mod:`cozy.project`
+======================
+
+.. py:module:: cozy.project
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cozy.project.Project
+
+
+
+
+.. py:class:: Project(binary_path: str, fun_prototypes: dict[str | int, str] | None = None, load_debug_info: bool = False, **kwargs)
+
+
+   Represents a project for a single executable
+
+   :ivar angr.Project angr_proj: The angr project created for this cozy project.
+   :ivar dict[str | int, str] fun_prototypes: Maps function names or function addresses to their type signatures.
+
+   Constructor for a project.
+
+   :param str binary_path: The path to the binary to analyze.
+   :param dict[str | int, str] | None fun_prototypes: Initial dictionary that maps function names or addresses to their type signatures. If None is passed, fun_prototypes is initialized to the empty dictionary.
+   :param kwargs: Extra arguments to pass to angr.Project
+
+   .. py:property:: cfg
+
+      Returns the control flow graph for this project. This property will cache the cfg in a pickle file
+      to speed up future runs. This means if you change the underlying program you will need to delete the
+      .cfg.pickle file located in the same directory as your executable.
+
+
+   .. py:property:: arch
+
+      Returns the underlying angr project architecture
+
+
+   .. py:method:: object_ranges(obj_filter: collections.abc.Callable[[cle.Backend], bool] | None = None) -> list[range]
+
+      Returns the ranges of the objects stored in the executable (for example: ELF objects). If obj_filter is specified, only objects that pass the filter make it into the return list.
+
+      :param Callable[[Backend], bool] | None obj_filter: Used to filter certain objects from the output list.
+      :return: A list of memory ranges.
+      :rtype: list[range]
+
+
+   .. py:method:: find_symbol_addr(sym_name: str) -> int
+
+      Finds the rebased addressed of a symbol. Functions are the most common symbol type.
+
+      :param str sym_name: The symbol to lookup.
+      :return: The rebased symbol address
+      :rtype: int
+
+
+   .. py:method:: add_prototype(fun: str | int, fun_prototype: str) -> None
+
+      Adds a function prototype to this project.
+
+      :param str | int fun: The function's name or address.
+      :param str fun_prototype: The function's type signature.
+      :return: None
+      :rtype: None
+
+
+   .. py:method:: session(start_fun: str | int | None = None) -> cozy.session.Session
+
+      Returns a new session derived from this project.
+
+      :param str | int | None start_fun: The name or address of the function which this session will start with. If None is specified, then the program will start at the entry point (main function).
+      :return: The fresh session.
+      :rtype: Session
+
+
+   .. py:method:: hook_symbol(symbol_name: str, simproc_class: type[angr.SimProcedure], kwargs=None, replace: bool | None = None) -> int
+
+      Hooks a symbol in the angr project. If the symbol is one from libc, this method will also replace
+      what is stored in :py:attr:`angr.SIM_PROCEDURES["libc"][symbol_name]`.
+
+      :param str symbol_name: The name of the symbol to hook.
+      :param type[SimProcedure] simproc_class: The class to use to hook the symbol. Note that this is not an instance        of SimProcedure, but is instead a reference to the class itself.
+      :param kwargs: These are the keyword arguments that will be passed to the procedure's `run` method eventually.
+      :param bool | None replace: Control the behavior on finding that the address is already hooked. If true,        silently replace the hook. If false, warn and do not replace the hook. If none (default), warn and replace the        hook.
+      :rtype: int
+      :return: The address of the new symbol.
+
+
+   .. py:method:: hook_syscall(syscall_name: str, simproc_class: type[angr.SimProcedure])
+
+      Hooks a syscall in the angr project.
+
+      :param str syscall_name: The name of the syscall to hook.
+      :param type[SimProcedure] simproc_class: The class to use to hook the symbol. Note that this is not an instance        of SimProcedure, but is instead a reference to the class itself.
+
+
+

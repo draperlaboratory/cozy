@@ -1,0 +1,17 @@
+:py:mod:`cozy.hooks`
+====================
+
+.. py:module:: cozy.hooks
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   strlen/index.rst
+   strncmp/index.rst
+   strtok_r/index.rst
+
+
