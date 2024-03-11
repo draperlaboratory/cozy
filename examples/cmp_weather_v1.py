@@ -24,7 +24,7 @@ symbolic_integers_lst = [
      claripy.BVS('n3_line_{}'.format(i), INT_SIZE * 8)] for i in range(num_lines)]
 
 if input("Would you like to constrain the temperatures to be in the range [-459, 1000)? (y/n)") == "y":
-    range_constraint = claripy.And(*[claripy_ext.twos_comp_range_constraint(x, -459, 1000) for lst in symbolic_integers_lst for x in lst])
+    range_constraint = claripy.And(*[(x.SGE(-459) & x.SLT(1000)) for lst in symbolic_integers_lst for x in lst])
 else:
     range_constraint = True
 

@@ -58,17 +58,14 @@ def run(proj: cozy.project.Project):
 
     sess = proj.session('loop')
 
-    sess.add_constraints(claripy_ext.twos_comp_range_constraint(buffer_position_sym, 0, 128))
+    sess.add_constraints(buffer_position_sym.SGE(0))
+    sess.add_constraints(*[sym.SGE(0) for sym in available_symbols])
 
     sess.state.globals['available_i'] = 0
     sess.state.globals['readsym_i'] = 0
 
-    command_log_addr = sess.malloc(3 * BUFFER_SIZE)
     class process_command(angr.SimProcedure):
         def run(self, cmd_str):
-            # Instead of doing the code to process the string, just store it in the command_log buffer
-            #strncpy = angr.SIM_PROCEDURES["libc"]["strncpy"]
-            #self.inline_call(strncpy, command_log_addr, cmd_str, 3 * BUFFER_SIZE)
             strlen = angr.SIM_PROCEDURES["libc"]["strlen"]
             max_len = self.state.solver.max(self.inline_call(strlen, cmd_str).ret_expr)
             cmd = [self.state.memory.load(cmd_str + i, 1) for i in range(max_len)]
@@ -91,12 +88,12 @@ def run(proj: cozy.project.Project):
 
     def index_assertion(state):
         index = state.regs.r2
-        return cozy.claripy_ext.twos_comp_range_constraint(index, 0, BUFFER_SIZE)
+        return (index.SGE(0) & index.SLT(BUFFER_SIZE))
     sess.add_directives(cozy.directive.Assert.from_fun_offset(proj, 'loop', 0x20, index_assertion, "index out of bounds in non-newline character branch"))
 
     def index_assertion2(state):
         index = state.regs.r3
-        return cozy.claripy_ext.twos_comp_range_constraint(index, 0, BUFFER_SIZE)
+        return (index.SGE(0) & index.SLT(BUFFER_SIZE))
     sess.add_directives(cozy.directive.Assert.from_fun_offset(proj, 'loop', 0x36, index_assertion2, "index out of bounds in newline character branch"))
 
     return sess.run(loop_arguments)
@@ -109,7 +106,7 @@ comparison_results = cozy.analysis.Comparison(results_prepatched, results_goodpa
 def concrete_arg_mapper(args):
     ret = dict(args)
     ret['bufferPosition'] = cozy.primitives.from_twos_comp(args['bufferPosition'].concrete_value, 32)
-    ret['available'] = [False if av.concrete_value == 0 else True for av in args['available']]
+    ret['available'] = [av.concrete_value for av in args['available']]
     ret['read_sym'] = [chr(r.concrete_value) for r in args['read_sym']]
     return ret
 

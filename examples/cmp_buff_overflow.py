@@ -11,7 +11,8 @@ arg1 = claripy.BVS('idx_arg', INT_SIZE * 8)
 
 def construct_args(sess):
     # Constrain the first argument to satisfy -10 <= arg1 <= 10
-    sess.add_constraints(claripy_ext.twos_comp_range_constraint(arg1, -10, 10 + 1))
+    sess.add_constraints(arg1.SGE(-10))
+    sess.add_constraints(arg1.SLE(10))
     return [arg0, arg1]
 
 def run_pre_patched():

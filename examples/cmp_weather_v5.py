@@ -28,7 +28,7 @@ num_vals = [claripy.BVS("num_vals_{}".format(i), INT_SIZE * 8) for i in range(MA
 next_args = [primitives.sym_ptr(archinfo.ArchAMD64, 'next_ptr').annotate(MultiwriteAnnotation()) for i in range(MAX_NUM_ROWS)]
 
 if input("Would you like to constrain the temperatures to be in the range [-459, 1000)? (y/n)") == "y":
-    range_constraint = claripy.And(*[claripy_ext.twos_comp_range_constraint(x, -459, 1000) for lst in vals for x in lst])
+    range_constraint = claripy.And(*[(x.SGE(-459) & x.SLT(1000)) for lst in vals for x in lst])
 else:
     range_constraint = True
 

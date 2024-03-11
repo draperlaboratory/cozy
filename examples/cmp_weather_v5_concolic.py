@@ -46,7 +46,7 @@ symbols.update(next_args)
 args = ({"latest_data_init": latest_data}, list(zip(vals, num_vals, next_args)))
 
 if input("Would you like to constrain the temperatures to be in the range [-459, 1000)? (y/n)") == "y":
-    range_constraint = claripy.And(*[claripy_ext.twos_comp_range_constraint(x, -459, 1000) for lst in vals for x in lst])
+    range_constraint = claripy.And(*[(x.SGE(-459) & x.SLT(1000)) for lst in vals for x in lst])
 else:
     range_constraint = True
 
