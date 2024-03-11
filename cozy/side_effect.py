@@ -6,26 +6,26 @@ class PerformedSideEffect:
     """
     This class encapsulates the idea of a side effect whose body may consist of mixed symbolic and concrete values.
     """
-    def __init__(self, state_history: SimStateHistory, body, concrete_mapper=None, label=None):
+    def __init__(self, state_history: SimStateHistory, body, concrete_post_processor=None, label=None):
         """
         :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and\
         claripy concrete and symbolic values.
         """
         self.state_history = state_history
         self.body = body
-        self.concrete_mapper = concrete_mapper
+        self.concrete_post_processor = concrete_post_processor
         self.label = label
 
 class ConcretePerformedSideEffect:
     """
     This class encapsulates the idea of a side effect whose body previously consisted of mixed symbolic and concrete
     values, but now consists of only concrete values (ie, BVV and FPV). At the point of the construction, this concrete
-    value has not yet been passed through the user provided concrete_mapper, whose job is to take the concrete value
-    and transform the BVV values into ordinary Python values. The purpose of concrete_mapper for instance could be
+    value has not yet been passed through the user provided concrete_post_processor, whose job is to take the concrete value
+    and transform the BVV values into ordinary Python values. The purpose of concrete_post_processor for instance could be
     to transform a two's complement BVV that is negative into a negative Python integer. This will make the display
-    more readable to the user. Hence, the concrete_mapper can be viewed as a post-processing function.
+    more readable to the user. Hence, the concrete_post_processor can be viewed as a post-processing function.
     """
-    def __init__(self, base_effect: PerformedSideEffect, state_history: SimStateHistory, body, concrete_mapper=None, label=None):
+    def __init__(self, base_effect: PerformedSideEffect, state_history: SimStateHistory, body, concrete_post_processor=None, label=None):
         """
         :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and\
         claripy concrete values.
@@ -33,20 +33,20 @@ class ConcretePerformedSideEffect:
         self.base_effect = base_effect
         self.state_history = state_history
         self.body = body
-        self.concrete_mapper = concrete_mapper
+        self.concrete_post_processor = concrete_post_processor
         self.label = label
 
     @property
     def mapped_body(self):
-        return self.concrete_mapper(self.body) if self.concrete_mapper is not None else self.body
+        return self.concrete_post_processor(self.body) if self.concrete_post_processor is not None else self.body
 
-def perform(state: SimState, channel: str, body, concrete_mapper=None, label=None):
+def perform(state: SimState, channel: str, body, concrete_post_processor=None, label=None):
     side_effects_copy = state.globals['side_effects'].copy()
     if channel in state.globals['side_effects']:
         accum_channel = side_effects_copy[channel].copy()
     else:
         accum_channel = []
-    accum_channel.append(PerformedSideEffect(state.history, body, concrete_mapper=concrete_mapper, label=label))
+    accum_channel.append(PerformedSideEffect(state.history, body, concrete_post_processor=concrete_post_processor, label=label))
     side_effects_copy[channel] = accum_channel
     state.globals['side_effects'] = side_effects_copy
 

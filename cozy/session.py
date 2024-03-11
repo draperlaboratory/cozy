@@ -40,12 +40,12 @@ class RunResult:
     def __str__(self):
         return "RunResult({} deadended, {} errored, {} asserts_failed, {} assume_warnings)".format(len(self.deadended), len(self.errored), len(self.asserts_failed), len(self.assume_warnings))
 
-    def report_errored(self, args: any, concrete_arg_mapper: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+    def report_errored(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
         Creates a human readable report about a list of errored states.
 
         :param any args: The arguments to concretize
-        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
         :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
         :return: The report as a string
         :rtype: str
@@ -60,8 +60,8 @@ class RunResult:
                 concrete_vals_lst = err.concrete_examples(args, num_examples=num_examples)
                 output += "Here are {} concrete input(s):\n".format(len(concrete_vals_lst))
                 for (j, concrete_input) in enumerate(concrete_vals_lst):
-                    if concrete_arg_mapper is not None:
-                        concrete_args = concrete_arg_mapper(concrete_input.args)
+                    if concrete_post_processor is not None:
+                        concrete_args = concrete_post_processor(concrete_input.args)
                     else:
                         concrete_args = concrete_input.args
                     output += "{}.\n".format(j + 1)
@@ -69,12 +69,12 @@ class RunResult:
                 output += "\n"
             return output
 
-    def report_asserts_failed(self, args: any, concrete_arg_mapper: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+    def report_asserts_failed(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
         Creates a human readable report about a list of failed assertions.
 
         :param any args: The arguments to concretize
-        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
         :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed state.
         :return: The report as a string
         :rtype: str
@@ -90,8 +90,8 @@ class RunResult:
                 concrete_inputs = state.concrete_examples(args, num_examples)
                 output += "Here are {} concrete input(s) for this particular assertion:\n".format(len(concrete_inputs))
                 for (i, concrete_input) in enumerate(concrete_inputs):
-                    if concrete_arg_mapper is not None:
-                        concrete_args = concrete_arg_mapper(concrete_input.args)
+                    if concrete_post_processor is not None:
+                        concrete_args = concrete_post_processor(concrete_input.args)
                     else:
                         concrete_args = concrete_input.args
                     output += "{}.\n".format(i + 1)
@@ -281,7 +281,7 @@ class _SessionDirectiveExploration(_SessionExploration):
                                     if directive.assert_type == AssertType.ASSERT_CAN_GLOBAL:
                                         self.asserts_to_scrub.add(directive)
                         elif isinstance(directive, VirtualPrint):
-                            side_effect.perform(found_state, 'virtual_prints', directive.log_fun(found_state), concrete_mapper=directive.effect_concrete_mapper, label=directive.label)
+                            side_effect.perform(found_state, 'virtual_prints', directive.log_fun(found_state), concrete_post_processor=directive.effect_concrete_post_processor, label=directive.label)
                         elif isinstance(directive, ErrorDirective):
                             prune_states.add(found_state)
                             simgr.errored.append(

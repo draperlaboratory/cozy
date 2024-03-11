@@ -56,7 +56,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                     rslt_a: RunResult, rslt_b: RunResult,
                     comparison_results: analysis.Comparison,
                     file_name_a: str, file_name_b: str,
-                    concrete_arg_mapper: Callable [[any], any] | None = None,
+                    concrete_post_processor: Callable [[any], any] | None = None,
                     include_vex: bool = False, include_simprocs: bool = False,
                     flag_syscalls: bool = False, include_actions: bool = False,
                     include_debug: bool = False, include_side_effects: bool = True,
@@ -74,7 +74,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
     :param analysis.Comparison comparison_results: The comparison we wish to dump.
     :param str file_name_a: The filename for the JSON serializing the first execution
     :param str file_name_b: The filename for the JSON serializing the second execution
-    :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
+    :param Callable [[any],any] | None, optional concrete_post_processor: This function is used to
         post-process concretized versions of args before they are added to the
         return string. Some examples of this function include converting an integer
         to a negative number due to use of two's complement, or slicing off parts of
@@ -99,7 +99,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
         generate and incorporate into the JSON, for each dead-end state. Default 0.
     """
     g_a, g_b = _generate_comparison(proj_a, proj_b, rslt_a, rslt_b, comparison_results,
-                                    concrete_arg_mapper=concrete_arg_mapper,
+                                    concrete_post_processor=concrete_post_processor,
                                     include_vex=include_vex,
                                     include_simprocs=include_simprocs,
                                     include_actions=include_actions,
@@ -117,7 +117,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
 def visualize_comparison(proj_a: Project, proj_b: Project,
                          rslt_a: RunResult, rslt_b: RunResult,
                          comparison_results: analysis.Comparison,
-                         concrete_arg_mapper: Callable [[any], any] | None = None,
+                         concrete_post_processor: Callable [[any], any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False, include_actions: bool = False,
                          include_debug: bool = False, include_side_effects: bool = True,
@@ -135,7 +135,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
     :param RunResult rslt_a: The result of the first execution.
     :param RunResult rslt_b: The result of the second execution.
     :param analysis.Comparison comparison_results: The comparison we wish to dump.
-    :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
+    :param Callable [[any],any] | None, optional concrete_post_processor: This function is used to
         post-process concretized versions of args before they are added to the
         return string. Some examples of this function include converting an integer
         to a negative number due to use of two's complement, or slicing off parts of
@@ -161,7 +161,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
     :param int, optional port: The port to serve cozy-viz on. Default 8080.
     """
     g_a, g_b = _generate_comparison(proj_a, proj_b, rslt_a, rslt_b, comparison_results,
-                                    concrete_arg_mapper=concrete_arg_mapper,
+                                    concrete_post_processor=concrete_post_processor,
                                     include_vex=include_vex,
                                     flag_syscalls=flag_syscalls,
                                     include_actions = include_actions,
@@ -175,7 +175,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
 def _generate_comparison(proj_a: Project, proj_b: Project,
                          rslt_a: RunResult, rslt_b: RunResult,
                          comparison_results: analysis.Comparison,
-                         concrete_arg_mapper: Callable [[any], any] | None = None,
+                         concrete_post_processor: Callable [[any], any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False,
                          include_actions: bool = False,
@@ -192,7 +192,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
     :param Project proj_b: The project associated with the second execuction.
     :param RunResult rslt_a: The result of the first execution.
     :param RunResult rslt_b: The result of the second execution.
-    :param Callable [[any],any] | None, optional concrete_arg_mapper: This function is used to
+    :param Callable [[any],any] | None, optional concrete_post_processor: This function is used to
         post-process concretized versions of args before they are added to the
         return string. Some examples of this function include converting an integer
         to a negative number due to use of two's complement, or slicing off parts of
@@ -248,8 +248,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 comp = comparison_results.get_pair(state_a, state_b)
                 concretion = comp.concrete_examples(args, num_examples=num_examples)
 
-                if concrete_arg_mapper is not None:
-                    concrete_args = [concrete_arg_mapper(x.args) for x in concretion]
+                if concrete_post_processor is not None:
+                    concrete_args = [concrete_post_processor(x.args) for x in concretion]
                 else:
                     concrete_args = [x.args for x in concretion]
                 concrete_args = fmap(concrete_args, lambda x: x.concrete_value if isinstance(x, claripy.ast.Bits) else x)

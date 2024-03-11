@@ -185,7 +185,7 @@ else:
     prepatched_results = prepatched_sess.run(args_prepatched)
     postpatched_results = postpatched_sess.run(args_postpatched)
 
-def concrete_arg_mapper(args):
+def concrete_post_processor(args):
     def transform_str(characters):
         return [chr(n.concrete_value) if (n.concrete_value >= 32 and n.concrete_value <= 126) else n.concrete_value for n in characters]
     return [transform_str(cs) for cs in args]
@@ -195,6 +195,6 @@ comparison = cozy.analysis.Comparison(prepatched_results, postpatched_results)
 cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
                                           prepatched_results, postpatched_results,
                                           comparison,
-                                          concrete_arg_mapper=concrete_arg_mapper,
+                                          concrete_post_processor=concrete_post_processor,
                                           args=[command_symbols, role_symbols, data_symbols],
                                           num_examples=2, open_browser=True, include_actions=False)

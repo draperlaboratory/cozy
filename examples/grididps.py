@@ -69,9 +69,9 @@ def run(proj: cozy.project.Project):
             strlen = angr.SIM_PROCEDURES["libc"]["strlen"]
             max_len = self.state.solver.max(self.inline_call(strlen, cmd_str).ret_expr)
             cmd = [self.state.memory.load(cmd_str + i, 1) for i in range(max_len)]
-            def concrete_mapper(concrete_cmd):
+            def concrete_post_processor(concrete_cmd):
                 return [chr(r.concrete_value) for r in concrete_cmd]
-            cozy.side_effect.perform(self.state, "process_command", cmd, concrete_mapper=concrete_mapper)
+            cozy.side_effect.perform(self.state, "process_command", cmd, concrete_post_processor=concrete_post_processor)
     
     proj.hook_symbol('_Z15process_commandPKc', process_command)
 
@@ -103,7 +103,7 @@ results_goodpatch = run(proj_goodpatch)
 
 comparison_results = cozy.analysis.Comparison(results_prepatched, results_goodpatch)
 
-def concrete_arg_mapper(args):
+def concrete_post_processor(args):
     ret = dict(args)
     ret['bufferPosition'] = cozy.primitives.from_twos_comp(args['bufferPosition'].concrete_value, 32)
     ret['available'] = [av.concrete_value for av in args['available']]
@@ -117,4 +117,4 @@ cozy.execution_graph.visualize_comparison(proj_prepatched, proj_goodpatch,
                                           include_side_effects=True,
                                           args={"bufferPosition": buffer_position_sym, "inputBuffer": inputBuffer_sym,
                                                 'read_sym': read_symbols, 'available': available_symbols},
-                                          num_examples=2, open_browser=True, concrete_arg_mapper=concrete_arg_mapper)
+                                          num_examples=2, open_browser=True, concrete_post_processor=concrete_post_processor)

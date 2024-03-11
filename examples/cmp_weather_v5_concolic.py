@@ -107,7 +107,7 @@ def run_orig_and_1():
 
     return joint_sess.run([], [], symbols)
 
-def concrete_mapper(concrete_args):
+def concrete_post_processor(concrete_args):
     (latest_data_init, rows) = concrete_args
     out_rows = []
     row_ptr = latest_data_init["latest_data_init"].concrete_value
@@ -130,5 +130,5 @@ comparison_results = analysis.Comparison(pre_patched, post_patched)
 execution_graph.visualize_comparison(proj_orig, proj_patched_1,
                                      pre_patched, post_patched,
                                      comparison_results,
-                                     concrete_arg_mapper=concrete_mapper, args=args,
+                                     concrete_post_processor=concrete_post_processor, args=args,
                                      num_examples=2, open_browser=True)

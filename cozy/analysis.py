@@ -624,13 +624,13 @@ class Comparison:
                     failure_list.append(pair_comp)
         return failure_list
 
-    def report(self, args: any, concrete_arg_mapper: Callable[[any], any] | None=None, num_examples: int=3) -> str:
+    def report(self, args: any, concrete_post_processor: Callable[[any], any] | None=None, num_examples: int=3) -> str:
         """
         Generates a human-readable report of the result object, saved as a string. This string is suitable for printing.
 
         :param any args: The symbolic/concolic arguments used during exeuction, here these args are concretized so that\
         we can give examples of concrete input.
-        :param Callable[[any], any] | None concrete_arg_mapper: This function is used to post-process concretized\
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
         versions of args before they are added to the return string. Some examples of this function include converting\
         an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on\
         another part of the input arguments.
@@ -689,8 +689,8 @@ class Comparison:
                     concrete_examples = p.concrete_examples(args, num_examples=num_examples)
                     output += "Here are {} concrete input(s) for this particular state pair:\n".format(len(concrete_examples))
                     for (k, concrete_input) in enumerate(concrete_examples):
-                        if concrete_arg_mapper is not None:
-                            input_args = concrete_arg_mapper(concrete_input.args)
+                        if concrete_post_processor is not None:
+                            input_args = concrete_post_processor(concrete_input.args)
                         else:
                             input_args = hexify(concrete_input.args)
                         output += "{}.\n".format(k + 1)
@@ -724,8 +724,8 @@ class Comparison:
             concrete_examples = orphan.concrete_examples(args, num_examples=num_examples)
             output += "Here are {} concrete input(s) for this particular orphaned state:\n".format(len(concrete_examples))
             for (k, concrete_input) in enumerate(concrete_examples):
-                if concrete_arg_mapper is not None:
-                    input_args = concrete_arg_mapper(concrete_input.args)
+                if concrete_post_processor is not None:
+                    input_args = concrete_post_processor(concrete_input.args)
                 else:
                     input_args = hexify(concrete_input.args)
                 output += "{}.\n".format(k + 1)

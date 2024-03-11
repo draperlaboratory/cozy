@@ -39,9 +39,9 @@ pre_patched = run_pre_patched()
 print("\nRunning post-patch.")
 post_patched = run_post_patched()
 
-def concrete_mapper(args):
+def concrete_post_processor(args):
     return (args[0], primitives.from_twos_comp(args[1].concrete_value, 32))
 
 args = (arg0, arg1)
 comparison_results = analysis.Comparison(pre_patched, post_patched)
-print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
+print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))

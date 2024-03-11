@@ -87,7 +87,7 @@ def run_weather_patched_2(**kwargs) -> RunResult:
 
 args = ({"latest_data_init": latest_data}, list(zip(vals, num_vals, next_args)))
 
-def concrete_mapper(concrete_args):
+def concrete_post_processor(concrete_args):
     (latest_data_init, rows) = concrete_args
     out_rows = []
     row_ptr = latest_data_init["latest_data_init"].concrete_value
@@ -113,48 +113,48 @@ print("Running weather-orig")
 weather_orig_states = run_weather_orig()
 
 if input("Would you like to view error states for weather-orig? (y/n)") == "y":
-    print(weather_orig_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_orig_states.report_errored(args, concrete_post_processor=concrete_post_processor, num_examples=2))
 
 input("Press enter to run weather-patched-1")
 
 print("\nRunning weather-patched-1")
 weather_patched_1_states = run_weather_patched_1()
 if input("Would you like to view error states for weather-patched-1? (y/n)") == "y":
-    print(weather_patched_1_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_patched_1_states.report_errored(args, concrete_post_processor=concrete_post_processor, num_examples=2))
 
 input("Press enter to run weather-patched-2")
 
 print("\nRunning weather-patched-2")
 weather_patched_2_states = run_weather_patched_2()
 if input("Would you like to view error states for weather-patched-2? (y/n)") == "y":
-    print(weather_patched_2_states.report_errored(args, concrete_arg_mapper=concrete_mapper, num_examples=2))
+    print(weather_patched_2_states.report_errored(args, concrete_post_processor=concrete_post_processor, num_examples=2))
 
 if input("Would you like to compare weather-orig and weather-patched-1? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-ORIG and WEATHER-PATCHED-1")
     comparison_results = analysis.Comparison(weather_orig_states, weather_patched_1_states, compare_memory=True, compare_registers=True)
-    print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
+    print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))
 
     if dump_execution_graphs:
         execution_graph.dump_comparison(proj_orig, proj_patched_1,
                                         weather_orig_states, weather_patched_1_states,
                                         comparison_results,
                                         "exec_g_orig.txt", "exec_g_patched_1.txt",
-                                        concrete_arg_mapper=concrete_mapper,
+                                        concrete_post_processor=concrete_post_processor,
                                         args=args, num_examples=2)
 
     if visualize_execution_graphs:
         execution_graph.visualize_comparison(proj_orig, proj_patched_1,
                                              weather_orig_states, weather_patched_1_states,
                                              comparison_results,
-                                             concrete_arg_mapper=concrete_mapper, args=args,
+                                             concrete_post_processor=concrete_post_processor, args=args,
                                              num_examples=2, open_browser=True)
 
 if input("Would you like to compare weather-patched-1 and weather-patched-2? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-PATCHED-1 and WEATHER-PATCHED-2")
     comparison_results = analysis.Comparison(weather_patched_1_states, weather_patched_2_states)
-    print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
+    print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))
 
 if input("Would you like to compare weather-orig and weather-patched-2? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-ORIG and WEATHER-PATCHED-2")
     comparison_results = analysis.Comparison(weather_orig_states, weather_patched_2_states)
-    print(comparison_results.report(args, concrete_arg_mapper=concrete_mapper))
+    print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))
