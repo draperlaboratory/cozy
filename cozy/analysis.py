@@ -20,19 +20,19 @@ def _invalid_stack_addrs(st: SimState) -> range:
     # Note that state.callback.stack_ptr has given incorrect values in the
     # lunarrelaysat test case. It seems that state.regs.sp is correct there,
     # so use that instead. In most cases state.regs.sp should be concrete,
-    # but we take the max anyway
+    # but we take the min/max anyway
     #curr_sp = st.callstack.stack_ptr
-
-    curr_sp = st.solver.max(st.regs.sp)
 
     # The red page is at the extrema of the stack, so we can use that to determine
     # the addresses to diqualify
     red_page_addr = st.memory._red_pageno * st.memory.page_size
     if st.arch.stack_change < 0:
         # The stack grows down
+        curr_sp = st.solver.max(st.regs.sp)
         return range(red_page_addr, curr_sp)
     else:
         # The stack grows up
+        curr_sp = st.solver.min(st.regs.sp)
         return range(curr_sp + 1, red_page_addr + st.memory.page_size)
 
 # If stack_change is negative, then the stack grows down
