@@ -8,7 +8,7 @@ from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
 from . import log, side_effect
-from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType
+from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState
 
 class RunResult:
@@ -286,6 +286,8 @@ class _SessionDirectiveExploration(_SessionExploration):
                             prune_states.add(found_state)
                             simgr.errored.append(
                                 ErrorRecord(found_state, SimStateError(directive.info_str), sys.exc_info()[2]))
+                        elif isinstance(directive, Breakpoint):
+                            directive.breakpoint_fun(found_state)
                 else:
                     raise RuntimeError(
                         "One of the found states was not satisfiable. This probably shouldn't have happened.")

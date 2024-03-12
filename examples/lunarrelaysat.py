@@ -71,8 +71,7 @@ def run(proj: cozy.project.Project):
 
     def mutate_init_i(state):
         state.regs.r9 = claripy.BVV(0x9, 32)
-        return state.regs.r9
-    sess.add_directives(cozy.directive.VirtualPrint.from_fun_offset(proj, 'RR_ReadTlmInput', 0x2c, mutate_init_i))
+    sess.add_directives(cozy.directive.Breakpoint.from_fun_offset(proj, 'RR_ReadTlmInput', 0x2c, mutate_init_i))
 
     sess.state.globals['packet_i'] = 0
 
