@@ -8,7 +8,7 @@ from angr.sim_manager import ErrorRecord
 from . import side_effect
 from .concrete import _concretize, TerminalStateInput
 import claripy
-from .directive import Assert, VirtualPrint
+from .directive import Assert, VirtualPrint, Postcondition
 from .side_effect import PerformedSideEffect
 
 
@@ -134,6 +134,26 @@ class AssertFailedState(TerminalState):
         super().__init__(failure_state, state_id, "ASSERT_FAILED_STATE")
         self.cond = cond
         self.assertion = assertion
+
+class PostconditionFailedState(TerminalState):
+    """
+    This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
+
+    :ivar Assert assertion: The assertion that was triggered.
+    :ivar claripy.ast.bool cond: The condition that caused the assertion to trigger
+    """
+    def __init__(self, postcondition: Postcondition, cond: claripy.ast.bool, failure_state: SimState, state_id: int):
+        """
+        Constructor for AssertFailedState
+
+        :param Postcondition assertion: The postcondition that was triggered.
+        :param claripy.ast.bool: The condition which if falsified will trigger the postcondition assertion.
+        :param SimState failure_state: The state that was created to test the postcondition assertion.
+        :param int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.postconditions_failed`
+        """
+        super().__init__(failure_state, state_id, "POSTCONDITION_FAILED_STATE")
+        self.cond = cond
+        self.postcondition = postcondition
 
 class ErrorState(TerminalState):
     """

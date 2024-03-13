@@ -259,3 +259,26 @@ class Breakpoint(Directive):
         :rtype: Breakpoint
         """
         return Breakpoint(project.find_symbol_addr(fun_name) + offset, breakpoint_fun)
+
+class Postcondition(Directive):
+    """
+    A Postcondition is a special type of assertion that is executed on terminal states for which execution has been
+    completed. This is identical to attaching an ASSERT_MUST assertion to all return points. This type of property
+    is useful for verifying that a property holds in all terminal states. Note that if you are looking to add a
+    precondition, you can add your proposition to the session before the run via
+    :py:meth:`cozy.Session.add_constraints`.
+    """
+
+    def __init__(self, condition_fun: Callable[[SimState], claripy.ast.bool], info_str: str | None=None,
+                 assert_type=AssertType.ASSERT_MUST):
+        """
+        :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches a terminal state, the\
+        SimState will be passed to this function, and an assertion condition should be returned. This is then used\
+        internally by the SAT solver, along with the state's accumulated constraints.
+        :param str | None info_str: Human readable label for this postcondition assertion, printed to the user if the\
+        assert is triggered.
+        :param AssertType assert_type: The type of assert to construct.
+        """
+        self.condition_fun = condition_fun
+        self.info_str = info_str
+        self.assert_type = assert_type

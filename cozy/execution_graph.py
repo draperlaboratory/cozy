@@ -342,6 +342,14 @@ class ExecutionGraph:
             assertion_addr = assert_fail_record.assertion.addr
             self.graph.add_node(state, assertion_info=assertion_info, assertion_addr=assertion_addr, failed_cond=cond)
             leaves.append(state)
+        # TODO: Graham: add special node for failing postconditions
+        for post_condition_record in result.postconditions_failed:
+            cond = post_condition_record.cond
+            state = post_condition_record.state
+            assertion_info = post_condition_record.postcondition.info_str or "unlabled postcondition"
+            assertion_addr = 0
+            self.graph.add_node(state, assertion_info=assertion_info, assertion_addr=assertion_addr, failed_cond=cond)
+            leaves.append(state)
         for state in leaves:
             target = state
             for hist in reversed(list(state.history.parents)):

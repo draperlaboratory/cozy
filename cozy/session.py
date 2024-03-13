@@ -8,24 +8,30 @@ from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
 from . import log, side_effect
-from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint
-from .terminal_state import AssertFailedState, ErrorState, DeadendedState
+from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
+from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState
+
 
 class RunResult:
     """
     This class is used for storing the results of running a session.
 
     :ivar list[DeadendedState] deadended: States that reached normal termination.
-    :ivar list[ErrorState] errored: States that reached an error state. This may be triggered for example by program errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
+    :ivar list[ErrorState] errored: States that reached an error state. This may be triggered for example by program\
+    errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
     :ivar list[AssertFailed] asserts_failed: States where an assertion was able to be falsified.
-    :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state. This means that due to the assumption, the new constraints are not satisfiable.
+    :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a\
+    :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state.\
+    This means that due to the assumption, the new constraints are not satisfiable.
     """
     def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
-                 asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]]):
+                 asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
+                 postconditions_failed: list[PostconditionFailedState]):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
         self.assume_warnings = assume_warnings
+        self.postconditions_failed = postconditions_failed
 
     @property
     def assertion_triggered(self) -> bool:
@@ -37,15 +43,28 @@ class RunResult:
         """
         return len(self.asserts_failed) > 0
 
+    @property
+    def postcondition_triggered(self) -> bool:
+        """
+        Returns True if there were any postcondition assertions triggered during this run.
+
+        :return: True if there were postcondition assertions triggered.
+        :rtype: bool
+        """
+        return len(self.postconditions_failed) > 0
+
     def __str__(self):
-        return "RunResult({} deadended, {} errored, {} asserts_failed, {} assume_warnings)".format(len(self.deadended), len(self.errored), len(self.asserts_failed), len(self.assume_warnings))
+        return "RunResult({} deadended, {} errored, {} asserts_failed, {} assume_warnings, {} postconditions_failed)".format(len(self.deadended), len(self.errored), len(self.asserts_failed), len(self.assume_warnings), len(self.postconditions_failed))
 
     def report_errored(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
         Creates a human readable report about a list of errored states.
 
         :param any args: The arguments to concretize
-        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
+        versions of args before they are added to the return string. Some examples of this function include converting\
+        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on\
+        another part of the input arguments.
         :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
         :return: The report as a string
         :rtype: str
@@ -69,13 +88,57 @@ class RunResult:
                 output += "\n"
             return output
 
+    def report_postconditions_failed(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+        """
+        Creates a human readable report about a list of failed postcondition assertions.
+
+        :param any args: The arguments to concretize
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
+        versions of args before they are added to the return string. Some examples of this function include converting\
+        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on\
+        another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed\
+        state.
+        :return: The report as a string
+        :rtype: str
+        """
+        if len(self.postconditions_failed) == 0:
+            return "No postcondition failure triggered"
+        else:
+            output = ""
+            for state in self.postconditions_failed:
+                output += "Postcondition failure was triggered: {}\n".format(str(state.cond))
+                if state.postcondition.info_str is not None:
+                    output += state.postcondition.info_str + "\n"
+                concrete_inputs = state.concrete_examples(args, num_examples)
+                output += "Here are {} concrete input(s) for this particular postcondition assertion:\n".format(len(concrete_inputs))
+                for (i, concrete_input) in enumerate(concrete_inputs):
+                    if concrete_post_processor is not None:
+                        concrete_args = concrete_post_processor(concrete_input.args)
+                    else:
+                        concrete_args = concrete_input.args
+                    output += "{}.\n".format(i + 1)
+                    output += "\t{}\n".format(str(concrete_args))
+                    if len(concrete_input.side_effects) > 0:
+                        output += "Side effects:\n"
+                        for (channel, effects) in concrete_input.side_effects.items():
+                            output += "Channel {}:\n".format(channel)
+                            for eff in effects:
+                                output += str(eff.mapped_body) + "\n"
+                output += "\n\n"
+            return output
+
     def report_asserts_failed(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
         Creates a human readable report about a list of failed assertions.
 
         :param any args: The arguments to concretize
-        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized versions of args before they are added to the return string. Some examples of this function include converting an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on another part of the input arguments.
-        :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed state.
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
+        versions of args before they are added to the return string. Some examples of this function include converting\
+        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on\
+        another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed\
+        state.
         :return: The report as a string
         :rtype: str
         """
@@ -200,18 +263,69 @@ class _SessionExploration:
         self.asserts_failed: list[AssertFailedState] = []
         self.cache_intermediate_info = cache_intermediate_info
         self.asserts_to_scrub: set[Assert] = set()
+        self.postconditions_failed: list[PostconditionFailedState] = []
+        self.postconditions_to_scrub : set[Postcondition] = set()
 
     def explore(self, simgr):
         raise NotImplementedError()
 
 class _SessionDirectiveExploration(_SessionExploration):
+    def check_postconditions(self, simgr):
+        prune_states = set()
+        add_states = set()
+
+        postcondition_directives = [directive for directive in self.session.directives if isinstance(directive, Postcondition)]
+        for found_state in simgr.deadended:
+            for directive in postcondition_directives:
+                cond = directive.condition_fun(found_state)
+                if directive.assert_type == AssertType.ASSERT_MUST:
+                    # Split execution into two states: one where the assertion holds and one where it
+                    # doesn't hold
+                    true_branch = found_state.copy()
+                    true_branch.add_constraints(cond)
+                    add_states.add(true_branch)
+
+                    # To check for validity, we need to check that (not cond) is unsatisfiable
+                    false_branch = found_state.copy()
+                    false_branch.add_constraints(~cond)
+                    if false_branch.satisfiable():
+                        if self.cache_intermediate_info:
+                            _save_states([false_branch])
+                        # If the false branch is satisfiable, add it to the list of failed assert states
+                        # This essentially halts execution on the false branch
+                        af = PostconditionFailedState(directive, cond, false_branch, len(self.postconditions_failed))
+                        self.postconditions_failed.append(af)
+                        # If false_branch is not satisfiable, then there is no way for the assertion to fail.
+                    # In any case, we should prune out the original state
+                    prune_states.add(found_state)
+                elif directive.assert_type == AssertType.ASSERT_CAN or directive.assert_type == AssertType.ASSERT_CAN_GLOBAL:
+                    # ASSERT_CAN can be thought of a "catch and release", the original state should
+                    # continue execution regardless of what happens
+                    true_branch = found_state.copy()
+                    true_branch.add_constraints(cond)
+                    if not true_branch.satisfiable():
+                        if self.cache_intermediate_info:
+                            _save_states([true_branch])
+                        af = PostconditionFailedState(directive, cond, true_branch, len(self.postconditions_failed))
+                        self.postconditions_failed.append(af)
+                    else:
+                        if directive.assert_type == AssertType.ASSERT_CAN_GLOBAL:
+                            self.postconditions_to_scrub.add(directive)
+
+        simgr.move(from_stash='deadended', to_stash='pruned', filter_func=lambda state: state in prune_states)
+
+        _save_states(add_states)
+        for state in add_states:
+            simgr.deadended.append(state)
+
     def explore(self, simgr):
         addrs_to_directive = {}
         for directive in self.session.directives:
-            if directive.addr in addrs_to_directive:
-                addrs_to_directive[directive.addr].append(directive)
-            else:
-                addrs_to_directive[directive.addr] = [directive]
+            if hasattr(directive, 'addr'):
+                if directive.addr in addrs_to_directive:
+                    addrs_to_directive[directive.addr].append(directive)
+                else:
+                    addrs_to_directive[directive.addr] = [directive]
 
         find_addrs = set(addrs_to_directive.keys())
 
@@ -309,6 +423,9 @@ class _SessionDirectiveExploration(_SessionExploration):
             if self.cache_intermediate_info:
                 _save_states(simgr.active)
                 _save_states(errored_states)
+
+        self.check_postconditions(simgr)
+
 
 class _SessionBasicExploration(_SessionExploration):
     def explore(self, simgr):
@@ -500,8 +617,10 @@ class Session:
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
         asserts_failed = [assert_failed for assert_failed in sess_exploration.asserts_failed
                           if assert_failed.assertion not in sess_exploration.asserts_to_scrub]
+        postconditions_failed = [postcondition_failed for postcondition_failed in sess_exploration.postconditions_failed
+                                 if postcondition_failed not in sess_exploration.postconditions_to_scrub]
 
-        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings)
+        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed)
 
     def run(self, args: list[claripy.ast.bits], cache_intermediate_info: bool=True, ret_addr: int | None=None) -> RunResult:
         """
