@@ -5,6 +5,7 @@ export const settings = {
   showingSyscalls: true,
   showingErrors: true,
   showingAsserts: true,
+  showingPostconditions: true,
 }
 
 //Cytoscape doesn't have specificity - last matching selector wins.
@@ -85,13 +86,6 @@ export const style = [
     }
   },
   {
-    selector: 'node[?error], node[?assertion_info]',
-    style: { 'background-color': () => settings.showingErrors
-      ? Colors.errorNode
-      : Colors.defaultNode
-    }
-  },
-  {
     selector: 'node[?assertion_info]',
     style: { 'background-color': () => settings.showingAsserts
       ? Colors.assertNode
@@ -105,6 +99,29 @@ export const style = [
       'background-color': () => settings.showingAsserts
       ? Colors.focusedAssertNode
       : Colors.focusedNode
+    }
+  },
+  {
+    selector: 'node[?postcondition_info]',
+    style: { 'background-color': () => settings.showingPostconditions
+      ? Colors.postconditionNode
+      : Colors.defaultNode
+    }
+  },
+  {
+    selector: 'node.pathHighlight[?postcondition_info]',
+    style: {
+      'border-width':'0px',
+      'background-color': () => settings.showingPostconditions
+      ? Colors.focusedPostconditionNode
+      : Colors.focusedNode
+    }
+  },
+  {
+    selector: 'node[?error]',
+    style: { 'background-color': () => settings.showingErrors
+      ? Colors.errorNode
+      : Colors.defaultNode
     }
   },
   {

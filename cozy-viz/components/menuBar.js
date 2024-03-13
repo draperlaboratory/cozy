@@ -236,6 +236,11 @@ export default class MenuBar extends Component {
           selected=${props.showingAsserts}>
             <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
         <//>
+        <${MenuOption} 
+          onClick=${props.togglePostconditions}
+          selected=${props.showingPostconditions}>
+            <${MenuBadge} color=${Colors.focusedPostconditionNode}/> Show Postcondition failures
+        <//>
       <//>
       <${PruneMenu} 
         enabled=${enabled} 

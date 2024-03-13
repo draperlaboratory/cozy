@@ -28,6 +28,7 @@ export default class App extends Component {
       showingSimprocs: true, // we start with SimProcedure calls visible
       showingErrors: true, // we start with errors visible
       showingAsserts: true, // we start with asserts visible
+      showingPostconditions: true, // we start with postconditions visible
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -42,6 +43,7 @@ export default class App extends Component {
     this.clearTooltip = this.clearTooltip.bind(this)
     this.resetLayout = this.resetLayout.bind(this)
     this.toggleErrors = this.toggleErrors.bind(this)
+    this.togglePostconditions = this.togglePostconditions.bind(this)
     this.toggleView = this.toggleView.bind(this)
     this.toggleSyscalls = this.toggleSyscalls.bind(this)
     this.toggleSimprocs = this.toggleSimprocs.bind(this)
@@ -213,6 +215,8 @@ export default class App extends Component {
   toggleErrors() { this.toggleView("showingErrors") }
 
   toggleAsserts() { this.toggleView("showingAsserts") }
+
+  togglePostconditions() { this.toggleView("showingPostconditions") }
 
   async handleDrop(ev, ref) {
     ev.stopPropagation()
@@ -406,9 +410,11 @@ export default class App extends Component {
         showingSimprocs=${state.showingSimprocs}
         showingErrors=${state.showingErrors}
         showingAsserts=${state.showingAsserts}
+        showingPostconditions=${state.showingPostconditions}
         toggleSyscalls=${this.toggleSyscalls}
         toggleSimprocs=${this.toggleSimprocs}
         toggleErrors=${this.toggleErrors}
+        togglePostconditions=${this.togglePostconditions}
         toggleAsserts=${this.toggleAsserts}
         getJSON=${this.getJSON}
       />

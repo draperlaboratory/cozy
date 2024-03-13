@@ -120,6 +120,18 @@ export default class Tooltip extends Component {
           return null
         }
       }
+      case "postcondition" : {
+        if (this.state.node?.data().postcondition_info) {
+          return html`
+          <div>${this.state.node?.data().postcondition_info}</div>
+          <pre>
+          Condition: ${this.state.node?.data().failed_cond}<br/>
+          </pre>
+          `
+        } else {
+          return null
+        }
+      }
       default: return null;
     }
   }
@@ -190,6 +202,13 @@ export default class Tooltip extends Component {
             data-highlighted=${state.mode == "assertion"} 
             onClick=${() => this.setView("assertion")}>
             Assertion
+          </button>`
+        }
+        ${this.state.node?.data().postcondition_info && html`
+          <button 
+            data-highlighted=${state.mode == "postcondition"} 
+            onClick=${() => this.setView("postcondition")}>
+            Postcondition
           </button>`
         }
       </div>
