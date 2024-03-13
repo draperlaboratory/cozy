@@ -23,6 +23,14 @@ The getting started guide and API reference can be found on our Github pages!:
 
 https://draperlaboratory.github.io/cozy/
 
+## Template Generator
+
+cozy now comes with a Python script template generator to help you get started with using the framework. The wizard will prompt you with a series of questions and generate the appropriate file with starter code. To run the generator, install cozy, then run the following command in the console:
+
+```commandline
+python3 -m cozy
+```
+
 ## About
 
 cozy is being developed by Draper Laboratory under the [DARPA Assured Micropatching (AMP) program](https://www.darpa.mil/program/assured-micropatching).

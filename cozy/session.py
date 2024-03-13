@@ -56,6 +56,25 @@ class RunResult:
     def __str__(self):
         return "RunResult({} deadended, {} errored, {} asserts_failed, {} assume_warnings, {} postconditions_failed)".format(len(self.deadended), len(self.errored), len(self.asserts_failed), len(self.assume_warnings), len(self.postconditions_failed))
 
+    def report(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+        """
+        Creates a composite human readable report with information about errored states, asserts failed, and postconditions failed.
+
+        :param any args: The arguments to concretize
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
+        versions of args before they are added to the return string. Some examples of this function include converting\
+        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on\
+        another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user.
+        :return: The report as a string
+        :rtype: str
+        """
+        e_report = self.report_errored(args, concrete_post_processor=concrete_post_processor, num_examples=num_examples)
+        a_report = self.report_asserts_failed(args, concrete_post_processor=concrete_post_processor, num_examples=num_examples)
+        p_report = self.report_postconditions_failed(args, concrete_post_processor=concrete_post_processor, num_examples=num_examples)
+        output = "Errored Report:\n{}\n\nAsserts Failed Report:\n{}\n\nPostconditions Failed Report:\n{}".format(e_report, a_report, p_report)
+        return output
+
     def report_errored(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
         Creates a human readable report about a list of errored states.
