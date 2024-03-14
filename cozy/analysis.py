@@ -106,6 +106,9 @@ class EqFieldDiff(FieldDiff):
         self.right_body = right_body
 
 class NotEqLeaf(FieldDiff):
+    """
+    A not equal leaf is a field that cannot be further unpacked/traversed.
+    """
     def __init__(self, left_leaf, right_leaf):
         self.left_leaf = left_leaf
         self.right_leaf = right_leaf
@@ -117,15 +120,20 @@ class NotEqFieldDiff(FieldDiff):
     represented by EqFieldDiff, whereas unequal subfields will be represented by further nested NotEqFieldDiff.
     """
     def __init__(self, body_diff):
+        # body_diff is a zipped data structure. For example, if body_diff is a list, it will be a list of FieldDiff
+        # objects, one for each zipped element. If body_diff is a dict, it will be a dict with string keys, and values
+        # of FieldDiff objects.
         self.body_diff = body_diff
 
 def compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff:
     both_lists = isinstance(left_se, list) and isinstance(right_se, list)
     both_tuples = isinstance(left_se, tuple) and isinstance(right_se, tuple)
+    # List, tuple case
     if both_lists or both_tuples:
         max_len = max(len(left_se), len(right_se))
         subfields_equal = True
         diff = []
+        # Loop over the zipped lists
         for i in range(max_len):
             if i < len(left_se):
                 left_val = left_se[i]
@@ -135,43 +143,55 @@ def compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff:
                 right_val = right_se[i]
             else:
                 right_val = None
+            # Compare each element of the list
             rec_result = compare_side_effect(joint_solver, left_val, right_val)
             if not isinstance(rec_result, EqFieldDiff):
+                # The element in the list are not equal, so the overall list is not equal
                 subfields_equal = False
             diff.append(rec_result)
         if subfields_equal:
+            # All elements in the list are equal, so the overall lists are equal
             return EqFieldDiff(left_se, right_se)
         else:
+            # There was at least one element that was not equal, so return the zipped diff
             if both_tuples:
                 diff = tuple(diff)
             return NotEqFieldDiff(diff)
+    # dict case
     elif isinstance(left_se, dict) and isinstance(right_se, dict):
         all_keys = set(left_se.keys())
         all_keys.update(right_se.keys())
         subfields_equal = True
         diff = dict()
+        # Compute the diff for all entries in the dictionary
         for key in all_keys:
             left_val = left_se.get(key, None)
             right_val = right_se.get(key, None)
+            # Compare each value in the dictionary
             rec_result = compare_side_effect(joint_solver, left_val, right_val)
             if not isinstance(rec_result, EqFieldDiff):
+                # The value in the dictionary was not equal, so the overall dicts are not equal
                 subfields_equal = False
             diff[key] = rec_result
         if subfields_equal:
             return EqFieldDiff(left_se, right_se)
         else:
             return NotEqFieldDiff(diff)
+    # claripy ast case
     elif isinstance(left_se, claripy.ast.Bits) and isinstance(right_se, claripy.ast.Bits):
         if left_se is not right_se and joint_solver.satisfiable(extra_constraints=[left_se != right_se]):
+            # Base case: leaf elements are not equal
             return NotEqLeaf(left_se, right_se)
         else:
             return EqFieldDiff(left_se, right_se)
+    # int or string case
     elif (isinstance(left_se, int) and isinstance(right_se, int)) or (
             isinstance(left_se, str) and isinstance(right_se, str)):
         if left_se == right_se:
             return EqFieldDiff(left_se, right_se)
         else:
             return NotEqLeaf(left_se, right_se)
+    # catchall base case. This will be hit if one of the values we were comparing was None, which is what we want
     else:
         return NotEqLeaf(left_se, right_se)
 
