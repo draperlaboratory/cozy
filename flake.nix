@@ -5,6 +5,15 @@
   let 
     pkgs = nixpkgs.legacyPackages.x86_64-linux;
     pyPkgs = pkgs.python311.pkgs;
+    portion = pyPkgs.buildPythonPackage rec {
+      pname = "portion";
+      version = "2.4.1";
+      src = pyPkgs.fetchPypi {
+        inherit pname version;
+        sha256 = "sha256-ncvxgIiY9ECu0wSl6fB0KihZ7KOwrH8fWOUFAoUqjvk=";
+      };
+      doCheck = false;
+    };
   in {
 
     packages.x86_64-linux.default = pyPkgs.buildPythonPackage {
@@ -15,19 +24,14 @@
       buildInputs = [
         pkgs.python311Packages.hatchling
       ];
+      propagatedBuildInputs = [
+        portion
+        pyPkgs.angr
+        pyPkgs.networkx
+      ];
     };
 
     devShells.x86_64-linux.testing = let 
-
-      portion = pyPkgs.buildPythonPackage rec {
-        pname = "portion";
-        version = "2.4.1";
-        src = pyPkgs.fetchPypi {
-          inherit pname version;
-          sha256 = "sha256-ncvxgIiY9ECu0wSl6fB0KihZ7KOwrH8fWOUFAoUqjvk=";
-        };
-        doCheck = false;
-      };
 
       patcherex2 = pyPkgs.buildPythonPackage rec {
         pname = "patcherex2";
@@ -65,6 +69,30 @@
         lld_15
         patcherex2
       ];
+    };
+
+    templates.default = {
+      path = ./cozy-template;
+      description = "simple cozy project template";
+      welcomeText = ''
+              .::                               
+           .::   .::                            
+          .::          .::    .:::: .::.::   .::
+          .::        .::  .::      .::  .:: .:: 
+          .::       .::    .::   .::      .:::  
+           .::   .:: .::  .::   .::        .::  
+             .::::     .::    .::::::::   .::   
+                                        .::     
+
+      # The Cozy Compariative Symbolic Evaluator
+
+      This is a cozy project template. 
+
+      - To get started in an environment with cozy and its dependencies
+      available, run `nix develop`
+
+      - to generate a cozy-script using the wizard, run `python -m cozy`.
+      '';
     };
   };
 }
