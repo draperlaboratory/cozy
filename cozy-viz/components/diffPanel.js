@@ -592,6 +592,17 @@ class SideEffectDifference extends Component {
     return { contents, lines, ids, msgs }
   }
 
+  handleSymbolicDiff(symbolicDiff) {
+    const rslt = {}
+    for (const channel in symbolicDiff) {
+      const lines = {}
+      lines.left  = symbolicDiff[channel].map(([x,]) => ({body: x}))
+      lines.right = symbolicDiff[channel].map(([,x]) => ({body: x}))
+      rslt[channel] = lines
+    }
+    return rslt
+  }
+
   highlightNodes(idLeft, idRight) {
     const cyLeft = this.props.leftFocus.top.cy()
     const cyRight = this.props.rightFocus.top.cy()
@@ -625,30 +636,33 @@ class SideEffectDifference extends Component {
     return [newLeft, newRight]
   }
 
-
   render(props, state) {
 
     const rightId = props.rightFocus.bot.id()
     const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_sediff ?? []
-    const conc_sediffs = concretions[state.view]
-    const presence = props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
+    const symbolicDiff= props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
+    const sediffs = state.view == "symbolic" 
+      ? this.handleSymbolicDiff(symbolicDiff)
+      : concretions[state.view]
     const chandivs = []
+
+    console.log(sediffs)
 
     // Note, line-diffing is handled on the python side, because of the
     // complexity of diffing non-concrete side effects. Hence, we have
     // a trivial comparator here.
-    for (const channel in conc_sediffs) {
-      if (!(channel in presence)) continue
+    for (const channel in sediffs) {
+      if (!(channel in symbolicDiff)) continue
       const chandiv = html`<div class="side-effect-channel">
         <h3>${channel}</h3>
         <${LineDiffView} 
           leftLines=${this.diffableSideEffects(
-            conc_sediffs[channel].left, 
-            presence[channel].map(([x,]) => x)
+            sediffs[channel].left, 
+            symbolicDiff[channel].map(([x,]) => !!x)
           )}
           rightLines=${this.diffableSideEffects(
-            conc_sediffs[channel].right, 
-            presence[channel].map(([,y]) => y)
+            sediffs[channel].right, 
+            symbolicDiff[channel].map(([,y]) => !!y)
           )}
           diffWords=${(l,r) => this.diffWords(l,r)}
           comparator=${() => true}

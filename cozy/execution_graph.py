@@ -256,7 +256,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
 
                 conc_sediff = []
 
-                def serialize_effect(effect, graph):
+                def serialize_conc_effect(effect, graph):
                     try:
                         id = [x for x,y in graph.nodes(data=True) if y["state"] == effect.state_history][0]
                         return { "id": id, "body": str(effect.mapped_body) }
@@ -267,15 +267,21 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                     channels = {}
                     for channel in c.left_side_effects:
                         channels[channel] = {
-                            "left": list(map(lambda x: serialize_effect(x, g_a), c.left_side_effects[channel])),
-                            "right": list(map(lambda x: serialize_effect(x, g_b), c.right_side_effects[channel]))
+                            "left": list(map(lambda x: serialize_conc_effect(x, g_a), c.left_side_effects[channel])),
+                            "right": list(map(lambda x: serialize_conc_effect(x, g_b), c.right_side_effects[channel]))
                         }
                     conc_sediff.append(channels)
 
                 simplified_side_effect_diff = {}
 
+                def serialize_abstract_effect(eff):
+                    field1 = False if eff[0] == None else str(eff[0].body)
+                    field2 = False if eff[1] == None else str(eff[1].body)
+                    return [field1, field2, str(eff[2])]
+
+
                 for channel in comp.side_effect_diff:
-                    simplified_side_effect_diff[channel] = list(map(lambda x: [x[0] != None, x[1] != None], comp.side_effect_diff[channel]))
+                    simplified_side_effect_diff[channel] = list(map(serialize_abstract_effect, comp.side_effect_diff[channel]))
 
                 info = {
                     "sediff": simplified_side_effect_diff,
@@ -480,6 +486,6 @@ class ExecutionGraph:
         :param str name: The filename for the generated json.
         """
         g = self.reconstruct_bbl_pp_graph()
-        data = json.dumps(nx.cytoscape_data(g))
+        data = json.dumps(nx.cytoscape_data(g), default=vars)
         with open(name, "w") as f:
             f.write(data)
