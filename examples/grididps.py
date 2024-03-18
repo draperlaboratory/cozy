@@ -67,23 +67,23 @@ class println(angr.SimProcedure):
     def run(self, arg):
         return 0
 
-class setup_hook(angr.SimProcedure):
-    def run(self):
-        return None
-
-class yield_hook(angr.SimProcedure):
-    def run(self):
-        return None
+class process_command(angr.SimProcedure):
+    def run(self, cmd_str):
+        strlen = angr.SIM_PROCEDURES["libc"]["strlen"]
+        max_len = self.state.solver.max(self.inline_call(strlen, cmd_str).ret_expr)
+        cmd = [self.state.memory.load(cmd_str + i, 1) for i in range(max_len)]
+        def concrete_post_processor(concrete_cmd):
+            return [chr(r.concrete_value) for r in concrete_cmd]
+        cozy.side_effect.perform(self.state, "process_command", cmd, concrete_post_processor=concrete_post_processor)
 
 def run(proj: cozy.project.Project):
     proj.hook_symbol('usb_serial_available', usb_serial_available)
     proj.hook_symbol('usb_serial_getchar', usb_serial_getchar)
     proj.hook_symbol('usb_serial_write', usb_serial_write)
     proj.hook_symbol('_ZN5Print7printlnEv', println)
-    proj.hook_symbol('setup', setup_hook)
-    proj.hook_symbol('yield', yield_hook)
+    proj.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
+    proj.hook_symbol('_Z15process_commandPKc', process_command)
     proj.add_prototype('loop', 'void loop()')
-    proj.add_prototype('main', 'int main()')
 
     sess = proj.session('loop')
 
@@ -96,17 +96,6 @@ def run(proj: cozy.project.Project):
     sess.state.globals['available_i'] = 0
     sess.state.globals['readsym_i'] = 0
 
-    class process_command(angr.SimProcedure):
-        def run(self, cmd_str):
-            strlen = angr.SIM_PROCEDURES["libc"]["strlen"]
-            max_len = self.state.solver.max(self.inline_call(strlen, cmd_str).ret_expr)
-            cmd = [self.state.memory.load(cmd_str + i, 1) for i in range(max_len)]
-            def concrete_post_processor(concrete_cmd):
-                return [chr(r.concrete_value) for r in concrete_cmd]
-            cozy.side_effect.perform(self.state, "process_command", cmd, concrete_post_processor=concrete_post_processor)
-    
-    proj.hook_symbol('_Z15process_commandPKc', process_command)
-
     buffer_position_addr = proj.find_symbol_addr('bufferPosition')
     sess.mem[buffer_position_addr].int = buffer_position_sym
 
@@ -115,8 +104,6 @@ def run(proj: cozy.project.Project):
         sess.mem[inputBuffer_addr + i].char = inputBuffer_sym[i]
 
     loop_arguments = []
-
-    proj.hook_symbol('strlen', cozy.hooks.strlen.strlen, replace=True)
 
     def index_assertion(state):
         index = state.regs.r2

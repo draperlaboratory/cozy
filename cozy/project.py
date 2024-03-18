@@ -52,7 +52,11 @@ class Project:
         :return: The rebased symbol address
         :rtype: int
         """
-        return self.angr_proj.loader.find_symbol(sym_name).rebased_addr
+        sym = self.angr_proj.loader.find_symbol(sym_name)
+        if sym is None:
+            raise RuntimeError("Unable to find symbol named {}. Try looking through the symbol table with readelf or similar tool to make sure the symbol actually exists.".format(sym_name))
+        else:
+            return sym.rebased_addr
 
     # fun can be either the address of a function or a function name
     def add_prototype(self, fun: str | int, fun_prototype: str) -> None:
