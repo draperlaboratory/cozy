@@ -5,6 +5,7 @@
   let 
     pkgs = nixpkgs.legacyPackages.x86_64-linux;
     pyPkgs = pkgs.python311.pkgs;
+
     portion = pyPkgs.buildPythonPackage rec {
       pname = "portion";
       version = "2.4.1";
@@ -13,6 +14,29 @@
         sha256 = "sha256-ncvxgIiY9ECu0wSl6fB0KihZ7KOwrH8fWOUFAoUqjvk=";
       };
       doCheck = false;
+    };
+
+    lld_15 = pkgs.lld_15.overrideAttrs (oa: {
+      postInstall = "ln -s $out/bin/ld.lld $out/bin/ld.lld-15";
+    });
+
+    patcherex2 = pyPkgs.buildPythonPackage rec {
+      pname = "patcherex2";
+      version = "0.1.8";
+      src = pyPkgs.fetchPypi {
+        inherit pname version;
+        sha256 = "sha256-tgzmOh0Ivb1yMAr1eivh0bHNBP1w5sLrZkkNFugglgI=";
+      };
+      pyproject = true;
+      nativeBuildInputs = [
+        pyPkgs.setuptools
+      ];
+      propagatedBuildInputs = [
+        pyPkgs.keystone-engine
+        pyPkgs.intelhex
+        lld_15
+        pkgs.clang_15
+      ];
     };
   in {
 
@@ -31,30 +55,7 @@
       ];
     };
 
-    devShells.x86_64-linux.testing = let 
-
-      patcherex2 = pyPkgs.buildPythonPackage rec {
-        pname = "patcherex2";
-        version = "0.1.8";
-        src = pyPkgs.fetchPypi {
-          inherit pname version;
-          sha256 = "sha256-tgzmOh0Ivb1yMAr1eivh0bHNBP1w5sLrZkkNFugglgI=";
-        };
-        pyproject = true;
-        nativeBuildInputs = [
-          pyPkgs.setuptools
-        ];
-        propagatedBuildInputs = [
-          pyPkgs.keystone-engine
-          pyPkgs.intelhex
-        ];
-      };
-
-      lld_15 = pkgs.lld_15.overrideAttrs (oa: {
-        postInstall = "ln -s $out/bin/ld.lld $out/bin/ld.lld-15";
-      });
-
-    in pkgs.mkShell {
+    devShells.x86_64-linux.testing = pkgs.mkShell {
       shellHook = ''
         export PYTHONPATH="$(git rev-parse --show-toplevel)":$PYTHONPATH
       '';
@@ -64,9 +65,7 @@
         pyPkgs.networkx
         pyPkgs.sphinx
         pyPkgs.sphinx-autoapi
-        pkgs.clang_15
         portion
-        lld_15
         patcherex2
       ];
     };
@@ -89,7 +88,7 @@
       This is a cozy project template. 
 
       - To get started in an environment with cozy and its dependencies
-      available, run `nix develop`
+      available, run `nix develop`.
 
       - to generate a cozy-script using the wizard, run `python -m cozy`.
       '';
