@@ -640,37 +640,44 @@ class SideEffectDifference extends Component {
 
     const rightId = props.rightFocus.bot.id()
     const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_sediff ?? []
-    const symbolicDiff= props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
-    const sediffs = state.view == "symbolic" 
-      ? this.handleSymbolicDiff(symbolicDiff)
-      : concretions[state.view]
+    const symbolicDiff = props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
     const chandivs = []
+    if (state.view == "symbolic") {
+      console.log(symbolicDiff)
+      for (const channel in symbolicDiff) {
+        const chandiv = html`<div class="side-effect-channel">
+          <h3>${channel}</h3>
+          ${symbolicDiff[channel].map(([,,x]) => html`<pre>${JSON.stringify(x, undefined, 2)}</pre>`)}
+        </div>`
+        chandivs.push(chandiv)
+      }
+    } else {
 
-    console.log(sediffs)
-
-    // Note, line-diffing is handled on the python side, because of the
-    // complexity of diffing non-concrete side effects. Hence, we have
-    // a trivial comparator here.
-    for (const channel in sediffs) {
-      if (!(channel in symbolicDiff)) continue
-      const chandiv = html`<div class="side-effect-channel">
-        <h3>${channel}</h3>
-        <${LineDiffView} 
-          leftLines=${this.diffableSideEffects(
-            sediffs[channel].left, 
-            symbolicDiff[channel].map(([x,]) => !!x)
-          )}
-          rightLines=${this.diffableSideEffects(
-            sediffs[channel].right, 
-            symbolicDiff[channel].map(([,y]) => !!y)
-          )}
-          diffWords=${(l,r) => this.diffWords(l,r)}
-          comparator=${() => true}
-          highlight=${(idLeft,idRight) => this.highlightNodes(idLeft, idRight)}
-          dim=${() => this.dimAll()}
-        />
-      </div>`
-      chandivs.push(chandiv)
+      // Note, line-diffing is handled on the python side, because of the
+      // complexity of diffing non-concrete side effects. Hence, we have
+      // a trivial comparator here.
+      const sediffs = concretions[state.view]
+      for (const channel in sediffs) {
+        if (!(channel in symbolicDiff)) continue
+        const chandiv = html`<div class="side-effect-channel">
+          <h3>${channel}</h3>
+          <${LineDiffView} 
+            leftLines=${this.diffableSideEffects(
+              sediffs[channel].left, 
+              symbolicDiff[channel].map(([x,]) => x)
+            )}
+            rightLines=${this.diffableSideEffects(
+              sediffs[channel].right, 
+              symbolicDiff[channel].map(([,y]) => y)
+            )}
+            diffWords=${(l,r) => this.diffWords(l,r)}
+            comparator=${() => true}
+            highlight=${(idLeft,idRight) => this.highlightNodes(idLeft, idRight)}
+            dim=${() => this.dimAll()}
+          />
+        </div>`
+        chandivs.push(chandiv)
+      }
     }
 
     return html`<div>
