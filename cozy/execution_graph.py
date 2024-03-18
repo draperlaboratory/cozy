@@ -52,6 +52,17 @@ def _serialize_diff(diff, nice_name_a: Callable[[int], str | None] | None = None
             return str(v)
     return {convert_key(k): (convert_val(v1), convert_val(v2)) for (k, (v1, v2)) in diff.items()}
 
+def _serialized_field_diff(diff : any): 
+    if isinstance(diff, analysis.EqFieldDiff):
+        return {"tag": "fieldEq", "left": str(diff.left_body), "right": str(diff.right_body)}
+    elif isinstance(diff, analysis.NotEqLeaf):
+        return {"tag": "leafNeq", "left": str(diff.left_leaf), "right": str(diff.right_leaf)}
+    elif isinstance(diff, analysis.NotEqFieldDiff):
+        return fmap(diff.body_diff, _serialized_field_diff)
+    else:
+        # fmap into dict labels, so we need this default case too
+        return str(diff)
+
 def dump_comparison(proj_a: Project, proj_b: Project,
                     rslt_a: RunResult, rslt_b: RunResult,
                     comparison_results: analysis.Comparison,
@@ -275,9 +286,9 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 simplified_side_effect_diff = {}
 
                 def serialize_abstract_effect(eff):
-                    field1 = False if eff[0] == None else str(eff[0].body)
-                    field2 = False if eff[1] == None else str(eff[1].body)
-                    return [field1, field2, str(eff[2])]
+                    field1 = eff[0] != None
+                    field2 = eff[1] != None
+                    return [field1, field2, _serialized_field_diff(eff[2])]
 
 
                 for channel in comp.side_effect_diff:
