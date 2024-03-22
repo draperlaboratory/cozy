@@ -185,7 +185,7 @@ Let's invoke the prepatched my_fun with arg0 as the symbolic input via the
 
 Which prints the following result that informs us that an assertion was triggered::
 
-    RunResult(1 deadended, 0 errored, 1 asserts_failed, 0 assume_warnings)
+    RunResult(1 deadended, 0 errored, 1 asserts_failed, 0 assume_warnings, 0 postconditions_failed)
 
 To view a report on what went wrong with the assertion, let's create
 a report using the :py:meth:`~cozy.project.RunResult.report_asserts_failed`
@@ -220,7 +220,7 @@ that no NULL dereference occurs in the postpatch::
 
 In the console we see that no assertions were triggered::
 
-    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings)
+    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings, 0 postconditions_failed)
 
 ======================
 Making the Comparisons
@@ -249,13 +249,13 @@ We can inspect the results object to see how many states we are dealing with::
 
 This prints the following messages::
 
-    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings)
-    RunResult(2 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings)
+    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings, 0 postconditions_failed)
+    RunResult(2 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings, 0 postconditions_failed)
 
 We can now make a comparison between these two terminated results. Constructing a Comparison object is used to do
 the comparison computation::
 
-    comparison_results = cozy.analysis.Comparison(prepatched_result, postpatched_result)
+    comparison_results = cozy.analysis.Comparison(prepatched_result, postpatched_result, simplify=True)
 
 To view a human readable report, we can now call the :py:meth:`cozy.analysis.Comparison.report` method, which
 will convert the :py:class:`~cozy.analysis.Comparison` to a human readable summary::
@@ -269,16 +269,16 @@ We now see the human readable report
 
     STATE PAIR (0, DEADENDED_STATE), (0, DEADENDED_STATE) are different
     Memory difference detected for 0,0:
-    {range(0, 4): (<BV32 0x2a000000>, <BV32 0x0>)}
+    {'range(0x0, 0x4)': (<BV32 0x2a000000>, <BV32 0x0>)}
     Instruction pointers for these memory writes:
-    {range(0, 4): (frozenset(), frozenset({<BV64 0x401179>}))}
+    {'range(0x0, 0x4)': (frozenset({<BV64 0x401179>}), frozenset())}
     Register difference detected for 0,0:
     {'eflags': (<BV64 0x0>, <BV64 0x44>), 'flags': (<BV64 0x0>, <BV64 0x44>), 'rflags': (<BV64 0x0>, <BV64 0x44>)}
     Here are 1 concrete input(s) for this particular state pair:
     1.
-        Input arguments: ['0x0']
-        Concrete mem diff: {range(0, 4): ('0x2a000000', '0x0')}
-        Concrete reg diff: {'eflags': ('0x0', '0x44'), 'flags': ('0x0', '0x44'), 'rflags': ('0x0', '0x44')}
+        Input arguments: [<BV64 0x0>]
+        Concrete mem diff: {'range(0x0, 0x4)': (<BV32 0x2a000000>, <BV32 0x0>)}
+        Concrete reg diff: {'eflags': (<BV64 0x0>, <BV64 0x44>), 'flags': (<BV64 0x0>, <BV64 0x44>), 'rflags': (<BV64 0x0>, <BV64 0x44>)}
 
     STATE PAIR (0, DEADENDED_STATE), (1, DEADENDED_STATE) are different
     The memory was equal for this state pair
@@ -286,8 +286,9 @@ We now see the human readable report
     {'eflags': (<BV64 0x0>, <BV64 0x4>), 'flags': (<BV64 0x0>, <BV64 0x4>), 'rflags': (<BV64 0x0>, <BV64 0x4>)}
     Here are 1 concrete input(s) for this particular state pair:
     1.
-        Input arguments: ['0xc0000000']
-        Concrete reg diff: {'eflags': ('0x0', '0x4'), 'flags': ('0x0', '0x4'), 'rflags': ('0x0', '0x4')}
+        Input arguments: [<BV64 0xc0000000>]
+        Concrete reg diff: {'eflags': (<BV64 0x0>, <BV64 0x4>), 'flags': (<BV64 0x0>, <BV64 0x4>), 'rflags': (<BV64 0x0>, <BV64 0x4>)}
+
     There are no prepatched orphans
     There are no postpatched orphans
 

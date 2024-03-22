@@ -456,13 +456,15 @@ class _SessionBasicExploration(_SessionExploration):
 
 class Session:
     """
-    A session is a particular run of a project, consisting of attached directives (asserts/assumes).
-    You can malloc memory for storage prior to running the session.
-    Once you are ready to run the session, use the run method.
+    A session is a particular run of a project, consisting of attached directives (asserts/assumes).\
+    You can malloc memory for storage prior to running the session.\
+    Once you are ready to run the session, use the run method.\
 
-    :ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify properties of the state before a run.
+    :ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify\
+    properties of the state before a run.
     :ivar cozy.project.Project proj: The Project tied to this session.
-    :ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the session starts in an entry state.
+    :ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the\
+    session starts in an entry state.
     :ivar list[Directive] directives: The directives added to this session.
     :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
     """
@@ -500,7 +502,8 @@ class Session:
 
     def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
         """
-        Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments to state.fs.insert.
+        Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments\
+        to state.fs.insert.
 
         :param str filename: The filename of the new file.
         :param angr.SimFile simfile: The file to make available to the simulated program.
@@ -511,7 +514,8 @@ class Session:
 
     def malloc(self, num_bytes: int, name=None) -> int:
         """
-        Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory before the :py:meth:`~cozy.project.Project.run` method is called.
+        Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory\
+        before the :py:meth:`~cozy.project.Project.run` method is called.
 
         :param int num_bytes: The number of bytes to allocate.
         :return: A pointer to the allocated memory block.

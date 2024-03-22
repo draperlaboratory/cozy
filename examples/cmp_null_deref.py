@@ -92,7 +92,7 @@ print("\nRunning post-patch.")
 print("There are {} deadended states, {} assert failed states, and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.asserts_failed), len(post_patched.errored)))
 
 args = [arg0]
-comparison_results = analysis.Comparison(pre_patched, post_patched)
+comparison_results = analysis.Comparison(pre_patched, post_patched, simplify=True)
 
 if dump_execution_graphs:
     execution_graph.dump_comparison(pre_proj, post_proj, pre_patched, post_patched, comparison_results, "null_pre.json", "null_post.json", args=args, num_examples=2)

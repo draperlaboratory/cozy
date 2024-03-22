@@ -219,7 +219,8 @@ class StateDiff:
                    compute_mem_diff=True,
                    compute_reg_diff=True,
                    compute_side_effect_diff=True,
-                   use_unsat_core=True) -> DiffResult | None:
+                   use_unsat_core=True,
+                   simplify=False) -> DiffResult | None:
         """
         Compares two states to find differences in memory. This function will return None if the two states have\
         non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are\
@@ -293,6 +294,11 @@ class StateDiff:
                 if bytes_left is not bytes_right:
                     if joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right]):
                         # It is possible that there is a symbolic value stored in memory.
+                        # Here we want to simplify this with respect to the joint constraints
+                        if simplify:
+                            bytes_left = claripy_ext.simplify_kb(bytes_left, joint_solver.constraints)
+                            bytes_right = claripy_ext.simplify_kb(bytes_right, joint_solver.constraints)
+                        # It is possible that there is a symbolic value stored in memory.
                         ret_mem_diff[addr_range] = (bytes_left, bytes_right)
 
         # Loop over all the registers that could possibly be different and save the ones that are actually different
@@ -311,6 +317,9 @@ class StateDiff:
 
                 if reg_left is not reg_right:
                     if joint_solver.satisfiable(extra_constraints=[reg_left != reg_right]):
+                        if simplify:
+                            reg_left = claripy_ext.simplify_kb(reg_left, joint_solver.constraints)
+                            reg_right = claripy_ext.simplify_kb(reg_right, joint_solver.constraints)
                         ret_reg_diff[reg_name] = (reg_left, reg_right)
 
         # Compute side effect difference
@@ -467,7 +476,7 @@ class Comparison:
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
                  ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_side_effects=True,
-                 compare_std_out=False, compare_std_err=False, use_unsat_core=True):
+                 compare_std_out=False, compare_std_err=False, use_unsat_core=True, simplify=False):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
 
@@ -484,6 +493,10 @@ class Comparison:
         :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
         :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
         comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
+        :param bool simplify: If this flag is True, then symbolic memory and register differences will be simplified\
+        as much as possible. This flag is typically only necessary if you want to do some deep inspection of symbolic\
+        contents. simplify can speed things down a lot, and symbolic expressions are usually very complex to the point\
+        where they are not easily understandable. This is why in most scenarios the flag should be left as False.
         """
 
         if ignore_addrs is None:
@@ -532,7 +545,8 @@ class Comparison:
                     compute_mem_diff=compare_memory if is_deadended_comparison else False,
                     compute_reg_diff=compare_registers if is_deadended_comparison else False,
                     compute_side_effect_diff=compare_side_effects if is_deadended_comparison else False,
-                    use_unsat_core=use_unsat_core
+                    use_unsat_core=use_unsat_core,
+                    simplify=simplify
                 )
 
                 if diff is not None:
