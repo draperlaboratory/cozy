@@ -292,6 +292,11 @@ class StateDiff:
                 bytes_left = sl.memory.load(addr_range.start, len(addr_range))
                 bytes_right = sr.memory.load(addr_range.start, len(addr_range))
                 if bytes_left is not bytes_right:
+                    # Note that the joint solver caches models that previously led to satness. This means that in the
+                    # case where the following condition is satisfiable, angr may internally not query z3 at all.
+                    # There is not much point in adding the unsat core trick here, since we already know that the joint
+                    # solver constraints without the extra_constraints are satisfiable. bytes_left != bytes_right are
+                    # highly likely to be syntactically different from previous calls of this loop as well.
                     if joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right]):
                         # It is possible that there is a symbolic value stored in memory.
                         # Here we want to simplify this with respect to the joint constraints
