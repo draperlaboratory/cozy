@@ -64,6 +64,16 @@ class {}(angr.SimProcedure):
         pass"""
         return template.format(func.name, argstring)
 
+    def make_callee_stubs(self, func_name):
+        """Returns a list of stubs for the callees of function `func_name`.
+
+        :param str func_name: Name of the caller function.
+        :return: Stubs for the callees of function `func_name`.
+        :rtype: list[str]
+        """
+        callees = self.get_callees(func_name)
+        return [self.make_stub(callee) for callee in callees]
+
 if __name__ == "__main__":
     # Example usage
     unstripped_binary_path = "../test_programs/GridIDPS/build/amp_challenge_arm.ino_unstripped.elf"
