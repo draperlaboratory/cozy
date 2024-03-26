@@ -21,13 +21,13 @@ class Stubber:
        :ivar networkx.classes.multidigraph.MultiDiGraph cg: Call graph for the binary.
     """
 
-    def __init__(self, binary_path):
+    def __init__(self, binary_path: str):
         proj = angr.Project(binary_path, load_options={"auto_load_libs":False})
         self.cfg = proj.analyses.CFGFast(show_progressbar=True)
         proj.analyses.CompleteCallingConventions(recover_variables=True) 
         self.cg = self.cfg.functions.callgraph
 
-    def extract_func(self, func_name):
+    def extract_func(self, func_name: str) -> angr.knowledge_plugins.functions.function.Function:
         """Returns the function with the given name from the CFG.
 
         :param str func_name: Name of the function to extract.
@@ -40,7 +40,7 @@ class Stubber:
         except IndexError:
             raise ValueError("Function {} does not appear in call graph".format(func_name)) from None
 
-    def get_callees(self, func_name):
+    def get_callees(self, func_name: str) -> list[angr.knowledge_plugins.functions.function.Function]:
         """Returns the list of functions called by function `func_name`.
 
         :param str func_name: Name of the caller function.
@@ -50,7 +50,7 @@ class Stubber:
         func = self.extract_func(func_name)
         return [self.cfg.functions[addr] for addr in self.cg.successors(func.addr)]
 
-    def make_stub(self, func):
+    def make_stub(self, func: angr.knowledge_plugins.functions.function.Function) -> str:
         """Returns an empty Python class definition (in string form) named after `func` that inherits from `angr.SimProcedure`.
 
         :param angr.knowledge_plugins.functions.function.Function func: Function to be stubbed.
@@ -64,7 +64,7 @@ class {}(angr.SimProcedure):
         pass"""
         return template.format(func.name, argstring)
 
-    def make_callee_stubs(self, func_name):
+    def make_callee_stubs(self, func_name: str) -> list[str]:
         """Returns a list of stubs for the callees of function `func_name`.
 
         :param str func_name: Name of the caller function.
