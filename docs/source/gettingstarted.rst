@@ -109,9 +109,10 @@ the source code, so we can add the function signature quite easily::
     proj_postpatched.add_prototype("my_fun", "void f(int *a)")
 
 We now need to create sessions from each project. A session is created
-from a specific project, and represents a single execution run. Here we pass
-"my_fun" to the :py:meth:`~cozy.project.Project.session` method, which indicates
-that we are going to be running the "my_fun" function::
+from a specific project, and represents a single run of symbolic
+execution. Here we pass "my_fun" to the
+:py:meth:`~cozy.project.Project.session` method, which indicates that
+we are going to be running the "my_fun" function::
 
     sess_prepatched = proj_prepatched.session("my_fun")
     sess_postpatched = proj_postpatched.session("my_fun")
@@ -120,6 +121,9 @@ Since we will only be comparing the my_fun function, we need to create
 the symbolic value to pass to the functions::
 
     arg0 = claripy.BVS("num_arg", 64)
+
+The symbolic value arg0 has 64 bits because it represents a pointer
+on a 64-bit architecture.
 
 Alternatively we could have used the :py:func:`cozy.primitives.sym_ptr` helper
 function to create the claripy symbolic variable::
@@ -132,13 +136,14 @@ address in our two sessions. Currently angr has limited support for symbolic
 memory addressing, so we will malloc space for our integers then constrain
 arg0 accordingly::
 
-    addr_prepatched = sess_prepatched.malloc(4)
+    addr_prepatched = sess_prepatched.malloc(4) # integers are 4 bytes on the target arch
     sess_prepatched.add_constraints((arg0 == 0x0) | (arg0 == addr_prepatched))
     addr_postpatched = sess_postpatched.malloc(4)
     sess_postpatched.add_constraints((arg0 == 0x0) | (arg0 == addr_postpatched))
 
-So before any execution we have constrained arg0 to be NULL (0x0) or be
-a concrete address returned by :py:meth:`~cozy.project.Session.malloc`.
+So before any execution we have constrained arg0 to be either NULL
+(0x0) or a concrete 64-bit address returned by
+:py:meth:`~cozy.project.Session.malloc`.
 
 ================================
 Directives - Assumes and Asserts
@@ -151,7 +156,7 @@ Assume and assert function by pausing execution once a specific instruction
 is reached and adding constraints to the SMT solver. Assumes are used for
 adding preconditions, and are often set to be triggered at the start of
 functions. Asserts are triggered if there exists an input that will cause
-the assert to be evaluated to true. Note that directives do not change the
+the assert to evaluate to false. Note that directives do not change the
 code being executed: they work more or less in the same way as debug
 breakpoints.
 
@@ -292,28 +297,45 @@ We now see the human readable report
     There are no prepatched orphans
     There are no postpatched orphans
 
-We can see cozy found a diff between the 0th deadended (terminated) state in the prepatch and the 0th deadended state
-in the postpatched. Together these two states form a state pair, which is displayed on line 1 of the report.
+We can see that cozy found a diff between the 0th deadended
+(terminated) state in the prepatched program (we will refer to this
+state as s0) and the 0th deadended state in the postpatched program
+(we will refer to this state as s0'). Together these two states form a
+state pair, which is displayed on line 1 of the report. As we will see
+from the following lines of the report, s0 represents the sole final
+symbolic state for the prepatched function (there is only one path
+through this function), and s0' represents the final state for the
+"false" branch of the postpatched function (i.e., the path that is
+triggered by a NULL argument).
 
-Line 3 displays the memory addresses that are different. Contents of memory for written ranges are mapped to
-a tuple containing the symbolic bytes at those addresses as a (prepatched, postpatched) tuple. In this case,
-memory at addresses 0x0 to 0x4 is 0x2a000000 in the prepatched, and 0x0 in the postpatched.
+Line 3 displays the memory addresses that are different. Contents of
+memory for written ranges are mapped to a tuple containing the
+symbolic bytes at those addresses as a (prepatched, postpatched)
+tuple. In this case, memory at addresses 0x0 to 0x4 is 0x2a000000 in
+s0 (because the prepatched function writes 0x2a = 42 to the NULL
+address), and 0x0 in s0' (because the NULL check prevents the write
+from occurring).
 
-Line 5 tells the instruction pointer the program was at when it wrote to those specific memory address ranges.
-Here we see that the program was at the instruction 0x401179 when it wrote to address 0x0, and the postpatched
-program never wrote to that address (hence the empty frozenset).
+Line 5 tells the instruction pointer the program was at when it wrote
+to those specific memory address ranges.  Here we see that the
+prepatched program was at the instruction 0x401179 when it wrote to
+address 0x0, and the postpatched program never wrote to that address
+(hence the empty frozenset).
 
 Line 7 gives the symbolic register difference between the states. As we can see, the flags registers
 are different due to the presence of a branch in the postpatched program. As with the memory, each register
 maps to a (prepatched, postpatched) tuple which gives the symbolic contents of the registers.
 
-Lines 8-12 gives concretized input that will cause the prepatched program to end in the 0th state and
-the postpatched program in its 0th state. The input argument is concretized to 0x0 (aka NULL). Additionally since
+Lines 8-12 gives concretized input that will cause the prepatched program to end in state s0 and
+the postpatched program in state s0'. The input argument is concretized to 0x0 (aka NULL). Additionally since
 the memory contents and register contents may be symbolic, we provide a concretized version of those as well.
 
-Lines 14-21 tells us that there is another state diff between state pairs (0,1). In this case
-we observe that the only difference is in the flags registers, and that there are no observable
-differences in memory. The concrete input argument for this pair is when the input is non-NULL.
+Lines 14-21 tells us that there is another diff for the state pair
+(0,1). The second state in this pair represents the "true" branch
+through the postpatched function. In this case we observe that the
+only difference is in the flags registers, and that there are no
+observable differences in memory. The concrete input argument for this
+pair is when the input is non-NULL.
 
 The next lines describe any orphaned states - typically there will be none. An orphaned state is a state in which
 there are no compatible pair states.
