@@ -244,8 +244,8 @@ Let's create fresh sessions and re-run without any directives attached. This tim
 
 Now let's run both of our new sessions::
 
-    prepatched_result = sess_prepatched.run(arg0)
-    postpatched_result = sess_postpatched.run(arg0)
+    prepatched_result = sess_prepatched.run([arg0])
+    postpatched_result = sess_postpatched.run([arg0])
 
 We can inspect the results object to see how many states we are dealing with::
 
