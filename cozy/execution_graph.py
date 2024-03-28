@@ -365,6 +365,10 @@ class ExecutionGraph:
             assertion_info = post_condition_record.postcondition.info_str or "unlabled postcondition"
             self.graph.add_node(state, postcondition_info=assertion_info, failed_cond=cond)
             leaves.append(state)
+        for spinning_record in result.spinning:
+            state = spinning_record.state
+            self.graph.add_node(state, spinning = True)
+            leaves.append(state)
         for state in leaves:
             target = state
             for hist in reversed(list(state.history.parents)):

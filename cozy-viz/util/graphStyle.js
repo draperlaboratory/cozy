@@ -125,7 +125,18 @@ export const style = [
     }
   },
   {
-    selector: 'node.pathHighlight[?error]',
+    selector: 'node[?spinning]',
+    style: { 
+      'shape' : 'vee',
+      'width' : 50,
+      'height' : 50,
+      'background-color': () => settings.showingErrors
+      ? Colors.errorNode
+      : Colors.defaultNode
+    }
+  },
+  {
+    selector: 'node.pathHighlight[?error],node.pathHighlight[?spinning]',
     style: {
       'border-width':'0px',
       'background-color': () => settings.showingErrors

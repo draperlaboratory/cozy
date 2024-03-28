@@ -83,6 +83,8 @@ export default class Tooltip extends Component {
       case "errors" : { 
         if (this.state.node.data().error) {
           return html`<pre>${this.state.node.data().error}</pre>`
+        } else if (this.state.node.data().spinning) {
+          return html`<pre>Spinning: Loop bounds exceeded</pre>`
         } else {
           return null
         }
@@ -169,7 +171,8 @@ export default class Tooltip extends Component {
             Vex IR
           </button>`
         }
-        ${this.state.node?.data().error && html`
+        ${this.state.node?.data().error ||
+          this.state.node?.data().spinning && html`
           <button 
             data-highlighted=${state.mode == "errors"} 
             onClick=${() => this.setView("errors")}>
