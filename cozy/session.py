@@ -23,6 +23,9 @@ class RunResult:
     :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a\
     :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state.\
     This means that due to the assumption, the new constraints are not satisfiable.
+    :ivar list[PostconditionFailedState] postconditions_failed: States where the function returned, and the assertion\
+    as part of the postcondition could be falsified.
+    :ivar list[SpinningState] spinning: States that were stashed due to a loop bound being breached.
     """
     def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
                  asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
