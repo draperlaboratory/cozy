@@ -9,7 +9,7 @@ from angr.sim_manager import ErrorRecord, SimulationManager
 
 from . import log, side_effect
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
-from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState
+from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
 
 
 class RunResult:
@@ -26,12 +26,14 @@ class RunResult:
     """
     def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
                  asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
-                 postconditions_failed: list[PostconditionFailedState]):
+                 postconditions_failed: list[PostconditionFailedState],
+                 spinning: list[SpinningState]):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
         self.assume_warnings = assume_warnings
         self.postconditions_failed = postconditions_failed
+        self.spinning = spinning
 
     @property
     def assertion_triggered(self) -> bool:
@@ -54,11 +56,12 @@ class RunResult:
         return len(self.postconditions_failed) > 0
 
     def __str__(self):
-        return "RunResult({} deadended, {} errored, {} asserts_failed, {} assume_warnings, {} postconditions_failed)".format(len(self.deadended), len(self.errored), len(self.asserts_failed), len(self.assume_warnings), len(self.postconditions_failed))
+        return "RunResult({} deadended, {} errored, {} asserts_failed, {} assume_warnings, {} postconditions_failed, {} spinning)".format(len(self.deadended), len(self.errored), len(self.asserts_failed), len(self.assume_warnings), len(self.postconditions_failed), len(self.spinning))
 
     def report(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
-        Creates a composite human readable report with information about errored states, asserts failed, and postconditions failed.
+        Creates a composite human readable report with information about errored states, asserts failed,\
+        postconditions failed, and spinning states.
 
         :param any args: The arguments to concretize
         :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
@@ -72,7 +75,8 @@ class RunResult:
         e_report = self.report_errored(args, concrete_post_processor=concrete_post_processor, num_examples=num_examples)
         a_report = self.report_asserts_failed(args, concrete_post_processor=concrete_post_processor, num_examples=num_examples)
         p_report = self.report_postconditions_failed(args, concrete_post_processor=concrete_post_processor, num_examples=num_examples)
-        output = "Errored Report:\n{}\n\nAsserts Failed Report:\n{}\n\nPostconditions Failed Report:\n{}".format(e_report, a_report, p_report)
+        s_report = self.report_spinning(args, concrete_post_processor=concrete_post_processor, num_examples=num_examples)
+        output = "Errored Report:\n{}\n\nAsserts Failed Report:\n{}\n\nPostconditions Failed Report:\n{}\n\nSpinning (Looping) States Report:\n{}".format(e_report, a_report, p_report, s_report)
         return output
 
     def report_errored(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
@@ -107,9 +111,47 @@ class RunResult:
                 output += "\n"
             return output
 
-    def report_postconditions_failed(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+    def report_spinning(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
         Creates a human readable report about a list of failed postcondition assertions.
+
+        :param any args: The arguments to concretize
+        :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
+        versions of args before they are added to the return string. Some examples of this function include converting\
+        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on\
+        another part of the input arguments.
+        :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed\
+        state.
+        :return: The report as a string
+        :rtype: str
+        """
+        if len(self.spinning) == 0:
+            return "No spinning states were reported"
+        else:
+            output = ""
+            for state in self.spinning:
+                output += "Spinning State #{}\n".format(state.state_id)
+                concrete_inputs = state.concrete_examples(args, num_examples)
+                output += "Here are {} concrete input(s) for this particular postcondition assertion:\n".format(len(concrete_inputs))
+                for (i, concrete_input) in enumerate(concrete_inputs):
+                    if concrete_post_processor is not None:
+                        concrete_args = concrete_post_processor(concrete_input.args)
+                    else:
+                        concrete_args = concrete_input.args
+                    output += "{}.\n".format(i + 1)
+                    output += "\t{}\n".format(str(concrete_args))
+                    if len(concrete_input.side_effects) > 0:
+                        output += "Side effects:\n"
+                        for (channel, effects) in concrete_input.side_effects.items():
+                            output += "Channel {}:\n".format(channel)
+                            for eff in effects:
+                                output += str(eff.mapped_body) + "\n"
+                output += "\n\n"
+            return output
+
+    def report_postconditions_failed(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
+        """
+        Creates a human readable report about the failed postcondition assertions.
 
         :param any args: The arguments to concretize
         :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
@@ -149,7 +191,7 @@ class RunResult:
 
     def report_asserts_failed(self, args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str:
         """
-        Creates a human readable report about a list of failed assertions.
+        Creates a human readable report about any failed assertions.
 
         :param any args: The arguments to concretize
         :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized\
@@ -279,6 +321,8 @@ class _SessionExploration:
     def __init__(self, session: 'Session', cache_intermediate_info: bool=True):
         self.session = session
         self.assume_warnings: list[tuple[Assume, SimState]] = []
+        # Note that we use a separate list here instead of a new stash because we want to keep around more information
+        # about the failed assertion than just the SimState
         self.asserts_failed: list[AssertFailedState] = []
         self.cache_intermediate_info = cache_intermediate_info
         self.asserts_to_scrub: set[Assert] = set()
@@ -642,10 +686,15 @@ class Session:
                           if assert_failed.assertion not in sess_exploration.asserts_to_scrub]
         postconditions_failed = [postcondition_failed for postcondition_failed in sess_exploration.postconditions_failed
                                  if postcondition_failed not in sess_exploration.postconditions_to_scrub]
+        if 'spinning' in simgr.stashes:
+            spinning = [SpinningState(state, i) for (i, state) in enumerate(simgr.spinning)]
+        else:
+            spinning = []
 
-        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed)
+        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed, spinning)
 
-    def run(self, args: list[claripy.ast.bits], cache_intermediate_info: bool=True, ret_addr: int | None=None) -> RunResult:
+    def run(self, args: list[claripy.ast.bits], cache_intermediate_info: bool=True, ret_addr: int | None=None,
+            loop_bound: int | None=None) -> RunResult:
         """
         Runs a session to completion, either starting from the start_fun used to create the session, or from the\
         program start. Note that currently a session may be run only once. If run is called multiple times, a\
@@ -656,11 +705,16 @@ class Session:
         :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be
         cached. This is required for dumping the execution graph which is used in visualization.
         :param int | None ret_addr: What address to return to if calling as a function
+        :param int | None loop_bound: Sets an upper bound on loop iteration count. Useful for programs with\
+        non-terminating loops.
         :return: The result of running this session.
         :rtype: RunResult
         """
 
         simgr = self._call(list(args), cache_intermediate_info=cache_intermediate_info, ret_addr=ret_addr)
+
+        if isinstance(loop_bound, int):
+            simgr.use_technique(angr.exploration_techniques.LocalLoopSeer(bound=loop_bound))
 
         sess_exploration = self._session_exploration(cache_intermediate_info=cache_intermediate_info)
         sess_exploration.explore(simgr)

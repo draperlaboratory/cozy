@@ -235,7 +235,8 @@ class JointConcolicSim:
                 explore_fun_left: Callable[[SimulationManager], None] | None = None,
                 explore_fun_right: Callable[[SimulationManager], None] | None = None,
                 termination_fun_left: Callable[[SimulationManager], bool] | None = None,
-                termination_fun_right: Callable[[SimulationManager], bool] | None = None) -> None:
+                termination_fun_right: Callable[[SimulationManager], bool] | None = None,
+                loop_bound_left: int | None=None, loop_bound_right: int | None=None) -> None:
         """
         Explores the simulations given in the left and right simulation manager.
 
@@ -255,9 +256,19 @@ class JointConcolicSim:
         functions return True, then exploration is halted and this function returns. If this parameter is None, then\
         the right simulation manager will terminate only when no further exploration is possible (ie, execution is\
         complete). Pre-made termination functions can be found in the :py:mod:`cozy.concolic.heuristics` module.
+        :param int | None loop_bound_left: Sets an upper bound on loop iteration count for the left session. Useful for\
+        programs with non-terminating loops.
+        :param int | None loop_bound_right: Sets an upper bound on loop iteration count for the right session. Useful\
+        for programs with non-terminating loops.
         :return: None
         :rtype: None
         """
+
+        if isinstance(loop_bound_left, int):
+            self.simgr_left.use_technique(angr.exploration_techniques.LocalLoopSeer(bound=loop_bound_left))
+        if isinstance(loop_bound_right, int):
+            self.simgr_right.use_technique(angr.exploration_techniques.LocalLoopSeer(bound=loop_bound_right))
+
         while len(self.simgr_left.active) > 0 or len(self.simgr_right.active) > 0:
             if (termination_fun_left is not None and termination_fun_right is not None and
                     (len(self.simgr_left.active) == 0 or termination_fun_left(self.simgr_left)) and

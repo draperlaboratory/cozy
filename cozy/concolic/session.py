@@ -29,7 +29,8 @@ class JointConcolicSession:
     def run(self, args_left: list[claripy.ast.bits], args_right: list[claripy.ast.bits],
             symbols: set[claripy.BVS] | frozenset[claripy.BVS],
             cache_intermediate_info: bool=True,
-            ret_addr_left: int | None=None, ret_addr_right: int | None = None) -> tuple[RunResult, RunResult]:
+            ret_addr_left: int | None=None, ret_addr_right: int | None = None,
+            loop_bound_left: int | None=None, loop_bound_right: int | None=None) -> tuple[RunResult, RunResult]:
         """
         Jointly run two sessions.
 
@@ -43,6 +44,10 @@ class JointConcolicSession:
         cached. This is required for dumping the execution graph which is used in visualization.
         :param int | None ret_addr_left: What address to return to if calling as a function
         :param int | None ret_addr_right: What address to return to if calling as a function
+        :param int | None loop_bound_left: Sets an upper bound on loop iteration count for the left session. Useful\
+        for programs with non-terminating loops.
+        :param int | None loop_bound_right: Sets an upper bound on loop iteration count for the right session. Useful\
+        for programs with non-terminating loops.
 
         :return: The result of running the two sessions, where the first element of the return tuple being the left\
         session's result, and the second element being the right session's result.
@@ -67,7 +72,8 @@ class JointConcolicSession:
         jconcolic_sim.explore(explore_fun_left=sess_exploration_left.explore,
                               explore_fun_right=sess_exploration_right.explore,
                               termination_fun_left=self.termination_heuristic_left,
-                              termination_fun_right=self.termination_heuristic_right)
+                              termination_fun_right=self.termination_heuristic_right,
+                              loop_bound_left=loop_bound_left, loop_bound_right=loop_bound_right)
 
         return (self.sess_left._run_result(simgr_left, sess_exploration_left),
                 self.sess_right._run_result(simgr_right, sess_exploration_right))

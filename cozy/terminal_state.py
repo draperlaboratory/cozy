@@ -115,6 +115,20 @@ class DeadendedState(TerminalState):
         """
         super().__init__(state, state_id, "DEADENDED_STATE")
 
+class SpinningState(TerminalState):
+    """
+    This class is used to indicate that the contained state was killed by the LocalLoopSeer, indicating that an upper
+    bound on number of loop iterations was reached.
+    """
+    def __init__(self, state: SimState, state_id: int):
+        """
+        Constructor for SpinningState
+
+        :ivar SimState state: The state that was spinning
+        :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.spinning`
+        """
+        super().__init__(state, state_id, "SPINNING_STATE")
+
 class AssertFailedState(TerminalState):
     """
     This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.

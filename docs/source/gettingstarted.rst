@@ -190,21 +190,31 @@ Let's invoke the prepatched my_fun with arg0 as the symbolic input via the
 
 Which prints the following result that informs us that an assertion was triggered::
 
-    RunResult(1 deadended, 0 errored, 1 asserts_failed, 0 assume_warnings, 0 postconditions_failed)
+    RunResult(1 deadended, 0 errored, 1 asserts_failed, 0 assume_warnings, 0 postconditions_failed, 0 spinning)
 
 To view a report on what went wrong with the assertion, let's create
 a report using the :py:meth:`~cozy.project.RunResult.report_asserts_failed`
 method::
 
-    print(run_result.report_asserts_failed([arg0]))
+    print(run_result.report([arg0]))
 
 Which prints off the human-readable report::
 
-    Assert for address 0x401179 was triggered: <Bool num_arg_108_64 != 0x0>
+    Errored Report:
+    No errored states
+
+    Asserts Failed Report:
+    Assert for address 0x401179 was triggered: <Bool int_arg_0_64 != 0x0>
     Dereferencing null pointer
     Here are 1 concrete input(s) for this particular assertion:
     1.
-        [0]
+        [<BV64 0x0>]
+
+    Postconditions Failed Report:
+    No postcondition failure triggered
+
+    Spinning (Looping) States Report:
+    No spinning states were reported
 
 As part of the report, cozy reports that the concretized input that leads to
 this assertion being triggered occurs when the input argument is 0.
@@ -254,8 +264,8 @@ We can inspect the results object to see how many states we are dealing with::
 
 This prints the following messages::
 
-    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings, 0 postconditions_failed)
-    RunResult(2 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings, 0 postconditions_failed)
+    RunResult(1 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings, 0 postconditions_failed, 0 spinning)
+    RunResult(2 deadended, 0 errored, 0 asserts_failed, 0 assume_warnings, 0 postconditions_failed, 0 spinning)
 
 We can now make a comparison between these two terminated results. Constructing a Comparison object is used to do
 the comparison computation::

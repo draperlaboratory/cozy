@@ -509,8 +509,12 @@ class Comparison:
 
         self.pairs: dict[tuple[SimState, SimState], CompatiblePair] = dict()
 
-        states_pre_patched: list[TerminalState] = pre_patched.deadended + pre_patched.errored + pre_patched.asserts_failed + pre_patched.postconditions_failed
-        states_post_patched: list[TerminalState] = post_patched.deadended + post_patched.errored + post_patched.asserts_failed + post_patched.postconditions_failed
+        states_pre_patched: list[TerminalState] = (pre_patched.deadended + pre_patched.errored +
+                                                   pre_patched.asserts_failed + pre_patched.postconditions_failed +
+                                                   pre_patched.spinning)
+        states_post_patched: list[TerminalState] = (post_patched.deadended + post_patched.errored +
+                                                    post_patched.asserts_failed + post_patched.postconditions_failed +
+                                                    post_patched.spinning)
 
         # An orphan is a state that is not compatible with any other state
         # Testing has revealed that there are typically never any orphans

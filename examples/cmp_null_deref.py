@@ -9,7 +9,7 @@ import cozy.execution_graph as execution_graph
 from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
 
 dump_execution_graphs = input("Would you like to dump the execution graphs for visualization? (y/n)") == "y"
-arg0 = primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg').annotate(MultiwriteAnnotation())
+arg0 = primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg')
 
 def construct_args(sess):
     concrete_addr = sess.malloc(INT_SIZE)
@@ -49,7 +49,7 @@ def run_pre_patched():
 
     args = construct_args(sess)
     run_results = sess.run(args)
-    print(run_results.report_asserts_failed(args))
+    print(run_results.report(args))
     return (proj, run_results)
 
 # The patched function is the same as the original, except it has an if statement
@@ -78,18 +78,18 @@ def run_post_patched():
     sess.add_directives(*directives)
     args = construct_args(sess)
     run_results = sess.run(args)
-    print(run_results.report_asserts_failed(args))
+    print(run_results.report(args))
     return (proj, run_results)
 
 print("Running pre-patched.")
 (pre_proj, pre_patched) = run_pre_patched()
 
-print("There are {} deadended states, {} assert failed states, and {} errored states for the pre-patch run.".format(len(pre_patched.deadended), len(pre_patched.asserts_failed), len(pre_patched.errored)))
+print("\nThere are {} deadended states, {} assert failed states, and {} errored states for the pre-patch run.".format(len(pre_patched.deadended), len(pre_patched.asserts_failed), len(pre_patched.errored)))
 
 print("\nRunning post-patch.")
 (post_proj, post_patched) = run_post_patched()
 
-print("There are {} deadended states, {} assert failed states, and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.asserts_failed), len(post_patched.errored)))
+print("\nThere are {} deadended states, {} assert failed states, and {} errored states for the post-patch run.".format(len(post_patched.deadended), len(post_patched.asserts_failed), len(post_patched.errored)))
 
 args = [arg0]
 comparison_results = analysis.Comparison(pre_patched, post_patched, simplify=True)

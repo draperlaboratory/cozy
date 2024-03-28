@@ -3,7 +3,7 @@ import angr
 import claripy
 
 proj_prepatched = cozy.project.Project('test_programs/LunarRelaySat/rr.so')
-proj_goodpatch = cozy.project.Project('test_programs/LunarRelaySat/rr-good-fixedstack.so')
+proj_goodpatch = cozy.project.Project('test_programs/LunarRelaySat/rr-good-incorrect-stack.so')
 
 MAX_NUM_PACKETS = 11
 
@@ -71,11 +71,13 @@ def run(proj: cozy.project.Project):
 
     def mutate_init_i(state):
         state.regs.r9 = claripy.BVV(0x9, 32)
-    sess.add_directives(cozy.directive.Breakpoint.from_fun_offset(proj, 'RR_ReadTlmInput', 0x2c, mutate_init_i))
+    # If you don't want to use a loop_bound, then we can instead directly change the loop counter to a larger number
+    # so that it iterates less times.
+    #sess.add_directives(cozy.directive.Breakpoint.from_fun_offset(proj, 'RR_ReadTlmInput', 0x2c, mutate_init_i))
 
     sess.state.globals['packet_i'] = 0
 
-    return sess.run([])
+    return sess.run([], loop_bound=3)
 
 results_prepatched = run(proj_prepatched)
 results_goodpatch = run(proj_goodpatch)
