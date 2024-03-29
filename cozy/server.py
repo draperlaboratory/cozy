@@ -2,6 +2,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler, HTTPStatus
 import json
 from functools import partial
 import sys
+import time
 import os
 import threading
 import webbrowser
@@ -49,7 +50,10 @@ def start_viz_server(pre={}, post={}, open_browser=False, port=8080):
     print("launching visualization server, on localhost:8080…")
     handler = partial(VizHandler, pre, post, directory=get_vizroot())
     thread = threading.Thread(None,HTTPServer(("",port),handler).serve_forever)
+    thread.daemon = True
     thread.start()
     if open_browser:
         webbrowser.open_new("localhost:" + str(port) + "/?pre=/pre&post=/post")
+    while True:
+        time.sleep(1)
     
