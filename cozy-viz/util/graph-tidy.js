@@ -77,3 +77,36 @@ export function removeBranch(node) {
   }
     
 }
+
+export function mergeByAddress(cy) {
+  const constructed = {}
+  for (const node of cy.nodes()) {
+    const addr = node.data().address
+    if (addr in constructed) {
+      for (const edge of node.outgoers('edge')) {
+        if (constructed[addr].edgesTo(edge.target()).length > 0) continue
+        cy.add({
+          group: 'edges',
+          data: {
+            source: constructed[addr].id(),
+            target: edge.target().id()
+          }
+        })
+      }
+      for (const edge of node.incomers('edge')) {
+        if (edge.source().edgesTo(constructed[addr]).length > 0) continue
+        cy.add({
+          group: 'edges',
+          data: {
+            source: edge.source().id(),
+            target: constructed[addr].id(),
+          }
+        })
+      }
+      node.remove()
+    } else {
+      node.data().constraints = null
+      constructed[addr] = node
+    }
+  }
+}

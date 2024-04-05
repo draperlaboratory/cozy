@@ -9,3 +9,8 @@ export const Tidiness = Object.freeze({
   tidy: Symbol("tidy"),
   veryTidy: Symbol("very-tidy")
 })
+
+export const View = Object.freeze({
+  plain: Symbol("plain"),
+  cfg: Symbol("cfg")
+})

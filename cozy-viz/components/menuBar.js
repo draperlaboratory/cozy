@@ -3,6 +3,8 @@ import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import { Status, Tidiness } from '../data/cozy-data.js'
 import Colors from '../data/colors.js'
+import { View } from '../data/cozy-data.js'
+import { breadthFirst, cola, cose } from '../data/layouts.js'
 
 // this should be mounted and unmounted rather than toggled; adding and removing
 // the event-listener for closing the menu should be part of the mount/unmount
@@ -161,8 +163,8 @@ export default class MenuBar extends Component {
     this.setOpen(null)
   }
 
-  resetLayout() {
-    this.props.resetLayout()
+  resetLayout(layout, view) {
+    this.props.resetLayout(layout, view)
     this.setOpen(null)
   }
 
@@ -195,8 +197,8 @@ export default class MenuBar extends Component {
           Save Post Graph
         <//>
       <//>
-      <${Menu} 
-        enabled=${enabled}
+      <${Menu}
+        enabled=${enabled && props.view == View.plain}
         open=${state.open}
         title="View"
         setOpen=${o => this.setOpen(o)}>
@@ -243,7 +245,7 @@ export default class MenuBar extends Component {
         <//>
       <//>
       <${PruneMenu} 
-        enabled=${enabled} 
+        enabled=${enabled && props.view == View.plain} 
         prune=${props.prune}
         unprune=${props.unprune}
         open=${state.open}
@@ -254,8 +256,28 @@ export default class MenuBar extends Component {
         open=${state.open}
         title="Layout"
         setOpen=${o => this.setOpen(o)}>
+        <${MenuOption} 
+          onClick=${() => this.resetLayout(breadthFirst,View.plain)}
+          selected=${props.layout.name == "breadthfirst" && props.view == View.plain}>
+            Tree
+        <//>
+        <${MenuOption} 
+          onClick=${() => this.resetLayout(breadthFirst,View.cfg)}
+          selected=${props.layout.name == "breadthfirst" && props.view == View.cfg}>
+            CFG - Tree layout
+        <//>
+        <${MenuOption} onClick=${() => this.resetLayout()}
+          onClick=${() => this.resetLayout(cose,View.cfg)}
+          selected=${props.layout.name == "cose" && props.view == View.cfg}>
+            CFG - Cose layout
+        <//>
+        <${MenuOption} 
+          onClick=${() => this.resetLayout(cola, View.cfg)}
+          selected=${props.layout.name == "cola" && props.view == View.cfg}>
+            CFG - Cola layout
+        <//>
         <${MenuOption} onClick=${() => this.resetLayout()}>
-            Reset
+            Refresh
         <//>
       <//>
       <${SearchMenu}

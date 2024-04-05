@@ -2,20 +2,18 @@ import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import cytoscape from "https://cdn.jsdelivr.net/npm/cytoscape@3.26.0/+esm"
+import cytoscapeCola from 'https://cdn.jsdelivr.net/npm/cytoscape-cola@2.5.1/+esm'
 import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
-import { tidyGraph, removeBranch } from '../util/graph-tidy.js';
-import { Status, Tidiness } from '../data/cozy-data.js'
+import { tidyGraph, removeBranch, mergeByAddress } from '../util/graph-tidy.js';
+import { Status, Tidiness, View } from '../data/cozy-data.js'
+import { breadthFirst } from '../data/layouts.js'
 
-const standardLayout = {
-  name: 'breadthfirst',
-  directed: true,
-  spacingFactor: 2
-}
+cytoscape.use(cytoscapeCola)
 
 export default class App extends Component {
 
@@ -29,6 +27,8 @@ export default class App extends Component {
       showingErrors: true, // we start with errors visible
       showingAsserts: true, // we start with asserts visible
       showingPostconditions: true, // we start with postconditions visible
+      layout: breadthFirst, // we start with the breadthfirst layout
+      view: View.plain, //we start with all nodes visible, not a CFG
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -182,8 +182,8 @@ export default class App extends Component {
     tidyGraph(this.cy1.cy, opts)
     tidyGraph(this.cy2.cy, opts)
     // reset layout and viewport
-    this.cy1.cy.layout(standardLayout).run()
-    this.cy2.cy.layout(standardLayout).run()
+    this.cy1.cy.layout(this.state.layout).run()
+    this.cy2.cy.layout(this.state.layout).run()
     // remove all foci, and reset viewport
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
@@ -255,7 +255,7 @@ export default class App extends Component {
     cy.debugData = cy.nodes().roots()[0].data("debug")
 
     // set layout
-    cy.layout(standardLayout).run()
+    cy.layout(this.state.layout).run()
 
     cy.on('add', ev => {
       if (ev.target.group() === 'nodes') {
@@ -358,10 +358,28 @@ export default class App extends Component {
     this.setState({ tidiness, status: Status.idle })
   }
 
-  resetLayout() {
+  async resetLayout(layout, view) {
+    await new Promise(res => this.setState(oldState => {
+      layout = layout ?? oldState.layout
+      if (view != oldState.view) {
+        if (view == View.cfg) {
+          //we're going from View.plain to View.cfg
+          mergeByAddress(this.cy1.cy)
+          mergeByAddress(this.cy2.cy)
+        } else if (view == View.plain) {
+          //we're going from View.cfg to View.plain
+          this.startRender(this.refresh)
+        } else {
+          //no view given, we're just recomputing the view,
+          view = oldState.view
+        }
+      }
+      return {view, layout}
+    },res))
+
     this.batch(() => {
-      this.cy1.cy.layout(standardLayout).run()
-      this.cy2.cy.layout(standardLayout).run()
+      this.cy1.cy.layout(this.state.layout).run()
+      this.cy2.cy.layout(this.state.layout).run()
     })
   }
 
@@ -403,6 +421,8 @@ export default class App extends Component {
         cyRight=${this.cy2}
         prune=${this.prune}
         unprune=${this.unprune}
+        view=${state.view}
+        layout=${state.layout}
         resetLayout=${this.resetLayout}
         tidiness=${state.tidiness}
         status=${state.status}

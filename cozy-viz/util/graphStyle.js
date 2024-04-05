@@ -33,6 +33,7 @@ export const style = [
       'line-color': Colors.defaultEdge,
       'target-arrow-color': Colors.defaultEdge,
       'target-arrow-shape': 'triangle',
+      'arrow-scale': 1.5,
       'curve-style': 'bezier'
     }
   },
