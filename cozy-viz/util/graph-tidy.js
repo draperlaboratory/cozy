@@ -106,6 +106,10 @@ export function mergeByAddress(cy) {
       node.remove()
     } else {
       node.data().constraints = null
+      node.data().stdout = null
+      node.data().stderr = null
+      node.data().assertion_info = null
+      node.data().postcondition_info = null
       constructed[addr] = node
     }
   }
