@@ -1,4 +1,4 @@
-import {constraintsEq} from './constraints.js'
+import { constraintsEq } from './constraints.js'
 
 // We try to tidy up a given graph by merging non-branching series of nodes into single nodes
 
@@ -10,14 +10,14 @@ export function tidyGraph(graph, opts) {
 
 }
 
-function tidyChildren(node, {mergeConstraints}) {
+function tidyChildren(node, { mergeConstraints }) {
 
   let candidates = [node];
   let next = [];
 
   while (candidates.length > 0) {
     for (const candidate of candidates) {
-      const out = candidate.outgoers('node') 
+      const out = candidate.outgoers('node')
       const constraints1 = out[0]?.data().constraints
       const constraints2 = candidate.data().constraints
       // We merge nodes with their children if they have exactly one child and either
@@ -40,10 +40,10 @@ function tidyChildren(node, {mergeConstraints}) {
         }
         // introduce edges linking the child to its grandparent
         for (const parent of candidate.incomers('node')) {
-          const edgeData = { 
-            id : `${parent.id()}-${out[0].id()}`, source: parent.id(), target: out[0].id()
+          const edgeData = {
+            id: `${parent.id()}-${out[0].id()}`, source: parent.id(), target: out[0].id()
           }
-          node.cy().add({group:'edges', data: edgeData})
+          node.cy().add({ group: 'edges', data: edgeData })
         }
         // we remove the merge-candidate node
         candidate.remove()
@@ -63,7 +63,7 @@ function tidyChildren(node, {mergeConstraints}) {
 //that has more than one child
 export function removeBranch(node) {
   let target
-  while (node.outgoers('node').length == 0 && 
+  while (node.outgoers('node').length == 0 &&
     node.incomers('node').length > 0) {
 
     target = node
@@ -71,11 +71,11 @@ export function removeBranch(node) {
     target.remove()
   }
   if (target &&
-    node.outgoers('node').length == 0 && 
+    node.outgoers('node').length == 0 &&
     node.incomers('node').length == 0) {
     node.remove()
   }
-    
+
 }
 
 export function mergeByAddress(cy) {
@@ -83,34 +83,42 @@ export function mergeByAddress(cy) {
   for (const node of cy.nodes()) {
     const addr = node.data().address
     if (addr in constructed) {
-      for (const edge of node.outgoers('edge')) {
-        if (constructed[addr].edgesTo(edge.target()).length > 0) continue
-        cy.add({
-          group: 'edges',
-          data: {
-            source: constructed[addr].id(),
-            target: edge.target().id()
-          }
-        })
-      }
-      for (const edge of node.incomers('edge')) {
-        if (edge.source().edgesTo(constructed[addr]).length > 0) continue
-        cy.add({
-          group: 'edges',
-          data: {
-            source: edge.source().id(),
-            target: constructed[addr].id(),
-          }
-        })
-      }
-      node.remove()
+      if (node.hasClass('pathHighlight')) constructed[addr].addClass('pathHighlight')
+      node.cleanMe = true
     } else {
-      node.data().constraints = null
-      node.data().stdout = null
-      node.data().stderr = null
-      node.data().assertion_info = null
-      node.data().postcondition_info = null
       constructed[addr] = node
     }
   }
+  const startingEdges = [...cy.edges()]
+  for (const edge of startingEdges) {
+    if (!edge.source().cleanMe && !edge.target().cleanMe) {
+      if (edge.hasClass("pathHighlight")) {
+        edge.data("traversals", (edge.data("traversals") || 0) + 1)
+      }
+    } else {
+      const sourceRepr = constructed[edge.source().data("address")]
+      const targetRepr = constructed[edge.target().data("address")]
+      if (sourceRepr.edgesTo(targetRepr).length > 0) {
+        if (edge.hasClass("pathHighlight")) {
+          const traversals = sourceRepr.edgesTo(targetRepr)[0].data("traversals")
+          sourceRepr.edgesTo(targetRepr)[0].data("traversals", (traversals || 0) + 1)
+        }
+      } else {
+        cy.add({
+          group: 'edges',
+          data: {
+            source: sourceRepr.id(),
+            target: targetRepr.id(),
+            traversals: edge.hasClass("pathHighlight") ? 1 : 0
+          }
+        })
+      }
+      edge.remove()
+    }
+  }
+  for (const node of cy.nodes()) {
+    if (node.cleanMe) node.remove()
+  }
+  // this kinda mangles the styles, so we refresh them
+  cy.style().update()
 }

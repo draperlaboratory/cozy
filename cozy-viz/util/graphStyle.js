@@ -49,6 +49,17 @@ export const style = [
     }
   },
   {
+    selector: 'edge[traversals > 0]',
+    style: {
+      'width': 3,
+      'line-color': Colors.focusedEdge,
+      'target-arrow-color': Colors.focusedEdge,
+      'target-arrow-shape': 'triangle',
+      'z-compound-depth' : 'top',
+      'curve-style': 'bezier'
+    }
+  },
+  {
     selector: 'node.pathHighlight',
     style: { 'background-color': Colors.focusedNode }
   },

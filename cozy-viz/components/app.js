@@ -363,7 +363,7 @@ export default class App extends Component {
       layout = layout ?? oldState.layout
       if (view != oldState.view) {
         if (view == View.cfg) {
-          //we're going from View.plain to View.cfg
+          // we're going from View.plain to View.cfg
           mergeByAddress(this.cy1.cy)
           mergeByAddress(this.cy2.cy)
         } else if (view == View.plain) {

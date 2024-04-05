@@ -65,6 +65,9 @@ export const focusMixin = {
       .removeClass('pathHighlight')
       .removeClass('availablePath');
 
+    this.elements()
+      .removeData('traversals')
+
     return this
   }
 }
