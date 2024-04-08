@@ -181,9 +181,6 @@ export default class App extends Component {
     // merge similar nodes
     this.cy1.cy.tidy(opts)
     this.cy2.cy.tidy(opts)
-    // reset layout and viewport
-    this.cy1.cy.layout(this.state.layout).run()
-    this.cy2.cy.layout(this.state.layout).run()
     // remove all foci, and reset viewport
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
@@ -256,7 +253,7 @@ export default class App extends Component {
     cy.debugData = cy.nodes().roots()[0].data("debug")
 
     // set layout
-    cy.layout(this.state.layout).run()
+    ref.currentLayout = cy.layout(this.state.layout).run()
 
     cy.on('add', ev => {
       if (ev.target.group() === 'nodes') {
@@ -330,10 +327,9 @@ export default class App extends Component {
     this.cy2.cy?.endBatch()
   }
 
-  async setTidiness(tidiness) {
+  setTidiness(tidiness) {
     // we insert a few milliseconds delay to allow for prior state updates to
     // render
-    await new Promise(r => setTimeout(r, 50))
     switch (tidiness) {
       case Tidiness.untidy: {
         this.refresh()
@@ -359,8 +355,8 @@ export default class App extends Component {
     this.setState({ tidiness, status: Status.idle })
   }
 
-  async resetLayout(layout, view) {
-    await new Promise(res => this.setState(oldState => {
+  resetLayout(layout, view) {
+    this.setState(oldState => {
       layout = layout ?? oldState.layout
       if (view != oldState.view) {
         if (view == View.cfg) {
@@ -371,19 +367,24 @@ export default class App extends Component {
           //we're going from View.cfg to View.plain
           this.cy1.cy.removeCFGData()
           this.cy2.cy.removeCFGData()
-          this.startRender(this.refresh)
+          this.setTidiness(this.state.tidiness)
         } else {
           //no view given, we're just recomputing the view,
           view = oldState.view
         }
       }
-      return {view, layout}
-    },res))
+      this.updateLayout(layout)
 
-    this.batch(() => {
-      this.cy1.cy.layout(this.state.layout).run()
-      this.cy2.cy.layout(this.state.layout).run()
+      return {view, layout}
     })
+  }
+
+  updateLayout(layout) {
+    layout = layout || this.state.layout
+    this.cy1.currentLayout.stop()
+    this.cy2.currentLayout.stop()
+    this.cy1.currentLayout = this.cy1.cy.layout(layout).run()
+    this.cy2.currentLayout = this.cy2.cy.layout(layout).run()
   }
 
   clearTooltip() {
@@ -411,6 +412,7 @@ export default class App extends Component {
 
   unprune() {
     this.setTidiness(this.state.tidiness)
+    this.updateLayout()
   }
 
   render(_props, state) {
@@ -419,7 +421,9 @@ export default class App extends Component {
     return html`
       <${Tooltip} ref=${this.tooltip}/>
       <${MenuBar} 
-        setTidiness=${level => this.startRender(() => this.setTidiness(level))}
+        setTidiness=${level => this.startRender(() => {
+          this.setTidiness(level); this.updateLayout()
+        })}
         cyLeft=${this.cy1}
         cyRight=${this.cy2}
         prune=${this.prune}
