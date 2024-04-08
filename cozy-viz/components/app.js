@@ -9,7 +9,7 @@ import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
-import { tidyGraph, removeBranch, mergeByAddress } from '../util/graph-tidy.js';
+import { tidyMixin, removeBranch } from '../util/graph-tidy.js';
 import { Status, Tidiness, View } from '../data/cozy-data.js'
 import { breadthFirst } from '../data/layouts.js'
 
@@ -179,8 +179,8 @@ export default class App extends Component {
 
   tidy(opts) {
     // merge similar nodes
-    tidyGraph(this.cy1.cy, opts)
-    tidyGraph(this.cy2.cy, opts)
+    this.cy1.cy.tidy(opts)
+    this.cy2.cy.tidy(opts)
     // reset layout and viewport
     this.cy1.cy.layout(this.state.layout).run()
     this.cy2.cy.layout(this.state.layout).run()
@@ -251,6 +251,7 @@ export default class App extends Component {
 
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
+    Object.assign(cy, tidyMixin);
     Object.assign(cy, segmentationMixin);
     cy.debugData = cy.nodes().roots()[0].data("debug")
 
@@ -364,10 +365,12 @@ export default class App extends Component {
       if (view != oldState.view) {
         if (view == View.cfg) {
           // we're going from View.plain to View.cfg
-          mergeByAddress(this.cy1.cy)
-          mergeByAddress(this.cy2.cy)
+          this.cy1.cy.mergeByAddress()
+          this.cy2.cy.mergeByAddress()
         } else if (view == View.plain) {
           //we're going from View.cfg to View.plain
+          this.cy1.cy.removeCFGData()
+          this.cy2.cy.removeCFGData()
           this.startRender(this.refresh)
         } else {
           //no view given, we're just recomputing the view,

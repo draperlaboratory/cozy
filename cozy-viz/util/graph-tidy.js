@@ -1,15 +1,5 @@
 import { constraintsEq } from './constraints.js'
 
-// We try to tidy up a given graph by merging non-branching series of nodes into single nodes
-
-export function tidyGraph(graph, opts) {
-
-  const root = graph.nodes().roots()
-
-  tidyChildren(root, opts)
-
-}
-
 function tidyChildren(node, { mergeConstraints }) {
 
   let candidates = [node];
@@ -78,47 +68,83 @@ export function removeBranch(node) {
 
 }
 
-export function mergeByAddress(cy) {
-  const constructed = {}
-  for (const node of cy.nodes()) {
-    const addr = node.data().address
-    if (addr in constructed) {
-      if (node.hasClass('pathHighlight')) constructed[addr].addClass('pathHighlight')
-      node.cleanMe = true
-    } else {
-      constructed[addr] = node
-    }
-  }
-  const startingEdges = [...cy.edges()]
-  for (const edge of startingEdges) {
-    if (!edge.source().cleanMe && !edge.target().cleanMe) {
-      if (edge.hasClass("pathHighlight")) {
-        edge.data("traversals", (edge.data("traversals") || 0) + 1)
+export const tidyMixin = {
+  // array of graph elements merged out of existence
+  mergedNodes : [],
+  mergedEdges : [],
+
+  // We try to tidy up a given graph by merging non-branching series of nodes
+  // into single nodes
+  tidy(opts) {
+
+    const root = this.nodes().roots()
+
+    tidyChildren(root, opts)
+
+  },
+  //merge blocks that share an address
+  mergeByAddress() {
+    const constructed = {}
+    this.mergedNodes = []
+    this.mergedEdges = []
+    for (const node of this.nodes()) {
+      const addr = node.data().address
+      if (addr in constructed) {
+        this.mergedNodes.push(node)
+      } else {
+        constructed[addr] = node
       }
-    } else {
+      if (node.hasClass('pathHighlight')) constructed[addr].data('traversed', true)
+    }
+    const startingEdges = [...this.edges()]
+    for (const edge of startingEdges) {
       const sourceRepr = constructed[edge.source().data("address")]
       const targetRepr = constructed[edge.target().data("address")]
-      if (sourceRepr.edgesTo(targetRepr).length > 0) {
+      if ( edge.source() == sourceRepr && edge.target() == targetRepr ) {
         if (edge.hasClass("pathHighlight")) {
-          const traversals = sourceRepr.edgesTo(targetRepr)[0].data("traversals")
-          sourceRepr.edgesTo(targetRepr)[0].data("traversals", (traversals || 0) + 1)
+          edge.data("traversals", (edge.data("traversals") || 0) + 1)
         }
       } else {
-        cy.add({
-          group: 'edges',
-          data: {
-            source: sourceRepr.id(),
-            target: targetRepr.id(),
-            traversals: edge.hasClass("pathHighlight") ? 1 : 0
+        if (sourceRepr.edgesTo(targetRepr).length > 0) {
+          if (edge.hasClass("pathHighlight")) {
+            const traversals = sourceRepr.edgesTo(targetRepr)[0].data("traversals")
+            sourceRepr.edgesTo(targetRepr)[0].data("traversals", (traversals || 0) + 1)
           }
-        })
+        } else {
+          this.add({
+            group: 'edges',
+            data: {
+              source: sourceRepr.id(),
+              target: targetRepr.id(),
+              traversals: edge.hasClass("pathHighlight") ? 1 : 0
+            }
+          })
+        }
+        this.mergedEdges.push(edge)
       }
-      edge.remove()
+    }
+    for (const element of [...this.mergedNodes, ...this.mergedEdges]) {
+      element.remove()
+    }
+    // this kinda mangles the styles, so we refresh them
+    this.style().update()
+  },
+
+  // tidy extraneous data added to existing elements by merging. Constructed
+  // nodes are removed automatically.
+  removeCFGData() {
+    let element
+    while (element = this.mergedNodes.pop()) {
+      element.restore()
+    }
+    while (element = this.mergedEdges.pop()) {
+      element.restore()
+    }
+    for (const node of this.nodes()) {
+      node.removeData("traversed")
+    }
+    for (const edge of this.edges()) {
+      edge.removeData("traversals")
     }
   }
-  for (const node of cy.nodes()) {
-    if (node.cleanMe) node.remove()
-  }
-  // this kinda mangles the styles, so we refresh them
-  cy.style().update()
 }

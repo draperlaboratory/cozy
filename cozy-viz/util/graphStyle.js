@@ -38,7 +38,7 @@ export const style = [
     }
   },
   {
-    selector: 'edge.pathHighlight',
+    selector: 'edge.pathHighlight, edge[traversals > 0]',
     style: {
       'width': 3,
       'line-color': Colors.focusedEdge,
@@ -49,18 +49,7 @@ export const style = [
     }
   },
   {
-    selector: 'edge[traversals > 0]',
-    style: {
-      'width': 3,
-      'line-color': Colors.focusedEdge,
-      'target-arrow-color': Colors.focusedEdge,
-      'target-arrow-shape': 'triangle',
-      'z-compound-depth' : 'top',
-      'curve-style': 'bezier'
-    }
-  },
-  {
-    selector: 'node.pathHighlight',
+    selector: 'node.pathHighlight, node[?traversed]',
     style: { 'background-color': Colors.focusedNode }
   },
   {

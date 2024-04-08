@@ -257,17 +257,17 @@ export default class MenuBar extends Component {
         title="Layout"
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} 
-          onClick=${() => this.resetLayout(breadthFirst,View.plain)}
+          onClick=${() => this.resetLayout(breadthFirst, View.plain)}
           selected=${props.layout.name == "breadthfirst" && props.view == View.plain}>
             Tree
         <//>
         <${MenuOption} 
-          onClick=${() => this.resetLayout(breadthFirst,View.cfg)}
+          onClick=${() => this.resetLayout(breadthFirst, View.cfg)}
           selected=${props.layout.name == "breadthfirst" && props.view == View.cfg}>
             CFG - Tree layout
         <//>
         <${MenuOption} onClick=${() => this.resetLayout()}
-          onClick=${() => this.resetLayout(cose,View.cfg)}
+          onClick=${() => this.resetLayout(cose, View.cfg)}
           selected=${props.layout.name == "cose" && props.view == View.cfg}>
             CFG - Cose layout
         <//>
