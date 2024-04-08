@@ -23,7 +23,7 @@ export const style = [
     },
   },
   { 
-    selector: "[[outdegree = 0]][!error]",
+    selector: "[[outdegree = 0]]",
     style: { 'border-width': '5px' },
   },
   {
@@ -120,7 +120,9 @@ export const style = [
   },
   {
     selector: 'node[?error]',
-    style: { 'background-color': () => settings.showingErrors
+    style: { 
+      'border-width':'0px',
+      'background-color': () => settings.showingErrors
       ? Colors.errorNode
       : Colors.defaultNode
     }
