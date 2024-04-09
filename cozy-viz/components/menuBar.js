@@ -330,6 +330,7 @@ class SearchMenu extends Component {
       cyLeft.dim()
       cyRight.dim()
     })
+    this.props.setOpen(null)
   }
 
   render(props, state) {

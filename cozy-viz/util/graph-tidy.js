@@ -92,6 +92,7 @@ export const tidyMixin = {
       if (addr in constructed) {
         this.mergedNodes.push(node)
       } else {
+        this.removePlainData(node)
         constructed[addr] = node
       }
       if (node.hasClass('pathHighlight')) constructed[addr].data('traversed', true)
@@ -128,6 +129,13 @@ export const tidyMixin = {
     }
     // this kinda mangles the styles, so we refresh them
     this.style().update()
+  },
+
+  // remove data that doesn't make sense in the CFG context
+  removePlainData(node) {
+    node.removeData('constraints')
+    node.removeData('stdout')
+    node.removeData('stderr')
   },
 
   // tidy extraneous data added to existing elements by merging. Constructed

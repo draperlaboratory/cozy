@@ -87,6 +87,19 @@ export default class App extends Component {
       alert("Please load both graphs before attempting comparison.")
       return
     }
+    if (this.state.view == View.plain) this.handlePlainClick(ev)
+    if (this.state.view == View.cfg) this.handleCFGClick(ev)
+  }
+
+  handleCFGClick(ev) {
+    if (!ev.originalEvent.shiftKey) return
+    const addr = ev.target.data('address')
+    this.resetLayout(breadthFirst, View.plain)
+    const similar = ev.target.cy().nodes(`[address=${addr}]`)
+    ev.target.cy().highlight(similar)
+  }
+
+  handlePlainClick(ev) {
 
     const isLeft = ev.target.cy() == this.cy1.cy
     const self = ev.cy
@@ -168,6 +181,8 @@ export default class App extends Component {
     this.cy1.cy.json({ elements: JSON.parse(this.cy1.orig).elements })
     this.cy2.cy.json({ elements: JSON.parse(this.cy2.orig).elements })
     // refocus all foci, and reset viewport
+    this.cy1.cy.nodes().map(node => node.ungrabify())
+    this.cy2.cy.nodes().map(node => node.ungrabify())
     this.cy1.cy.refocus().fit()
     this.cy2.cy.refocus().fit()
     this.setState({ status: Status.idle })
@@ -263,6 +278,7 @@ export default class App extends Component {
 
     // clear focus on click without target
     cy.on('click', ev => {
+      if (this.state.view == View.cfg) return
       if (!ev.target.group) {
         this.batch(() => {
           this.cy1.cy?.blur()
@@ -271,6 +287,10 @@ export default class App extends Component {
           this.tooltip.current.clearTooltip()
         })
       }
+    })
+
+    cy.on('zoom pan',() => {
+      this.tooltip.current.clearTooltip()
     })
 
     // stow graph data in reference
@@ -308,7 +328,11 @@ export default class App extends Component {
         ev.cy.container().style.cursor = "pointer"
       }
 
-      if (ev.cy.loci && !(ev.target.hasClass('pathHighlight') || ev.target.hasClass('availablePath'))) return;
+      if (ev.cy.loci && !(
+        ev.target.hasClass('pathHighlight') || 
+        ev.target.hasClass('availablePath') || 
+        ev.target.data('traversed')
+      )) return;
       this.tooltip.current.attachTo(ev.target)
     })
 
