@@ -310,7 +310,6 @@ export default class App extends Component {
         ev.cy.container().style.cursor = "pointer"
       }
 
-      if (ev.cy.loci && !(ev.target.hasClass('pathHighlight') || ev.target.hasClass('availablePath'))) return;
       this.tooltip.current.attachTo(ev.target)
     })
 
