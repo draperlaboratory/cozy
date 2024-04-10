@@ -29,6 +29,8 @@ export default class App extends Component {
       showingPostconditions: true, // we start with postconditions visible
       layout: breadthFirst, // we start with the breadthfirst layout
       view: View.plain, //we start with all nodes visible, not a CFG
+      prelabel : "prepatch",
+      postlabel : "postpatch"
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -76,7 +78,6 @@ export default class App extends Component {
           this.mountToCytoscape(obj, this.cy2)
         })
         .catch(e => console.error(e))
-
     }
   }
 
@@ -189,7 +190,16 @@ export default class App extends Component {
   }
 
   getJSON() {
-    return [this.cy1.orig, this.cy2.orig]
+    return JSON.stringify({
+      pre : {
+        data: JSON.parse(this.cy1.orig),
+        name: this.state.prelabel
+      }, 
+      post : {
+        data : JSON.parse(this.cy2.orig),
+        name: this.state.postlabel
+      }
+    })
   }
 
   tidy(opts) {
@@ -230,25 +240,31 @@ export default class App extends Component {
 
   togglePostconditions() { this.toggleView("showingPostconditions") }
 
-  async handleDrop(ev, ref) {
+  async handleDrop(ev) {
     ev.stopPropagation()
     ev.preventDefault()
-    ev.target.classList.remove("dragHover")
+    ev.currentTarget.classList.remove("dragHover")
     const file = ev.dataTransfer.files[0]
-    const raw = await file.text().then(text => JSON.parse(text))
-    this.mountToCytoscape(raw, ref)
+    const raw = await file.text().then(JSON.parse)
+    this.setState({
+      prelabel: raw.pre.name,
+      postlabel: raw.post.name,
+    })
+    this.mountToCytoscape(raw.pre.data, this.cy1)
+    this.mountToCytoscape(raw.post.data, this.cy2)
   }
 
   handleDragover(ev) {
+    console.log(ev)
     ev.stopPropagation()
     ev.preventDefault()
-    ev.target.classList.add("dragHover")
+    ev.currentTarget.classList.add("dragHover")
   }
 
   handleDragleave(ev) {
     ev.stopPropagation()
     ev.preventDefault()
-    ev.target.classList.remove("dragHover")
+    ev.currentTarget.classList.remove("dragHover")
   }
 
   mountToCytoscape(raw, ref) {
@@ -328,11 +344,6 @@ export default class App extends Component {
         ev.cy.container().style.cursor = "pointer"
       }
 
-      if (ev.cy.loci && !(
-        ev.target.hasClass('pathHighlight') || 
-        ev.target.hasClass('availablePath') || 
-        ev.target.data('traversed')
-      )) return;
       this.tooltip.current.attachTo(ev.target)
     })
 
@@ -469,21 +480,20 @@ export default class App extends Component {
         toggleAsserts=${this.toggleAsserts}
         getJSON=${this.getJSON}
       />
-      <div id="main-view">
-        <span id="labelLeft">prepatch</span>
-        <span id="labelRight">postpatch</span>
+      <div id="main-view"
+        onDragover=${this.handleDragover}
+        onDragleave=${this.handleDragleave}
+        onDrop=${ev => this.startRender(() => this.handleDrop(ev))} 
+      >
+        <span id="labelLeft">${state.prelabel}</span>
+        <span id="labelRight">${state.postlabel}</span>
         <div 
           onMouseEnter=${this.clearTooltip} 
-          onDragover=${this.handleDragover}
-          onDragleave=${this.handleDragleave}
-          onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy1))} 
-          ref=${this.cy1} id="cy1">
+          ref=${this.cy1}
+           id="cy1">
         </div>
         <div 
           onMouseEnter=${this.clearTooltip} 
-          onDragover=${this.handleDragover}
-          onDragleave=${this.handleDragleave}
-          onDrop=${ev => this.startRender(() => this.handleDrop(ev, this.cy2))}
           ref=${this.cy2} id="cy2">
         </div>
       </div>
