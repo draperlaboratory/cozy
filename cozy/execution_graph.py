@@ -66,7 +66,8 @@ def _serialized_field_diff(diff : any):
 def dump_comparison(proj_a: Project, proj_b: Project,
                     rslt_a: RunResult, rslt_b: RunResult,
                     comparison_results: analysis.Comparison,
-                    file_name_a: str, file_name_b: str,
+                    file_name_a: str = "prepatch", file_name_b: str = "postpatch",
+                    output_file: str = "cozy-result.json",
                     concrete_post_processor: Callable [[any], any] | None = None,
                     include_vex: bool = False, include_simprocs: bool = False,
                     flag_syscalls: bool = False, include_actions: bool = False,
@@ -83,8 +84,11 @@ def dump_comparison(proj_a: Project, proj_b: Project,
     :param RunResult rslt_a: The result of the first execution.
     :param RunResult rslt_b: The result of the second execution.
     :param analysis.Comparison comparison_results: The comparison we wish to dump.
-    :param str file_name_a: The filename for the JSON serializing the first execution
-    :param str file_name_b: The filename for the JSON serializing the second execution
+    :param str, optional file_name_a: A name for the prepatch binary, displayed in visualization. 
+        Default "prepatch".
+    :param str, optional file_name_b: A name for the postpatch binary, displayed in visualization.
+        Default "postpatch"
+    :param str, optional output_file: A name for generated JSON file. Default "cozy-result.json".
     :param Callable [[any],any] | None, optional concrete_post_processor: This function is used to
         post-process concretized versions of args before they are added to the
         return string. Some examples of this function include converting an integer
@@ -118,12 +122,18 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                                     include_side_effects=include_side_effects,
                                     flag_syscalls=flag_syscalls,
                                     args=args, num_examples=num_examples)
-    def write_graph(g, file_name):
-        data = json.dumps(nx.cytoscape_data(g))
-        with open(file_name, "w") as f:
-            f.write(data)
-    write_graph(g_a, file_name_a)
-    write_graph(g_b, file_name_b)
+    data = json.dumps({
+        "pre" : {
+            "name" : file_name_a,
+            "data" : nx.cytoscape_data(g_a)
+        },
+        "post" : {
+            "name" : file_name_b,
+            "data" : nx.cytoscape_data(g_b)
+        },
+    })
+    with open(output_file, "w") as f:
+        f.write(data)
 
 def visualize_comparison(proj_a: Project, proj_b: Project,
                          rslt_a: RunResult, rslt_b: RunResult,

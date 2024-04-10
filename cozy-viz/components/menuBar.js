@@ -188,11 +188,8 @@ export default class MenuBar extends Component {
         open=${state.open}
         title="Files"
         setOpen=${o => this.setOpen(o)}>
-        <${MenuOption} onClick=${() => this.saveFile(props.getJSON()[0])}>
-          Save Pre Graph
-        <//>
-        <${MenuOption} onClick=${() => this.saveFile(props.getJSON()[1])}>
-          Save Post Graph
+        <${MenuOption} onClick=${() => this.saveFile(props.getJSON())}>
+          Save Graph
         <//>
       <//>
       <${Menu} 
