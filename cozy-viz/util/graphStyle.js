@@ -49,7 +49,10 @@ export const style = [
   },
   {
     selector: 'node.pathHighlight',
-    style: { 'background-color': Colors.focusedNode }
+    style: { 
+      'background-color': Colors.focusedNode,
+      'z-compound-depth' : 'top',
+    }
   },
   {
     selector: 'node[?has_syscall]',
