@@ -10,7 +10,7 @@ import { focusMixin } from '../util/focusMixin.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
 import { tidyMixin, removeBranch } from '../util/graph-tidy.js';
-import { Status, Tidiness, View } from '../data/cozy-data.js'
+import { Status, View } from '../data/cozy-data.js'
 import { breadthFirst } from '../data/layouts.js'
 
 cytoscape.use(cytoscapeCola)
@@ -21,7 +21,6 @@ export default class App extends Component {
     super();
     this.state = {
       status: Status.unloaded, // awaiting graph data
-      tidiness: Tidiness.untidy, // we're not yet tidying anything
       layout: breadthFirst, // we start with the breadthfirst layout
       view: View.plain, //we start with all nodes visible, not a CFG
       prelabel : "prepatch",
@@ -40,6 +39,8 @@ export default class App extends Component {
     this.clearTooltip = this.clearTooltip.bind(this)
     this.resetLayout = this.resetLayout.bind(this)
     this.getJSON = this.getJSON.bind(this)
+
+    this.viewMenu = createRef()
 
     window.app = this
   }
@@ -167,17 +168,6 @@ export default class App extends Component {
     }
   }
 
-  refresh() {
-    this.cy1.cy.json({ elements: JSON.parse(this.cy1.orig).elements })
-    this.cy2.cy.json({ elements: JSON.parse(this.cy2.orig).elements })
-    // refocus all foci, and reset viewport
-    this.cy1.cy.nodes().map(node => node.ungrabify())
-    this.cy2.cy.nodes().map(node => node.ungrabify())
-    this.cy1.cy.refocus().fit()
-    this.cy2.cy.refocus().fit()
-    this.setState({ status: Status.idle })
-  }
-
   getJSON() {
     return JSON.stringify({
       pre : {
@@ -191,21 +181,17 @@ export default class App extends Component {
     })
   }
 
-  tidy(opts) {
-    // merge similar nodes
-    this.cy1.cy.tidy(opts)
-    this.cy2.cy.tidy(opts)
-    // remove all foci, and reset viewport
-    this.cy1.cy.refocus().fit()
-    this.cy2.cy.refocus().fit()
+
+  setStatus(status) { this.setState({ status }) }
+
+  regenerateFocus() {
     this.setState({ 
-      status: Status.idle,
       leftFocus: this.state.leftFocus ? {... this.state.leftFocus} : null,
       rightFocus: this.state.rightFocus ? {... this.state.rightFocus} : null,
-      // we regenerate the focus, 
-      // so that the assembly diff is regenerated, 
-      // so that its lines are properly mapped on to the merged nodes,
     })
+    // we sometimes need to regenerate focus, 
+    // so that the assembly diff is regenerated, 
+    // so that its lines are properly mapped on to the merged nodes.
   }
 
 
@@ -331,31 +317,6 @@ export default class App extends Component {
     this.cy2.cy?.endBatch()
   }
 
-  setTidiness(tidiness) {
-    switch (tidiness) {
-      case Tidiness.untidy: {
-        this.refresh()
-        break;
-      }
-      case Tidiness.tidy: {
-        // technically we could hold off on the refresh here unless we're
-        // already veryTidy, but that's probably a premature optimization
-        this.batch(() => {
-          this.refresh()
-          this.tidy({})
-        })
-        break;
-      }
-      case Tidiness.veryTidy: {
-        this.batch(() => {
-          this.refresh()
-          this.tidy({ mergeConstraints: true })
-        })
-        break;
-      }
-    }
-    this.setState({ tidiness, status: Status.idle })
-  }
 
   resetLayout(layout, view) {
     this.setState(oldState => {
@@ -369,7 +330,7 @@ export default class App extends Component {
           //we're going from View.cfg to View.plain
           this.cy1.cy.removeCFGData()
           this.cy2.cy.removeCFGData()
-          this.setTidiness(this.state.tidiness)
+          this.viewMenu.current.retidy()
         } else {
           //no view given, we're just recomputing the view,
           view = oldState.view
@@ -413,7 +374,7 @@ export default class App extends Component {
   }
 
   unprune() {
-    this.setTidiness(this.state.tidiness)
+    this.viewMenu.current.retidy()
     this.updateLayout()
   }
 
@@ -423,28 +384,19 @@ export default class App extends Component {
     return html`
       <${Tooltip} ref=${this.tooltip}/>
       <${MenuBar} 
-        setTidiness=${level => this.startRender(() => {
-          this.setTidiness(level); this.updateLayout()
-        })}
         cyLeft=${this.cy1}
         cyRight=${this.cy2}
         prune=${this.prune}
         unprune=${this.unprune}
         view=${state.view}
         layout=${state.layout}
+        regenerateFocus=${() => this.regenerateFocus()}
         resetLayout=${this.resetLayout}
+        updateLayout=${layout => this.updateLayout(layout)}
         tidiness=${state.tidiness}
         status=${state.status}
-        showingSyscalls=${state.showingSyscalls}
-        showingSimprocs=${state.showingSimprocs}
-        showingErrors=${state.showingErrors}
-        showingAsserts=${state.showingAsserts}
-        showingPostconditions=${state.showingPostconditions}
-        toggleSyscalls=${this.toggleSyscalls}
-        toggleSimprocs=${this.toggleSimprocs}
-        toggleErrors=${this.toggleErrors}
-        togglePostconditions=${this.togglePostconditions}
-        toggleAsserts=${this.toggleAsserts}
+        batch=${cb => this.batch(cb)}
+        viewMenu=${this.viewMenu}
         getJSON=${this.getJSON}
       />
       <div id="main-view"

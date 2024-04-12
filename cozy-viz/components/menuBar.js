@@ -196,12 +196,15 @@ export default class MenuBar extends Component {
         <//>
       <//>
       <${ViewMenu}
+        ref=${props.viewMenu}
         enabled=${enabled && props.view == View.plain} 
-        setTidiness=${t => this.setTidiness(t)}
         tidiness=${props.tidiness}
         cyLeft=${props.cyLeft}
         cyRight=${props.cyRight}
         open=${state.open}
+        regenerateFocus=${props.regenerateFocus}
+        updateLayout=${props.updateLayout}
+        batch=${props.batch}
         setOpen=${o => this.setOpen(o)}
       />
       <${PruneMenu} 
@@ -387,6 +390,7 @@ class ViewMenu extends Component {
       showingErrors: true, // we start with errors visible
       showingAsserts: true, // we start with asserts visible
       showingPostconditions: true, // we start with postconditions visible
+      tidiness: Tidiness.untidy, // we're not yet tidying anything
     }
     this.toggleErrors = this.toggleErrors.bind(this)
     this.togglePostconditions = this.togglePostconditions.bind(this)
@@ -394,6 +398,39 @@ class ViewMenu extends Component {
     this.toggleSyscalls = this.toggleSyscalls.bind(this)
     this.toggleSimprocs = this.toggleSimprocs.bind(this)
     this.toggleAsserts = this.toggleAsserts.bind(this)
+  }
+
+  retidy() {
+    this.setTidiness(this.state.tidiness)
+  }
+
+  setTidiness(tidiness) {
+    this.props.batch(() => {
+      this.props.cyLeft.cy.json({ elements: JSON.parse(this.props.cyLeft.orig).elements })
+      this.props.cyRight.cy.json({ elements: JSON.parse(this.props.cyRight.orig).elements })
+      // refocus all foci, and reset viewport
+      this.props.cyLeft.cy.nodes().map(node => node.ungrabify())
+      this.props.cyRight.cy.nodes().map(node => node.ungrabify())
+      this.props.cyLeft.cy.refocus().fit()
+      this.props.cyRight.cy.refocus().fit()
+      switch (tidiness) {
+        case Tidiness.untidy: break;
+        case Tidiness.tidy: this.tidy({}); break;
+        case Tidiness.veryTidy: this.tidy({ mergeConstraints: true }); break;
+      }
+      this.setState({ tidiness })
+      this.props.updateLayout()
+    })
+  }
+
+  tidy(opts) {
+    // merge similar nodes
+    this.props.cyLeft.cy.tidy(opts)
+    this.props.cyRight.cy.tidy(opts)
+    // remove all foci, and reset viewport
+    this.props.cyLeft.cy.refocus().fit()
+    this.props.cyRight.cy.refocus().fit()
+    this.props.regenerateFocus()
   }
 
   toggleView(type) {
@@ -424,18 +461,18 @@ class ViewMenu extends Component {
         title="View"
         setOpen=${o => props.setOpen(o)}>
         <${MenuOption} 
-          onClick=${() => props.setTidiness(Tidiness.untidy)}
-          selected=${props.tidiness == Tidiness.untidy}>
+          onClick=${() => this.setTidiness(Tidiness.untidy)}
+          selected=${state.tidiness == Tidiness.untidy}>
             Show All Blocks
         <//>
         <${MenuOption} 
-          onClick=${() => props.setTidiness(Tidiness.tidy)}
-          selected=${props.tidiness == Tidiness.tidy}>
+          onClick=${() => this.setTidiness(Tidiness.tidy)}
+          selected=${state.tidiness == Tidiness.tidy}>
             Merge Unless Constaints Change
         <//>
         <${MenuOption} 
-          onClick=${() => props.setTidiness(Tidiness.veryTidy)}
-          selected=${props.tidiness == Tidiness.veryTidy}>
+          onClick=${() => this.setTidiness(Tidiness.veryTidy)}
+          selected=${state.tidiness == Tidiness.veryTidy}>
             Merge Unless Branching Occurs
         <//>
         <hr/>
