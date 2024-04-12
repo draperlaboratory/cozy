@@ -2,6 +2,7 @@ import { computePosition } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import { Status, Tidiness } from '../data/cozy-data.js'
+import * as GraphStyle from '../util/graphStyle.js';
 import Colors from '../data/colors.js'
 import { View } from '../data/cozy-data.js'
 import { breadthFirst, cola, cose } from '../data/layouts.js'
@@ -194,53 +195,15 @@ export default class MenuBar extends Component {
           Save Graph
         <//>
       <//>
-      <${Menu}
-        enabled=${enabled && props.view == View.plain}
+      <${ViewMenu}
+        enabled=${enabled && props.view == View.plain} 
+        setTidiness=${t => this.setTidiness(t)}
+        tidiness=${props.tidiness}
+        cyLeft=${props.cyLeft}
+        cyRight=${props.cyRight}
         open=${state.open}
-        title="View"
-        setOpen=${o => this.setOpen(o)}>
-        <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.untidy)}
-          selected=${props.tidiness == Tidiness.untidy}>
-            Show All Blocks
-        <//>
-        <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.tidy)}
-          selected=${props.tidiness == Tidiness.tidy}>
-            Merge Unless Constaints Change
-        <//>
-        <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.veryTidy)}
-          selected=${props.tidiness == Tidiness.veryTidy}>
-            Merge Unless Branching Occurs
-        <//>
-        <hr/>
-        <${MenuOption} 
-          onClick=${props.toggleSyscalls}
-          selected=${props.showingSyscalls}>
-            <${MenuBadge} color=${Colors.focusedSyscallNode}/> Show Syscalls
-        <//>
-        <${MenuOption} 
-          onClick=${props.toggleSimprocs}
-          selected=${props.showingSimprocs}>
-            <${MenuBadge} color=${Colors.focusedSimprocNode}/> Show SimProcedure calls
-        <//>
-        <${MenuOption} 
-          onClick=${props.toggleErrors}
-          selected=${props.showingErrors}>
-            <${MenuBadge} color=${Colors.focusedErrorNode}/> Show Errors
-        <//>
-        <${MenuOption} 
-          onClick=${props.toggleAsserts}
-          selected=${props.showingAsserts}>
-            <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
-        <//>
-        <${MenuOption} 
-          onClick=${props.togglePostconditions}
-          selected=${props.showingPostconditions}>
-            <${MenuBadge} color=${Colors.focusedPostconditionNode}/> Show Postcondition failures
-        <//>
-      <//>
+        setOpen=${o => this.setOpen(o)}
+      />
       <${PruneMenu} 
         enabled=${enabled && props.view == View.plain} 
         prune=${props.prune}
@@ -410,6 +373,96 @@ class PruneMenu extends Component {
             onClick=${e => e.stopPropagation()}
             onInput=${e => this.debounceRegex(e)} 
             value=${state.pruningRegex}/>
+        <//>
+      <//>`
+  }
+}
+
+class ViewMenu extends Component {
+  constructor() {
+    super()
+    this.state = {
+      showingSyscalls: true, // we start with syscalls visible
+      showingSimprocs: true, // we start with SimProcedure calls visible
+      showingErrors: true, // we start with errors visible
+      showingAsserts: true, // we start with asserts visible
+      showingPostconditions: true, // we start with postconditions visible
+    }
+    this.toggleErrors = this.toggleErrors.bind(this)
+    this.togglePostconditions = this.togglePostconditions.bind(this)
+    this.toggleView = this.toggleView.bind(this)
+    this.toggleSyscalls = this.toggleSyscalls.bind(this)
+    this.toggleSimprocs = this.toggleSimprocs.bind(this)
+    this.toggleAsserts = this.toggleAsserts.bind(this)
+  }
+
+  toggleView(type) {
+    this.setState(oldState => {
+      GraphStyle.settings[type] = !oldState[type];
+      this.props.cyLeft.cy.style().update()
+      this.props.cyRight.cy.style().update()
+      return { 
+        [type]: !oldState[type]
+      }
+    })
+  }
+
+  toggleSyscalls() { this.toggleView("showingSyscalls") }
+
+  toggleSimprocs() { this.toggleView("showingSimprocs") }
+
+  toggleErrors() { this.toggleView("showingErrors") }
+
+  toggleAsserts() { this.toggleView("showingAsserts") }
+
+  togglePostconditions() { this.toggleView("showingPostconditions") }
+
+  render (props, state) {
+      return html`<${Menu}
+        enabled=${props.enabled}
+        open=${props.open}
+        title="View"
+        setOpen=${o => props.setOpen(o)}>
+        <${MenuOption} 
+          onClick=${() => props.setTidiness(Tidiness.untidy)}
+          selected=${props.tidiness == Tidiness.untidy}>
+            Show All Blocks
+        <//>
+        <${MenuOption} 
+          onClick=${() => props.setTidiness(Tidiness.tidy)}
+          selected=${props.tidiness == Tidiness.tidy}>
+            Merge Unless Constaints Change
+        <//>
+        <${MenuOption} 
+          onClick=${() => props.setTidiness(Tidiness.veryTidy)}
+          selected=${props.tidiness == Tidiness.veryTidy}>
+            Merge Unless Branching Occurs
+        <//>
+        <hr/>
+        <${MenuOption} 
+          onClick=${this.toggleSyscalls}
+          selected=${state.showingSyscalls}>
+            <${MenuBadge} color=${Colors.focusedSyscallNode}/> Show Syscalls
+        <//>
+        <${MenuOption} 
+          onClick=${this.toggleSimprocs}
+          selected=${state.showingSimprocs}>
+            <${MenuBadge} color=${Colors.focusedSimprocNode}/> Show SimProcedure calls
+        <//>
+        <${MenuOption} 
+          onClick=${this.toggleErrors}
+          selected=${state.showingErrors}>
+            <${MenuBadge} color=${Colors.focusedErrorNode}/> Show Errors
+        <//>
+        <${MenuOption} 
+          onClick=${this.toggleAsserts}
+          selected=${state.showingAsserts}>
+            <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
+        <//>
+        <${MenuOption} 
+          onClick=${this.togglePostconditions}
+          selected=${state.showingPostconditions}>
+            <${MenuBadge} color=${Colors.focusedPostconditionNode}/> Show Postcondition failures
         <//>
       <//>`
   }

@@ -22,11 +22,6 @@ export default class App extends Component {
     this.state = {
       status: Status.unloaded, // awaiting graph data
       tidiness: Tidiness.untidy, // we're not yet tidying anything
-      showingSyscalls: true, // we start with syscalls visible
-      showingSimprocs: true, // we start with SimProcedure calls visible
-      showingErrors: true, // we start with errors visible
-      showingAsserts: true, // we start with asserts visible
-      showingPostconditions: true, // we start with postconditions visible
       layout: breadthFirst, // we start with the breadthfirst layout
       view: View.plain, //we start with all nodes visible, not a CFG
       prelabel : "prepatch",
@@ -44,12 +39,6 @@ export default class App extends Component {
     this.handleDragover = this.handleDragover.bind(this)
     this.clearTooltip = this.clearTooltip.bind(this)
     this.resetLayout = this.resetLayout.bind(this)
-    this.toggleErrors = this.toggleErrors.bind(this)
-    this.togglePostconditions = this.togglePostconditions.bind(this)
-    this.toggleView = this.toggleView.bind(this)
-    this.toggleSyscalls = this.toggleSyscalls.bind(this)
-    this.toggleSimprocs = this.toggleSimprocs.bind(this)
-    this.toggleAsserts = this.toggleAsserts.bind(this)
     this.getJSON = this.getJSON.bind(this)
 
     window.app = this
@@ -219,26 +208,6 @@ export default class App extends Component {
     })
   }
 
-  toggleView(type) {
-    this.setState(oldState => {
-      GraphStyle.settings[type] = !oldState[type];
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return { 
-        [type]: !oldState[type]
-      }
-    })
-  }
-
-  toggleSyscalls() { this.toggleView("showingSyscalls") }
-
-  toggleSimprocs() { this.toggleView("showingSimprocs") }
-
-  toggleErrors() { this.toggleView("showingErrors") }
-
-  toggleAsserts() { this.toggleView("showingAsserts") }
-
-  togglePostconditions() { this.toggleView("showingPostconditions") }
 
   async handleDrop(ev) {
     ev.stopPropagation()
@@ -363,8 +332,6 @@ export default class App extends Component {
   }
 
   setTidiness(tidiness) {
-    // we insert a few milliseconds delay to allow for prior state updates to
-    // render
     switch (tidiness) {
       case Tidiness.untidy: {
         this.refresh()
