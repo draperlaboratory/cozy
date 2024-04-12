@@ -404,7 +404,7 @@ export default class App extends Component {
   }
 
   unprune() {
-    this.setTidiness(this.state.tidiness)
+    return this.setTidiness(this.state.tidiness)
   }
 
   render(_props, state) {

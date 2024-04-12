@@ -334,20 +334,16 @@ class PruneMenu extends Component {
       pruningDoRegex: false,
       pruningRegex: ".*",
     }
+    this.prune.bind(this)
   }
 
-  prune() {
-    // I think the user expectation is going to be that with nothing selected,
-    // nothing is pruned. But once something is selected, the more pruning
-    // requirements we add, the less we prune
-    let test = () =>
-      this.state.pruningMemory
-      || this.state.pruningStdout
-      || this.state.pruningRegisters
-      || this.state.pruningCorrect
-      || this.state.pruningDoRegex
+  async prune() {
+    await this.props.unprune()
+    // true means "prune"
+    let test = () => false
 
-    const extendTest = (f, g) => (l, r) => f(l, r) && g(l, r)
+    // So the more tests are added disjunctively, the more branches will be pruned
+    const extendTest = (f, g) => (l, r) => f(l, r) || g(l, r)
 
     if (this.state.pruningMemory) test = extendTest(noMemoryDiffs, test)
     if (this.state.pruningStdout) test = extendTest(noStdDiffs, test)
@@ -356,16 +352,12 @@ class PruneMenu extends Component {
     if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
 
     this.props.prune(test)
-    this.props.setOpen(null)
+  }
 
-    this.setState({
-      pruningMemory: false,
-      pruningStdout: false,
-      pruningRegisters: false,
-      pruningCorrect: false,
-      pruningDoRegex: false,
-      pruningRegex: ".*"
-    })
+  debounceRegex(e) {
+    this.setState({ pruningRegex: e.target.value })
+    clearTimeout(this.regexDebounceTimeout)
+    this.regexDebounceTimeout = setTimeout(() => this.prune(), 1000)
   }
 
   render(props, state) { 
@@ -374,30 +366,23 @@ class PruneMenu extends Component {
         open=${props.open}
         title="Prune"
         setOpen=${o => props.setOpen(o)}>
-        <${MenuOption} onClick=${() => this.setState({ pruningMemory: !state.pruningMemory })}>
+        <${MenuOption} onClick=${() => this.setState({ pruningMemory: !state.pruningMemory },this.prune)}>
           <input type="checkbox" checked=${state.pruningMemory}/> Identical Memory
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningRegisters: !state.pruningRegisters })}>
+        <${MenuOption} onClick=${() => this.setState({ pruningRegisters: !state.pruningRegisters },this.prune)}>
           <input type="checkbox" checked=${state.pruningRegisters}/> Identical Register Contents 
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningStdout: !state.pruningStdout })}>
+        <${MenuOption} onClick=${() => this.setState({ pruningStdout: !state.pruningStdout }, this.prune)}>
           <input type="checkbox" checked=${state.pruningStdout}/> Identical Stdout/Stderr
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningCorrect: !state.pruningCorrect })}>
+        <${MenuOption} onClick=${() => this.setState({ pruningCorrect: !state.pruningCorrect }, this.prune)}>
           <input type="checkbox" checked=${state.pruningCorrect}/> Error-free
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningDoRegex: !state.pruningDoRegex })}>
+        <${MenuOption} onClick=${() => this.setState({ pruningDoRegex: !state.pruningDoRegex }, this.prune)}>
           <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
             onClick=${e => e.stopPropagation()}
-            onInput=${e => this.setState({ pruningRegex: e.target.value })} 
+            onInput=${e => this.debounceRegex(e)} 
             value=${state.pruningRegex}/>
-        <//>
-        <hr/>
-        <${MenuOption} onClick=${() => this.prune()}>
-          Prune branches matching all conditions above
-        <//>
-        <${MenuOption} onClick=${() => { props.unprune(); props.setOpen(null) }}>
-          Revert All Pruning
         <//>
       <//>`
   }
