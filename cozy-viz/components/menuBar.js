@@ -6,6 +6,7 @@ import * as GraphStyle from '../util/graphStyle.js';
 import Colors from '../data/colors.js'
 import { View } from '../data/cozy-data.js'
 import { breadthFirst, cola, cose } from '../data/layouts.js'
+import { removeBranch } from '../util/graph-tidy.js';
 
 // this should be mounted and unmounted rather than toggled; adding and removing
 // the event-listener for closing the menu should be part of the mount/unmount
@@ -199,18 +200,22 @@ export default class MenuBar extends Component {
         ref=${props.viewMenu}
         enabled=${enabled && props.view == View.plain} 
         tidiness=${props.tidiness}
+        pruneMenu=${props.pruneMenu}
         cyLeft=${props.cyLeft}
         cyRight=${props.cyRight}
         open=${state.open}
         regenerateFocus=${props.regenerateFocus}
-        updateLayout=${props.updateLayout}
+        refreshLayout=${props.refreshLayout}
         batch=${props.batch}
         setOpen=${o => this.setOpen(o)}
       />
       <${PruneMenu} 
+        ref=${props.pruneMenu}
         enabled=${enabled && props.view == View.plain} 
-        prune=${props.prune}
-        unprune=${props.unprune}
+        viewMenu=${props.viewMenu}
+        cyLeft=${props.cyLeft}
+        cyRight=${props.cyRight}
+        refreshLayout=${props.refreshLayout}
         open=${state.open}
         setOpen=${o => this.setOpen(o)}
       />
@@ -329,9 +334,37 @@ class PruneMenu extends Component {
     }
     this.prune.bind(this)
   }
+  
+  // prune all branches whose compatibilities all fail some test (e.g. all have
+  // the same memory contents as the given branch)
+  prune(test) {
+    const leaves1 = this.props.cyLeft.cy.nodes().leaves()
+    const leaves2 = this.props.cyRight.cy.nodes().leaves()
+    for (const leaf of [...leaves1, ...leaves2]) {
+      let flag = true
+      let other = leaf.cy() == this.props.cyLeft.cy ? this.props.cyRight.cy : this.props.cyLeft.cy
+      for (const key in leaf.data().compatibilities) {
+        const otherleaf = other.nodes(`#${key}`)
+        if (otherleaf.length == 0) continue
+        flag &&= test(leaf, otherleaf)
+      }
+      if (flag) removeBranch(leaf)
+    }
+    this.props.cyLeft.cy.refocus()
+    this.props.cyRight.cy.refocus()
+  }
 
-  prune() {
-    this.props.unprune()
+  setPrune(update) {
+    this.setState(update, () => {
+      // we retidy before we set a pruning level to get a clean slate, in case
+      // we're actually removing some pruning
+      this.props.viewMenu.current.retidy()
+      this.props.refreshLayout()
+      this.doPrune()
+    })
+  }
+
+  doPrune() {
     // true means "prune"
     let test = () => false
 
@@ -344,13 +377,13 @@ class PruneMenu extends Component {
     if (this.state.pruningCorrect) test = extendTest(noErrors, test)
     if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
 
-    this.props.prune(test)
+    this.prune(test)
   }
 
   debounceRegex(e) {
     this.setState({ pruningRegex: e.target.value })
     clearTimeout(this.regexDebounceTimeout)
-    this.regexDebounceTimeout = setTimeout(() => this.prune(), 1000)
+    this.regexDebounceTimeout = setTimeout(() => this.purePrune(), 1000)
   }
 
   render(props, state) { 
@@ -359,19 +392,19 @@ class PruneMenu extends Component {
         open=${props.open}
         title="Prune"
         setOpen=${o => props.setOpen(o)}>
-        <${MenuOption} onClick=${() => this.setState({ pruningMemory: !state.pruningMemory },this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningMemory: !state.pruningMemory })}>
           <input type="checkbox" checked=${state.pruningMemory}/> Identical Memory
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningRegisters: !state.pruningRegisters },this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningRegisters: !state.pruningRegisters })}>
           <input type="checkbox" checked=${state.pruningRegisters}/> Identical Register Contents 
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningStdout: !state.pruningStdout }, this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningStdout: !state.pruningStdout })}>
           <input type="checkbox" checked=${state.pruningStdout}/> Identical Stdout/Stderr
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningCorrect: !state.pruningCorrect }, this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningCorrect: !state.pruningCorrect })}>
           <input type="checkbox" checked=${state.pruningCorrect}/> Error-free
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningDoRegex: !state.pruningDoRegex }, this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningDoRegex: !state.pruningDoRegex })}>
           <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
             onClick=${e => e.stopPropagation()}
             onInput=${e => this.debounceRegex(e)} 
@@ -400,6 +433,15 @@ class ViewMenu extends Component {
     this.toggleAsserts = this.toggleAsserts.bind(this)
   }
 
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.tidiness !== this.state.tidiness) {
+      // when we actually change tidiness, we need to clean up the layout
+      // afterwards and reapply any pruning
+      this.props.pruneMenu.current.doPrune()
+      this.props.refreshLayout()
+    }
+  }
+
   retidy() {
     this.setTidiness(this.state.tidiness)
   }
@@ -419,7 +461,6 @@ class ViewMenu extends Component {
         case Tidiness.veryTidy: this.tidy({ mergeConstraints: true }); break;
       }
       this.setState({ tidiness })
-      this.props.updateLayout()
     })
   }
 

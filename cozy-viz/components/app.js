@@ -32,8 +32,6 @@ export default class App extends Component {
     this.cy2.other = this.cy1
     this.tooltip = createRef()
 
-    this.prune = this.prune.bind(this)
-    this.unprune = this.unprune.bind(this)
     this.handleDragleave = this.handleDragleave.bind(this)
     this.handleDragover = this.handleDragover.bind(this)
     this.clearTooltip = this.clearTooltip.bind(this)
@@ -41,6 +39,7 @@ export default class App extends Component {
     this.getJSON = this.getJSON.bind(this)
 
     this.viewMenu = createRef()
+    this.pruneMenu = createRef()
 
     window.app = this
   }
@@ -210,7 +209,6 @@ export default class App extends Component {
   }
 
   handleDragover(ev) {
-    console.log(ev)
     ev.stopPropagation()
     ev.preventDefault()
     ev.currentTarget.classList.add("dragHover")
@@ -317,9 +315,10 @@ export default class App extends Component {
     this.cy2.cy?.endBatch()
   }
 
-
   resetLayout(layout, view) {
     this.setState(oldState => {
+      this.cy1.currentLayout.stop()
+      this.cy2.currentLayout.stop()
       layout = layout ?? oldState.layout
       if (view != oldState.view) {
         if (view == View.cfg) {
@@ -330,53 +329,31 @@ export default class App extends Component {
           //we're going from View.cfg to View.plain
           this.cy1.cy.removeCFGData()
           this.cy2.cy.removeCFGData()
+          // we need to restore the tidiness level and the pruning to the
+          // reconstucted graph
           this.viewMenu.current.retidy()
+          this.pruneMenu.current.doPrune()
         } else {
           //no view given, we're just recomputing the view,
           view = oldState.view
         }
       }
-      this.updateLayout(layout)
+      this.cy1.currentLayout = this.cy1.cy.layout(layout).run()
+      this.cy2.currentLayout = this.cy2.cy.layout(layout).run()
 
       return {view, layout}
     })
   }
 
-  updateLayout(layout) {
-    layout = layout || this.state.layout
-    this.cy1.currentLayout.stop()
-    this.cy2.currentLayout.stop()
-    this.cy1.currentLayout = this.cy1.cy.layout(layout).run()
-    this.cy2.currentLayout = this.cy2.cy.layout(layout).run()
+  refreshLayout() {
+    this.cy1.currentLayout = this.cy1.cy.layout(this.state.layout).run()
+    this.cy2.currentLayout = this.cy2.cy.layout(this.state.layout).run()
   }
 
   clearTooltip() {
     this.tooltip.current.clearTooltip()
   }
 
-  // prune all branches whose compatibilities all fail some test (e.g. all have
-  // the same memory contents as the given branch)
-  prune(test) {
-    const leaves1 = this.cy1.cy.nodes().leaves()
-    const leaves2 = this.cy2.cy.nodes().leaves()
-    for (const leaf of [...leaves1, ...leaves2]) {
-      let flag = true
-      let other = leaf.cy() == this.cy1.cy ? this.cy2.cy : this.cy1.cy
-      for (const key in leaf.data().compatibilities) {
-        const otherleaf = other.nodes(`#${key}`)
-        if (otherleaf.length == 0) continue
-        flag &&= test(leaf, otherleaf)
-      }
-      if (flag) removeBranch(leaf)
-    }
-    this.cy1.cy.refocus()
-    this.cy2.cy.refocus()
-  }
-
-  unprune() {
-    this.viewMenu.current.retidy()
-    this.updateLayout()
-  }
 
   render(_props, state) {
     // TODO I could get rid of a lot of lambdas here if I properly bound "this"
@@ -386,17 +363,16 @@ export default class App extends Component {
       <${MenuBar} 
         cyLeft=${this.cy1}
         cyRight=${this.cy2}
-        prune=${this.prune}
-        unprune=${this.unprune}
         view=${state.view}
         layout=${state.layout}
         regenerateFocus=${() => this.regenerateFocus()}
         resetLayout=${this.resetLayout}
-        updateLayout=${layout => this.updateLayout(layout)}
+        refreshLayout=${() => this.refreshLayout()}
         tidiness=${state.tidiness}
         status=${state.status}
         batch=${cb => this.batch(cb)}
         viewMenu=${this.viewMenu}
+        pruneMenu=${this.pruneMenu}
         getJSON=${this.getJSON}
       />
       <div id="main-view"
