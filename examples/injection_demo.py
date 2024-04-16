@@ -190,7 +190,14 @@ def concrete_post_processor(args):
         return [chr(n.concrete_value) if (n.concrete_value >= 32 and n.concrete_value <= 126) else n.concrete_value for n in characters]
     return [transform_str(cs) for cs in args]
 
-comparison = cozy.analysis.Comparison(prepatched_results, postpatched_results)
+comparison = cozy.analysis.Comparison(prepatched_results, postpatched_results, use_unsat_core=False)
+
+cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched,
+                                     prepatched_results, postpatched_results,
+                                     comparison, first_prog, second_prog,
+                                     concrete_post_processor=concrete_post_processor,
+                                     args=[command_symbols, role_symbols, data_symbols],
+                                     num_examples=2)
 
 cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
                                           prepatched_results, postpatched_results,

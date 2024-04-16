@@ -20,6 +20,9 @@ proj_postpatched.add_prototype(onMessageLength_mangled, onMessageLength_prototyp
 proj_tob_patch = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp_tob.so")
 proj_tob_patch.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
+proj_tob_no_fail_check_patch = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp_tob_no_fail_check.so")
+proj_tob_no_fail_check_patch.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
+
 # size is a symbolic variable that ends up being passed to the onMessageLength function. This symbolic variable
 # determines the size of the message that's going to be read. The goal is to make size be sufficiently small
 # so we don't run out of memory allocating a block to store the incoming message
@@ -87,6 +90,9 @@ proj_tob_patch.hook_symbol(connectionRead_mangled, connectionRead_hook)
 #proj_tob_patch.angr_proj.hook(proj_tob_patch.find_symbol_addr("epoll_ctl") + 0x180, sysinfo_hook())
 proj_tob_patch.hook_symbol("_ZNSt9basic_iosIcSt11char_traitsIcEE4initEPSt15basic_streambufIcS1_E", sysinfo_hook)
 
+proj_tob_no_fail_check_patch.hook_symbol(connectionRead_mangled, connectionRead_hook)
+proj_tob_no_fail_check_patch.hook_symbol("_ZNSt9basic_iosIcSt11char_traitsIcEE4initEPSt15basic_streambufIcS1_E", sysinfo_hook)
+
 def run(sess):
     len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C, info_str="Requested size is too large!")
     sess.add_directives(len_too_big)
@@ -133,9 +139,9 @@ def run_postpatched():
     sess = proj_postpatched.session(onMessageLength_mangled)
     return run(sess)
 
-def run_tob_patched():
+def run_tob_patched(proj):
     print("Running TOB postpatched")
-    sess = proj_tob_patch.session(onMessageLength_mangled)
+    sess = proj.session(onMessageLength_mangled)
 
     #len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x1C8, info_str="Requested size is too large!")
     len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C,
@@ -179,7 +185,8 @@ def run_tob_patched():
 pre_patched_results = run_prepatched()
 attempted_patch_results = run_attempted_patch()
 post_patched_results = run_postpatched()
-tob_patched_results = run_tob_patched()
+tob_patched_results = run_tob_patched(proj_tob_patch)
+tob_no_fail_check_results = run_tob_patched(proj_tob_no_fail_check_patch)
 
 args = {"size": size, "totalram": totalram, "freeram": freeram, "sysinfo_succeeded": sysinfo_succeded}
 
@@ -203,12 +210,22 @@ elif input("Would you like to visualize the pre-patch vs the post-patch? (y/n)")
                                               comparison_results,
                                               args=args,
                                               num_examples=2, open_browser=True)
-elif input("Would you like to visualize the pre-patch vs Trail of Bits patch? (y/n)") == "y":
+elif input("Would you like to visualize the pre-patch vs Trail of Bits (with fail check) patch? (y/n)") == "y":
     comparison_results = cozy.analysis.Comparison(pre_patched_results, tob_patched_results)
     print("\nComparison Results, pre-patch vs post-patch:\n")
     print(comparison_results.report(args))
     cozy.execution_graph.visualize_comparison(proj_prepatched, proj_tob_patch,
                                               pre_patched_results, tob_patched_results,
+                                              comparison_results,
+                                              include_actions=True,
+                                              args=args,
+                                              num_examples=2, open_browser=True)
+elif input("Would you like to visualize the pre-patch vs Trail of Bits (without fail check) patch? (y/n)") == "y":
+    comparison_results = cozy.analysis.Comparison(pre_patched_results, tob_no_fail_check_results)
+    print("\nComparison Results, pre-patch vs post-patch:\n")
+    print(comparison_results.report(args))
+    cozy.execution_graph.visualize_comparison(proj_prepatched, proj_tob_no_fail_check_patch,
+                                              pre_patched_results, tob_no_fail_check_results,
                                               comparison_results,
                                               include_actions=True,
                                               args=args,
