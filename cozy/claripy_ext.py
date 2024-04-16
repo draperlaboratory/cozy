@@ -58,6 +58,8 @@ def model(constraints,
                     return claripy.BVV(0, sym.length)
                 elif sym.op == "FPS":
                     return claripy.FPV(0.0, sym.sort)
+                elif sym.op == "BoolS":
+                    return claripy.BoolV(False)
                 else:
                     raise ValueError("Unsupported op")
 
@@ -66,6 +68,8 @@ def model(constraints,
                     return claripy.BVV(v, sym.length)
                 elif sym.op == "FPS":
                     return claripy.FPV(v, sym.sort)
+                elif sym.op == "BoolS":
+                    return claripy.BoolV(v)
                 else:
                     raise ValueError("Unsupported op")
 

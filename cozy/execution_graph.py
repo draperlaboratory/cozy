@@ -273,7 +273,15 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                     concrete_args = [concrete_post_processor(x.args) for x in concretion]
                 else:
                     concrete_args = [x.args for x in concretion]
-                concrete_args = fmap(concrete_args, lambda x: x.concrete_value if isinstance(x, claripy.ast.Bits) else x)
+
+                def f(x):
+                    if isinstance(x, claripy.ast.Bits):
+                        return x.concrete_value
+                    elif isinstance(x, claripy.ast.Bool):
+                        return x.args[0]
+                    else:
+                        return x
+                concrete_args = fmap(concrete_args, f)
 
                 conc_sediff = []
 
