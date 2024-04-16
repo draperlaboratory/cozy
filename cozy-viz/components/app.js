@@ -2,20 +2,18 @@ import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import cytoscape from "https://cdn.jsdelivr.net/npm/cytoscape@3.26.0/+esm"
+import cytoscapeCola from 'https://cdn.jsdelivr.net/npm/cytoscape-cola@2.5.1/+esm'
 import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
-import { tidyGraph, removeBranch } from '../util/graph-tidy.js';
-import { Status, Tidiness } from '../data/cozy-data.js'
+import { tidyMixin, removeBranch } from '../util/graph-tidy.js';
+import { Status, View } from '../data/cozy-data.js'
+import { breadthFirst } from '../data/layouts.js'
 
-const standardLayout = {
-  name: 'breadthfirst',
-  directed: true,
-  spacingFactor: 2
-}
+cytoscape.use(cytoscapeCola)
 
 export default class App extends Component {
 
@@ -23,12 +21,8 @@ export default class App extends Component {
     super();
     this.state = {
       status: Status.unloaded, // awaiting graph data
-      tidiness: Tidiness.untidy, // we're not yet tidying anything
-      showingSyscalls: true, // we start with syscalls visible
-      showingSimprocs: true, // we start with SimProcedure calls visible
-      showingErrors: true, // we start with errors visible
-      showingAsserts: true, // we start with asserts visible
-      showingPostconditions: true, // we start with postconditions visible
+      layout: breadthFirst, // we start with the breadthfirst layout
+      view: View.plain, //we start with all nodes visible, not a CFG
       prelabel : "prepatch",
       postlabel : "postpatch"
     }
@@ -38,19 +32,14 @@ export default class App extends Component {
     this.cy2.other = this.cy1
     this.tooltip = createRef()
 
-    this.prune = this.prune.bind(this)
-    this.unprune = this.unprune.bind(this)
     this.handleDragleave = this.handleDragleave.bind(this)
     this.handleDragover = this.handleDragover.bind(this)
     this.clearTooltip = this.clearTooltip.bind(this)
     this.resetLayout = this.resetLayout.bind(this)
-    this.toggleErrors = this.toggleErrors.bind(this)
-    this.togglePostconditions = this.togglePostconditions.bind(this)
-    this.toggleView = this.toggleView.bind(this)
-    this.toggleSyscalls = this.toggleSyscalls.bind(this)
-    this.toggleSimprocs = this.toggleSimprocs.bind(this)
-    this.toggleAsserts = this.toggleAsserts.bind(this)
     this.getJSON = this.getJSON.bind(this)
+
+    this.viewMenu = createRef()
+    this.pruneMenu = createRef()
 
     window.app = this
   }
@@ -88,6 +77,19 @@ export default class App extends Component {
       alert("Please load both graphs before attempting comparison.")
       return
     }
+    if (this.state.view == View.plain) this.handlePlainClick(ev)
+    if (this.state.view == View.cfg) this.handleCFGClick(ev)
+  }
+
+  handleCFGClick(ev) {
+    if (!ev.originalEvent.shiftKey) return
+    const addr = ev.target.data('address')
+    this.resetLayout(breadthFirst, View.plain)
+    const similar = ev.target.cy().nodes(`[address=${addr}]`)
+    ev.target.cy().highlight(similar)
+  }
+
+  handlePlainClick(ev) {
 
     const isLeft = ev.target.cy() == this.cy1.cy
     const self = ev.cy
@@ -165,15 +167,6 @@ export default class App extends Component {
     }
   }
 
-  refresh() {
-    this.cy1.cy.json({ elements: JSON.parse(this.cy1.orig).elements })
-    this.cy2.cy.json({ elements: JSON.parse(this.cy2.orig).elements })
-    // refocus all foci, and reset viewport
-    this.cy1.cy.refocus().fit()
-    this.cy2.cy.refocus().fit()
-    this.setState({ status: Status.idle })
-  }
-
   getJSON() {
     return JSON.stringify({
       pre : {
@@ -187,46 +180,19 @@ export default class App extends Component {
     })
   }
 
-  tidy(opts) {
-    // merge similar nodes
-    tidyGraph(this.cy1.cy, opts)
-    tidyGraph(this.cy2.cy, opts)
-    // reset layout and viewport
-    this.cy1.cy.layout(standardLayout).run()
-    this.cy2.cy.layout(standardLayout).run()
-    // remove all foci, and reset viewport
-    this.cy1.cy.refocus().fit()
-    this.cy2.cy.refocus().fit()
+
+  setStatus(status) { this.setState({ status }) }
+
+  regenerateFocus() {
     this.setState({ 
-      status: Status.idle,
       leftFocus: this.state.leftFocus ? {... this.state.leftFocus} : null,
       rightFocus: this.state.rightFocus ? {... this.state.rightFocus} : null,
-      // we regenerate the focus, 
-      // so that the assembly diff is regenerated, 
-      // so that its lines are properly mapped on to the merged nodes,
     })
+    // we sometimes need to regenerate focus, 
+    // so that the assembly diff is regenerated, 
+    // so that its lines are properly mapped on to the merged nodes.
   }
 
-  toggleView(type) {
-    this.setState(oldState => {
-      GraphStyle.settings[type] = !oldState[type];
-      this.cy1.cy.style().update()
-      this.cy2.cy.style().update()
-      return { 
-        [type]: !oldState[type]
-      }
-    })
-  }
-
-  toggleSyscalls() { this.toggleView("showingSyscalls") }
-
-  toggleSimprocs() { this.toggleView("showingSimprocs") }
-
-  toggleErrors() { this.toggleView("showingErrors") }
-
-  toggleAsserts() { this.toggleView("showingAsserts") }
-
-  togglePostconditions() { this.toggleView("showingPostconditions") }
 
   async handleDrop(ev) {
     ev.stopPropagation()
@@ -243,7 +209,6 @@ export default class App extends Component {
   }
 
   handleDragover(ev) {
-    console.log(ev)
     ev.stopPropagation()
     ev.preventDefault()
     ev.currentTarget.classList.add("dragHover")
@@ -267,11 +232,12 @@ export default class App extends Component {
 
     // monkeypatch in additional methods
     Object.assign(cy, focusMixin);
+    Object.assign(cy, tidyMixin);
     Object.assign(cy, segmentationMixin);
     cy.debugData = cy.nodes().roots()[0].data("debug")
 
     // set layout
-    cy.layout(standardLayout).run()
+    ref.currentLayout = cy.layout(this.state.layout).run()
 
     cy.on('add', ev => {
       if (ev.target.group() === 'nodes') {
@@ -281,6 +247,7 @@ export default class App extends Component {
 
     // clear focus on click without target
     cy.on('click', ev => {
+      if (this.state.view == View.cfg) return
       if (!ev.target.group) {
         this.batch(() => {
           this.cy1.cy?.blur()
@@ -289,6 +256,10 @@ export default class App extends Component {
           this.tooltip.current.clearTooltip()
         })
       }
+    })
+
+    cy.on('zoom pan',() => {
+      this.tooltip.current.clearTooltip()
     })
 
     // stow graph data in reference
@@ -344,68 +315,45 @@ export default class App extends Component {
     this.cy2.cy?.endBatch()
   }
 
-  async setTidiness(tidiness) {
-    // we insert a few milliseconds delay to allow for prior state updates to
-    // render
-    await new Promise(r => setTimeout(r, 50))
-    switch (tidiness) {
-      case Tidiness.untidy: {
-        this.refresh()
-        break;
+  resetLayout(layout, view) {
+    this.setState(oldState => {
+      this.cy1.currentLayout.stop()
+      this.cy2.currentLayout.stop()
+      layout = layout ?? oldState.layout
+      if (view != oldState.view) {
+        if (view == View.cfg) {
+          // we're going from View.plain to View.cfg
+          this.cy1.cy.mergeByAddress()
+          this.cy2.cy.mergeByAddress()
+        } else if (view == View.plain) {
+          //we're going from View.cfg to View.plain
+          this.cy1.cy.removeCFGData()
+          this.cy2.cy.removeCFGData()
+          // we need to restore the tidiness level and the pruning to the
+          // reconstucted graph
+          this.viewMenu.current.retidy()
+          this.pruneMenu.current.doPrune()
+        } else {
+          //no view given, we're just recomputing the view,
+          view = oldState.view
+        }
       }
-      case Tidiness.tidy: {
-        // technically we could hold off on the refresh here unless we're
-        // already veryTidy, but that's probably a premature optimization
-        this.batch(() => {
-          this.refresh()
-          this.tidy({})
-        })
-        break;
-      }
-      case Tidiness.veryTidy: {
-        this.batch(() => {
-          this.refresh()
-          this.tidy({ mergeConstraints: true })
-        })
-        break;
-      }
-    }
-    this.setState({ tidiness, status: Status.idle })
+      this.cy1.currentLayout = this.cy1.cy.layout(layout).run()
+      this.cy2.currentLayout = this.cy2.cy.layout(layout).run()
+
+      return {view, layout}
+    })
   }
 
-  resetLayout() {
-    this.batch(() => {
-      this.cy1.cy.layout(standardLayout).run()
-      this.cy2.cy.layout(standardLayout).run()
-    })
+  refreshLayout() {
+    this.cy1.currentLayout = this.cy1.cy.layout(this.state.layout).run()
+    this.cy2.currentLayout = this.cy2.cy.layout(this.state.layout).run()
   }
 
   clearTooltip() {
     this.tooltip.current.clearTooltip()
   }
 
-  // prune all branches whose compatibilities all fail some test (e.g. all have
-  // the same memory contents as the given branch)
-  prune(test) {
-    const leaves1 = this.cy1.cy.nodes().leaves()
-    const leaves2 = this.cy2.cy.nodes().leaves()
-    for (const leaf of [...leaves1, ...leaves2]) {
-      let flag = true
-      let other = leaf.cy() == this.cy1.cy ? this.cy2.cy : this.cy1.cy
-      for (const key in leaf.data().compatibilities) {
-        const otherleaf = other.nodes(`#${key}`)
-        if (otherleaf.length == 0) continue
-        flag &&= test(leaf, otherleaf)
-      }
-      if (flag) removeBranch(leaf)
-    }
-    this.cy1.cy.refocus()
-    this.cy2.cy.refocus()
-  }
-
-  unprune() {
-    return this.setTidiness(this.state.tidiness)
-  }
 
   render(_props, state) {
     // TODO I could get rid of a lot of lambdas here if I properly bound "this"
@@ -413,24 +361,18 @@ export default class App extends Component {
     return html`
       <${Tooltip} ref=${this.tooltip}/>
       <${MenuBar} 
-        setTidiness=${level => this.startRender(() => this.setTidiness(level))}
         cyLeft=${this.cy1}
         cyRight=${this.cy2}
-        prune=${this.prune}
-        unprune=${this.unprune}
+        view=${state.view}
+        layout=${state.layout}
+        regenerateFocus=${() => this.regenerateFocus()}
         resetLayout=${this.resetLayout}
+        refreshLayout=${() => this.refreshLayout()}
         tidiness=${state.tidiness}
         status=${state.status}
-        showingSyscalls=${state.showingSyscalls}
-        showingSimprocs=${state.showingSimprocs}
-        showingErrors=${state.showingErrors}
-        showingAsserts=${state.showingAsserts}
-        showingPostconditions=${state.showingPostconditions}
-        toggleSyscalls=${this.toggleSyscalls}
-        toggleSimprocs=${this.toggleSimprocs}
-        toggleErrors=${this.toggleErrors}
-        togglePostconditions=${this.togglePostconditions}
-        toggleAsserts=${this.toggleAsserts}
+        batch=${cb => this.batch(cb)}
+        viewMenu=${this.viewMenu}
+        pruneMenu=${this.pruneMenu}
         getJSON=${this.getJSON}
       />
       <div id="main-view"

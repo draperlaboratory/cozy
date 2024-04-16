@@ -2,7 +2,11 @@ import { computePosition } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import { Status, Tidiness } from '../data/cozy-data.js'
+import * as GraphStyle from '../util/graphStyle.js';
 import Colors from '../data/colors.js'
+import { View } from '../data/cozy-data.js'
+import { breadthFirst, cola, cose } from '../data/layouts.js'
+import { removeBranch } from '../util/graph-tidy.js';
 
 // this should be mounted and unmounted rather than toggled; adding and removing
 // the event-listener for closing the menu should be part of the mount/unmount
@@ -161,8 +165,8 @@ export default class MenuBar extends Component {
     this.setOpen(null)
   }
 
-  resetLayout() {
-    this.props.resetLayout()
+  resetLayout(layout, view) {
+    this.props.resetLayout(layout, view)
     this.setOpen(null)
   }
 
@@ -192,57 +196,26 @@ export default class MenuBar extends Component {
           Save Graph
         <//>
       <//>
-      <${Menu} 
-        enabled=${enabled}
+      <${ViewMenu}
+        ref=${props.viewMenu}
+        enabled=${enabled && props.view == View.plain} 
+        tidiness=${props.tidiness}
+        pruneMenu=${props.pruneMenu}
+        cyLeft=${props.cyLeft}
+        cyRight=${props.cyRight}
         open=${state.open}
-        title="View"
-        setOpen=${o => this.setOpen(o)}>
-        <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.untidy)}
-          selected=${props.tidiness == Tidiness.untidy}>
-            Show All Blocks
-        <//>
-        <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.tidy)}
-          selected=${props.tidiness == Tidiness.tidy}>
-            Merge Unless Constaints Change
-        <//>
-        <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.veryTidy)}
-          selected=${props.tidiness == Tidiness.veryTidy}>
-            Merge Unless Branching Occurs
-        <//>
-        <hr/>
-        <${MenuOption} 
-          onClick=${props.toggleSyscalls}
-          selected=${props.showingSyscalls}>
-            <${MenuBadge} color=${Colors.focusedSyscallNode}/> Show Syscalls
-        <//>
-        <${MenuOption} 
-          onClick=${props.toggleSimprocs}
-          selected=${props.showingSimprocs}>
-            <${MenuBadge} color=${Colors.focusedSimprocNode}/> Show SimProcedure calls
-        <//>
-        <${MenuOption} 
-          onClick=${props.toggleErrors}
-          selected=${props.showingErrors}>
-            <${MenuBadge} color=${Colors.focusedErrorNode}/> Show Errors
-        <//>
-        <${MenuOption} 
-          onClick=${props.toggleAsserts}
-          selected=${props.showingAsserts}>
-            <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
-        <//>
-        <${MenuOption} 
-          onClick=${props.togglePostconditions}
-          selected=${props.showingPostconditions}>
-            <${MenuBadge} color=${Colors.focusedPostconditionNode}/> Show Postcondition failures
-        <//>
-      <//>
+        regenerateFocus=${props.regenerateFocus}
+        refreshLayout=${props.refreshLayout}
+        batch=${props.batch}
+        setOpen=${o => this.setOpen(o)}
+      />
       <${PruneMenu} 
-        enabled=${enabled} 
-        prune=${props.prune}
-        unprune=${props.unprune}
+        ref=${props.pruneMenu}
+        enabled=${enabled && props.view == View.plain} 
+        viewMenu=${props.viewMenu}
+        cyLeft=${props.cyLeft}
+        cyRight=${props.cyRight}
+        refreshLayout=${props.refreshLayout}
         open=${state.open}
         setOpen=${o => this.setOpen(o)}
       />
@@ -251,8 +224,28 @@ export default class MenuBar extends Component {
         open=${state.open}
         title="Layout"
         setOpen=${o => this.setOpen(o)}>
+        <${MenuOption} 
+          onClick=${() => this.resetLayout(breadthFirst, View.plain)}
+          selected=${props.layout.name == "breadthfirst" && props.view == View.plain}>
+            Tree
+        <//>
+        <${MenuOption} 
+          onClick=${() => this.resetLayout(breadthFirst, View.cfg)}
+          selected=${props.layout.name == "breadthfirst" && props.view == View.cfg}>
+            CFG - Tree layout
+        <//>
+        <${MenuOption} onClick=${() => this.resetLayout()}
+          onClick=${() => this.resetLayout(cose, View.cfg)}
+          selected=${props.layout.name == "cose" && props.view == View.cfg}>
+            CFG - Cose layout
+        <//>
+        <${MenuOption} 
+          onClick=${() => this.resetLayout(cola, View.cfg)}
+          selected=${props.layout.name == "cola" && props.view == View.cfg}>
+            CFG - Cola layout
+        <//>
         <${MenuOption} onClick=${() => this.resetLayout()}>
-            Reset
+            Refresh
         <//>
       <//>
       <${SearchMenu}
@@ -270,38 +263,42 @@ class SearchMenu extends Component {
   constructor() {
     super()
     this.state = {
-      searchStdoutRegex: ".*",
+      searchStdoutRegex: "",
     }
   }
 
   updateSearch(e) {
-    this.setState({ searchStdoutRegex: e.target.value }, () => {
-      const cyLeft = this.props.cyLeft.cy
-      const cyRight = this.props.cyRight.cy
-      cyLeft.dim()
-      cyRight.dim()
-      let regex
-      try {
-        regex = new RegExp(this.state.searchStdoutRegex)
-      } catch (e) {
-        return
-      }
-      const ltargets = cyLeft.nodes()
-        .filter(node => node.data().stdout.match(regex))
-      const rtargets = cyRight.nodes()
-        .filter(node => node.data().stdout.match(regex))
-      cyLeft.highlight(ltargets)
-      cyRight.highlight(rtargets)
-    })
+    if (e.target.value == '') this.clearSearch()
+    else {
+      this.setState({ searchStdoutRegex: e.target.value }, () => {
+        const cyLeft = this.props.cyLeft.cy
+        const cyRight = this.props.cyRight.cy
+        cyLeft.dim()
+        cyRight.dim()
+        let regex
+        try {
+          regex = new RegExp(this.state.searchStdoutRegex)
+        } catch (e) {
+          return
+        }
+        const ltargets = cyLeft.nodes()
+          .filter(node => node.data().stdout.match(regex))
+        const rtargets = cyRight.nodes()
+          .filter(node => node.data().stdout.match(regex))
+        cyLeft.highlight(ltargets)
+        cyRight.highlight(rtargets)
+      })
+    }
   }
 
   clearSearch() {
-    this.setState({ searchStdoutRegex: '.*' }, () => {
+    this.setState({ searchStdoutRegex: '' }, () => {
       const cyLeft = this.props.cyLeft.cy
       const cyRight = this.props.cyRight.cy
       cyLeft.dim()
       cyRight.dim()
     })
+    this.props.setOpen(null)
   }
 
   render(props, state) {
@@ -312,6 +309,7 @@ class SearchMenu extends Component {
         setOpen=${o => props.setOpen(o)}>
         <${MenuOption} onClick=${() => props.setOpen(null)}>
           Stdout <input 
+            placeholder=".*"
             onClick=${e => e.stopPropagation()}
             onInput=${e => this.updateSearch(e)} 
             value=${state.searchStdoutRegex}/>
@@ -336,9 +334,37 @@ class PruneMenu extends Component {
     }
     this.prune.bind(this)
   }
+  
+  // prune all branches whose compatibilities all fail some test (e.g. all have
+  // the same memory contents as the given branch)
+  prune(test) {
+    const leaves1 = this.props.cyLeft.cy.nodes().leaves()
+    const leaves2 = this.props.cyRight.cy.nodes().leaves()
+    for (const leaf of [...leaves1, ...leaves2]) {
+      let flag = true
+      let other = leaf.cy() == this.props.cyLeft.cy ? this.props.cyRight.cy : this.props.cyLeft.cy
+      for (const key in leaf.data().compatibilities) {
+        const otherleaf = other.nodes(`#${key}`)
+        if (otherleaf.length == 0) continue
+        flag &&= test(leaf, otherleaf)
+      }
+      if (flag) removeBranch(leaf)
+    }
+    this.props.cyLeft.cy.refocus()
+    this.props.cyRight.cy.refocus()
+  }
 
-  async prune() {
-    await this.props.unprune()
+  setPrune(update) {
+    this.setState(update, () => {
+      // we retidy before we set a pruning level to get a clean slate, in case
+      // we're actually removing some pruning
+      this.props.viewMenu.current.retidy()
+      this.props.refreshLayout()
+      this.doPrune()
+    })
+  }
+
+  doPrune() {
     // true means "prune"
     let test = () => false
 
@@ -351,13 +377,13 @@ class PruneMenu extends Component {
     if (this.state.pruningCorrect) test = extendTest(noErrors, test)
     if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
 
-    this.props.prune(test)
+    this.prune(test)
   }
 
   debounceRegex(e) {
     this.setState({ pruningRegex: e.target.value })
     clearTimeout(this.regexDebounceTimeout)
-    this.regexDebounceTimeout = setTimeout(() => this.prune(), 1000)
+    this.regexDebounceTimeout = setTimeout(() => this.purePrune(), 1000)
   }
 
   render(props, state) { 
@@ -366,23 +392,155 @@ class PruneMenu extends Component {
         open=${props.open}
         title="Prune"
         setOpen=${o => props.setOpen(o)}>
-        <${MenuOption} onClick=${() => this.setState({ pruningMemory: !state.pruningMemory },this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningMemory: !state.pruningMemory })}>
           <input type="checkbox" checked=${state.pruningMemory}/> Identical Memory
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningRegisters: !state.pruningRegisters },this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningRegisters: !state.pruningRegisters })}>
           <input type="checkbox" checked=${state.pruningRegisters}/> Identical Register Contents 
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningStdout: !state.pruningStdout }, this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningStdout: !state.pruningStdout })}>
           <input type="checkbox" checked=${state.pruningStdout}/> Identical Stdout/Stderr
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningCorrect: !state.pruningCorrect }, this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningCorrect: !state.pruningCorrect })}>
           <input type="checkbox" checked=${state.pruningCorrect}/> Error-free
         <//>
-        <${MenuOption} onClick=${() => this.setState({ pruningDoRegex: !state.pruningDoRegex }, this.prune)}>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningDoRegex: !state.pruningDoRegex })}>
           <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
             onClick=${e => e.stopPropagation()}
             onInput=${e => this.debounceRegex(e)} 
             value=${state.pruningRegex}/>
+        <//>
+      <//>`
+  }
+}
+
+class ViewMenu extends Component {
+  constructor() {
+    super()
+    this.state = {
+      showingSyscalls: true, // we start with syscalls visible
+      showingSimprocs: true, // we start with SimProcedure calls visible
+      showingErrors: true, // we start with errors visible
+      showingAsserts: true, // we start with asserts visible
+      showingPostconditions: true, // we start with postconditions visible
+      tidiness: Tidiness.untidy, // we're not yet tidying anything
+    }
+    this.toggleErrors = this.toggleErrors.bind(this)
+    this.togglePostconditions = this.togglePostconditions.bind(this)
+    this.toggleView = this.toggleView.bind(this)
+    this.toggleSyscalls = this.toggleSyscalls.bind(this)
+    this.toggleSimprocs = this.toggleSimprocs.bind(this)
+    this.toggleAsserts = this.toggleAsserts.bind(this)
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.tidiness !== this.state.tidiness) {
+      // when we actually change tidiness, we need to clean up the layout
+      // afterwards and reapply any pruning
+      this.props.pruneMenu.current.doPrune()
+      this.props.refreshLayout()
+    }
+  }
+
+  retidy() {
+    this.setTidiness(this.state.tidiness)
+  }
+
+  setTidiness(tidiness) {
+    this.props.batch(() => {
+      this.props.cyLeft.cy.json({ elements: JSON.parse(this.props.cyLeft.orig).elements })
+      this.props.cyRight.cy.json({ elements: JSON.parse(this.props.cyRight.orig).elements })
+      // refocus all foci, and reset viewport
+      this.props.cyLeft.cy.nodes().map(node => node.ungrabify())
+      this.props.cyRight.cy.nodes().map(node => node.ungrabify())
+      this.props.cyLeft.cy.refocus().fit()
+      this.props.cyRight.cy.refocus().fit()
+      switch (tidiness) {
+        case Tidiness.untidy: break;
+        case Tidiness.tidy: this.tidy({}); break;
+        case Tidiness.veryTidy: this.tidy({ mergeConstraints: true }); break;
+      }
+      this.setState({ tidiness })
+    })
+  }
+
+  tidy(opts) {
+    // merge similar nodes
+    this.props.cyLeft.cy.tidy(opts)
+    this.props.cyRight.cy.tidy(opts)
+    // remove all foci, and reset viewport
+    this.props.cyLeft.cy.refocus().fit()
+    this.props.cyRight.cy.refocus().fit()
+    this.props.regenerateFocus()
+  }
+
+  toggleView(type) {
+    this.setState(oldState => {
+      GraphStyle.settings[type] = !oldState[type];
+      this.props.cyLeft.cy.style().update()
+      this.props.cyRight.cy.style().update()
+      return { 
+        [type]: !oldState[type]
+      }
+    })
+  }
+
+  toggleSyscalls() { this.toggleView("showingSyscalls") }
+
+  toggleSimprocs() { this.toggleView("showingSimprocs") }
+
+  toggleErrors() { this.toggleView("showingErrors") }
+
+  toggleAsserts() { this.toggleView("showingAsserts") }
+
+  togglePostconditions() { this.toggleView("showingPostconditions") }
+
+  render (props, state) {
+      return html`<${Menu}
+        enabled=${props.enabled}
+        open=${props.open}
+        title="View"
+        setOpen=${o => props.setOpen(o)}>
+        <${MenuOption} 
+          onClick=${() => this.setTidiness(Tidiness.untidy)}
+          selected=${state.tidiness == Tidiness.untidy}>
+            Show All Blocks
+        <//>
+        <${MenuOption} 
+          onClick=${() => this.setTidiness(Tidiness.tidy)}
+          selected=${state.tidiness == Tidiness.tidy}>
+            Merge Unless Constaints Change
+        <//>
+        <${MenuOption} 
+          onClick=${() => this.setTidiness(Tidiness.veryTidy)}
+          selected=${state.tidiness == Tidiness.veryTidy}>
+            Merge Unless Branching Occurs
+        <//>
+        <hr/>
+        <${MenuOption} 
+          onClick=${this.toggleSyscalls}
+          selected=${state.showingSyscalls}>
+            <${MenuBadge} color=${Colors.focusedSyscallNode}/> Show Syscalls
+        <//>
+        <${MenuOption} 
+          onClick=${this.toggleSimprocs}
+          selected=${state.showingSimprocs}>
+            <${MenuBadge} color=${Colors.focusedSimprocNode}/> Show SimProcedure calls
+        <//>
+        <${MenuOption} 
+          onClick=${this.toggleErrors}
+          selected=${state.showingErrors}>
+            <${MenuBadge} color=${Colors.focusedErrorNode}/> Show Errors
+        <//>
+        <${MenuOption} 
+          onClick=${this.toggleAsserts}
+          selected=${state.showingAsserts}>
+            <${MenuBadge} color=${Colors.focusedAssertNode}/> Show Asserts
+        <//>
+        <${MenuOption} 
+          onClick=${this.togglePostconditions}
+          selected=${state.showingPostconditions}>
+            <${MenuBadge} color=${Colors.focusedPostconditionNode}/> Show Postcondition failures
         <//>
       <//>`
   }

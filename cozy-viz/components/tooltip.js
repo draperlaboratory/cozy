@@ -159,11 +159,13 @@ export default class Tooltip extends Component {
           onClick=${() => this.setView("assembly")}>
           Assembly
         </button>
-        <button
-          data-highlighted=${state.mode == "constraints"} 
-          onClick=${() => this.setView("constraints")}>
-          Constraints
-        </button>
+        ${this.state.node?.data().constraints && html`
+          <button
+            data-highlighted=${state.mode == "constraints"} 
+            onClick=${() => this.setView("constraints")}>
+            Constraints
+          </button>`
+        }
         ${this.state.node?.data().vex && html`
           <button 
             data-highlighted=${state.mode == "vex"} 

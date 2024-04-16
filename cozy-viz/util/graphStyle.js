@@ -23,7 +23,7 @@ export const style = [
     },
   },
   { 
-    selector: "[[outdegree = 0]][!error]",
+    selector: "[[outdegree = 0]]",
     style: { 'border-width': '5px' },
   },
   {
@@ -33,11 +33,12 @@ export const style = [
       'line-color': Colors.defaultEdge,
       'target-arrow-color': Colors.defaultEdge,
       'target-arrow-shape': 'triangle',
+      'arrow-scale': 1.5,
       'curve-style': 'bezier'
     }
   },
   {
-    selector: 'edge.pathHighlight',
+    selector: 'edge.pathHighlight, edge[traversals > 0]',
     style: {
       'width': 3,
       'line-color': Colors.focusedEdge,
@@ -48,7 +49,7 @@ export const style = [
     }
   },
   {
-    selector: 'node.pathHighlight',
+    selector: 'node.pathHighlight, node[?traversed]',
     style: { 
       'background-color': Colors.focusedNode,
       'z-compound-depth' : 'top',
@@ -122,7 +123,9 @@ export const style = [
   },
   {
     selector: 'node[?error]',
-    style: { 'background-color': () => settings.showingErrors
+    style: { 
+      'border-width':'0px',
+      'background-color': () => settings.showingErrors
       ? Colors.errorNode
       : Colors.defaultNode
     }

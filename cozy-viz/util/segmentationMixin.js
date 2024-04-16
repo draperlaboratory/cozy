@@ -63,6 +63,9 @@ export const segmentationMixin = {
   },
 
   // gets all leaves in cy compatible with a given node
+  //
+  // XXX : this should probably be disabled when pruning is in progress, it
+  // doesn't necessarily make sense once nodes have been removed.
   getLeavesCompatibleWith(node, cy) {
     const leaves = node.successors().add(node).leaves()
     const ids = leaves.flatMap(leaf => Object.keys(leaf.data().compatibilities))

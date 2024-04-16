@@ -335,6 +335,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
             # FIXME: inefficient, we'll be running this many times for each basic block. 
             if include_simprocs: attr['simprocs'] = eg._list_simprocs(attr["contents"]) or []
             if flag_syscalls: attr['has_syscall'] = eg._has_syscall(attr["contents"]) or False
+            attr['address'] = attr["contents"].addr
             attr['contents'] = eg._get_bbl_asm(attr["contents"]) or "*"
             attr['constraints'] = [con.shallow_repr(max_depth=3) for con in attr["constraints"]] or "*"
             if "failed_cond" in attr: attr['failed_cond'] = str(attr["failed_cond"]) or "*"
