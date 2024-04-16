@@ -17,12 +17,29 @@ proj_attempted_patch.add_prototype(onMessageLength_mangled, onMessageLength_prot
 proj_postpatched = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp-patcherex.so")
 proj_postpatched.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
+proj_tob_patch = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp_tob.so")
+proj_tob_patch.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
+
 # size is a symbolic variable that ends up being passed to the onMessageLength function. This symbolic variable
 # determines the size of the message that's going to be read. The goal is to make size be sufficiently small
 # so we don't run out of memory allocating a block to store the incoming message
 size = claripy.BVS("size", 32)
+
 # This symbolic variable is stored inside the struct passed to a sysinfo call
 totalram = claripy.BVS("totalram", 32)
+freeram = claripy.BVS("freeram", 32)
+
+sysinfo_succeded = claripy.BoolS("sysinfo_succeeded")
+sysinfo_garbage = claripy.BVS("sysinfo_garbage", sysinfo_ty.with_arch(proj_tob_patch.arch).size * 8)
+
+answer = input("Enter 0 to check for totalram or 1 to check for freeram")
+if answer == "0":
+    use_freeram = False
+elif answer == "1":
+    use_freeram = True
+else:
+    print("Unknown selection")
+    exit(0)
 
 class connectionRead_hook(angr.SimProcedure):
     def run(self, this_conn, param_1, param_2):
@@ -41,7 +58,7 @@ class sysinfo_hook(angr.SimProcedure):
             "uptime": 1234567,
             "loads": [20100, 22000, 15000],
             "totalram": totalram,
-            "freeram": 1024 ** 2 // 4,
+            "freeram": freeram,
             "sharedram": 1024 ** 2 // 4,
             "bufferram": 1024 ** 2 // 4,
             "totalswap": 1024 ** 2,
@@ -52,6 +69,9 @@ class sysinfo_hook(angr.SimProcedure):
             "mem_unit": 13,
         }
         sysinfo_ty.with_arch(self.arch).store(self.state, info, value)
+        new_value = self.state.memory.load(info, sysinfo_ty.with_arch(proj_tob_patch.arch).size)
+        self.state.memory.store(info, claripy.ast.bool.If(sysinfo_succeded, new_value, sysinfo_garbage))
+        return claripy.ast.bool.If(sysinfo_succeded, claripy.BVV(0, 32), claripy.BVV(-1, 32))
 
 proj_prepatched.hook_symbol(connectionRead_mangled, connectionRead_hook)
 proj_prepatched.hook_syscall("sysinfo", sysinfo_hook)
@@ -62,6 +82,11 @@ proj_postpatched.hook_syscall("sysinfo", sysinfo_hook)
 proj_postpatched.hook_symbol(connectionRead_mangled, connectionRead_hook)
 proj_postpatched.hook_syscall("sysinfo", sysinfo_hook)
 
+proj_tob_patch.hook_symbol(connectionRead_mangled, connectionRead_hook)
+#proj_tob_patch.angr_proj.hook(proj_tob_patch.find_symbol_addr(onMessageLength_mangled) + 0xF1458, sysinfo_hook())
+#proj_tob_patch.angr_proj.hook(proj_tob_patch.find_symbol_addr("epoll_ctl") + 0x180, sysinfo_hook())
+proj_tob_patch.hook_symbol("_ZNSt9basic_iosIcSt11char_traitsIcEE4initEPSt15basic_streambufIcS1_E", sysinfo_hook)
+
 def run(sess):
     len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C, info_str="Requested size is too large!")
     sess.add_directives(len_too_big)
@@ -69,7 +94,10 @@ def run(sess):
     # This assertion is placed in the branch where we call connection_->read(len, boost::bind(&TransportPublisherLink::onMessage, this, _1, _2, _3, _4));
     # The assertion will ensure that we aren't reading something from memory that's too big
     def totalram_exceeded_assert(state):
-        return size <= totalram
+        if use_freeram:
+            return size < freeram
+        else:
+            return size <= totalram
     totalram_exceeded = cozy.directive.Assert.from_fun_offset(sess.proj, onMessageLength_mangled, 0x1C8, totalram_exceeded_assert, info_str="Total RAM was exceeded")
     sess.add_directives(totalram_exceeded)
 
@@ -85,7 +113,7 @@ def run(sess):
     # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
     result = sess.run([this_obj, 0x0, size_ptr_ptr, 4, 1])
 
-    print(result.report_asserts_failed({"size": size, "totalram": totalram}))
+    print(result.report_asserts_failed({"size": size, "totalram": totalram, "freeram": freeram}))
 
     return result
 
@@ -105,27 +133,83 @@ def run_postpatched():
     sess = proj_postpatched.session(onMessageLength_mangled)
     return run(sess)
 
+def run_tob_patched():
+    print("Running TOB postpatched")
+    sess = proj_tob_patch.session(onMessageLength_mangled)
+
+    #len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x1C8, info_str="Requested size is too large!")
+    len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C,
+                                                                info_str="Requested size is too large!")
+    sess.add_directives(len_too_big)
+
+    # This assertion is placed in the branch where we call connection_->read(len, boost::bind(&TransportPublisherLink::onMessage, this, _1, _2, _3, _4));
+    # The assertion will ensure that we aren't reading something from memory that's too big
+    def totalram_exceeded_assert(state):
+        if use_freeram:
+            return size < freeram
+        else:
+            return size <= totalram
+    #totalram_exceeded = cozy.directive.Assert.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C, totalram_exceeded_assert, info_str="Total RAM was exceeded")
+    totalram_exceeded = cozy.directive.Assert.from_fun_offset(sess.proj, onMessageLength_mangled, 0x1C8,
+                                                              totalram_exceeded_assert,
+                                                              info_str="Total RAM was exceeded")
+    sess.add_directives(totalram_exceeded)
+
+    # The buffer that contains the message we just read. Since we are exploring the path where we successfully read a length, use 4 bytes to store the length
+    size_ptr = sess.malloc(0x4)
+    sess.store(size_ptr, size, endness=sess.proj.arch.memory_endness)
+    size_ptr_ptr = sess.malloc(4)
+    sess.store(size_ptr_ptr, claripy.BVV(size_ptr, 32), endness=sess.proj.arch.memory_endness)
+    this_obj = sess.malloc(0x100)
+    # Set _retry_time_handler to be -1
+    sess.store(this_obj + 0xb0, claripy.BVV(-1, 32), endness=sess.proj.arch.memory_endness)
+
+    def bp(state):
+        print(state)
+
+    sess.add_directives(cozy.directive.Breakpoint.from_fun_offset(sess.proj, onMessageLength_mangled, 0x81268, bp))
+
+    # Call onMessageLength(this_obj, NULL, size_ptr_ptr, 4, true)
+    result = sess.run([this_obj, 0x0, size_ptr_ptr, 4, 1])
+
+    print(result.report_asserts_failed({"size": size, "totalram": totalram, "freeram": freeram}))
+
+    return result
+
 pre_patched_results = run_prepatched()
 attempted_patch_results = run_attempted_patch()
 post_patched_results = run_postpatched()
+tob_patched_results = run_tob_patched()
+
+args = {"size": size, "totalram": totalram, "freeram": freeram, "sysinfo_succeeded": sysinfo_succeded}
 
 if input("Would you like to visualize the pre-patch vs attempted patch? (y/n)") == "y":
     comparison_results = cozy.analysis.Comparison(pre_patched_results, attempted_patch_results)
     print("\nComparison Results, pre-patch vs attempted patch:\n")
-    print(comparison_results.report({"size": size, "totalram": totalram}))
+    print(comparison_results.report(args))
     cozy.execution_graph.visualize_comparison(proj_prepatched, proj_attempted_patch,
                                               pre_patched_results, attempted_patch_results,
                                               comparison_results,
-                                              args={"size": size, "totalram": totalram},
+                                              args=args,
                                               num_examples=2, open_browser=True)
 elif input("Would you like to visualize the pre-patch vs the post-patch? (y/n)") == "y":
     comparison_results = cozy.analysis.Comparison(pre_patched_results, post_patched_results)
 
     print("\nComparison Results, pre-patch vs post-patch:\n")
-    print(comparison_results.report({"size": size, "totalram": totalram}))
+    print(comparison_results.report(args))
 
     cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched,
                                               pre_patched_results, post_patched_results,
                                               comparison_results,
-                                              args={"size": size, "totalram": totalram},
+                                              args=args,
+                                              num_examples=2, open_browser=True)
+elif input("Would you like to visualize the pre-patch vs Trail of Bits patch? (y/n)") == "y":
+    comparison_results = cozy.analysis.Comparison(pre_patched_results, tob_patched_results)
+    print("\nComparison Results, pre-patch vs post-patch:\n")
+    print(comparison_results.report(args))
+    cozy.execution_graph.visualize_comparison(proj_prepatched, proj_tob_patch,
+                                              pre_patched_results, tob_patched_results,
+                                              comparison_results,
+                                              include_actions=True,
+                                              args=args,
                                               num_examples=2, open_browser=True)
