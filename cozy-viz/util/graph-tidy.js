@@ -96,6 +96,8 @@ export const tidyMixin = {
         constructed[addr] = node
       }
       if (node.hasClass('pathHighlight')) constructed[addr].data('traversed', true)
+      if (node.incomers().length == 0) constructed[addr].data('initial', true)
+      if (node.outgoers().length == 0) constructed[addr].data('terminal', true)
     }
     const startingEdges = [...this.edges()]
     for (const edge of startingEdges) {
@@ -150,6 +152,8 @@ export const tidyMixin = {
     }
     for (const node of this.nodes()) {
       node.removeData("traversed")
+      node.removeData("initial")
+      node.removeData("terminal")
     }
     for (const edge of this.edges()) {
       edge.removeData("traversals")

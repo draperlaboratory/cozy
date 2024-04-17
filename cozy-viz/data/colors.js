@@ -1,19 +1,26 @@
 const Colors = {
-  defaultNode: '#ededed',
-  defaultBorder: '#ccc',
-  defaultEdge: '#ccc',
+  defaultNode: '#ccc',
   focusedNode: '#666',
+
+  defaultBorder: '#aaa',
+
+  defaultEdge: '#aaa',
   focusedEdge: '#666',
+
   syscallNode: '#add8e6',
-  simprocNode: '#f7be6d',
-  errorNode: "#facdcd",
-  assertNode: "#edcdfa",
-  postconditionNode: "#ffffa4",
-  focusedErrorNode: "#d00",
   focusedSyscallNode: "#00ade6",
-  focusedSimprocNode: "#f79000",
+
+  simprocNode: "#ade6b6",
+  focusedSimprocNode: "#4eb302",
+
+  errorNode: "#facdcd",
+  focusedErrorNode: "#d00",
+
+  assertNode: "#edcdfa",
   focusedAssertNode: "#a600de",
-  focusedPostconditionNode: "#efcd00",
+
+  postconditionNode: '#f7be6d',
+  focusedPostconditionNode: "#f79000",
 }
 
 export default Colors
