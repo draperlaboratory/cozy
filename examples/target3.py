@@ -33,7 +33,9 @@ totalram = claripy.BVS("totalram", 32)
 freeram = claripy.BVS("freeram", 32)
 
 sysinfo_succeded = claripy.BoolS("sysinfo_succeeded")
-sysinfo_garbage = claripy.BVS("sysinfo_garbage", sysinfo_ty.with_arch(proj_tob_patch.arch).size * 8)
+
+totalram_garbage = claripy.BVS("sysinfo_garbage_totalram", 32)
+freeram_garbage = claripy.BVS("sysinfo_garbage_freeram", 32)
 
 answer = input("Enter 0 to check for totalram or 1 to check for freeram")
 if answer == "0":
@@ -60,8 +62,8 @@ class sysinfo_hook(angr.SimProcedure):
         value = {
             "uptime": 1234567,
             "loads": [20100, 22000, 15000],
-            "totalram": totalram,
-            "freeram": freeram,
+            "totalram": claripy.ast.bool.If(sysinfo_succeded, totalram, totalram_garbage),
+            "freeram": claripy.ast.bool.If(sysinfo_succeded, freeram, freeram_garbage),
             "sharedram": 1024 ** 2 // 4,
             "bufferram": 1024 ** 2 // 4,
             "totalswap": 1024 ** 2,
@@ -72,8 +74,6 @@ class sysinfo_hook(angr.SimProcedure):
             "mem_unit": 13,
         }
         sysinfo_ty.with_arch(self.arch).store(self.state, info, value)
-        new_value = self.state.memory.load(info, sysinfo_ty.with_arch(proj_tob_patch.arch).size)
-        self.state.memory.store(info, claripy.ast.bool.If(sysinfo_succeded, new_value, sysinfo_garbage))
         return claripy.ast.bool.If(sysinfo_succeded, claripy.BVV(0, 32), claripy.BVV(-1, 32))
 
 proj_prepatched.hook_symbol(connectionRead_mangled, connectionRead_hook)
@@ -188,7 +188,8 @@ post_patched_results = run_postpatched()
 tob_patched_results = run_tob_patched(proj_tob_patch)
 tob_no_fail_check_results = run_tob_patched(proj_tob_no_fail_check_patch)
 
-args = {"size": size, "totalram": totalram, "freeram": freeram, "sysinfo_succeeded": sysinfo_succeded}
+args = {"size": size, "totalram": totalram, "freeram": freeram, "freeram_garbage": freeram_garbage,
+        "totalram_garbage": totalram_garbage, "sysinfo_succeeded": sysinfo_succeded}
 
 if input("Would you like to visualize the pre-patch vs attempted patch? (y/n)") == "y":
     comparison_results = cozy.analysis.Comparison(pre_patched_results, attempted_patch_results)
