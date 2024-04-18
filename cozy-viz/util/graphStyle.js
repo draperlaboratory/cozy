@@ -23,7 +23,11 @@ export const style = [
     },
   },
   { 
-    selector: "[[outdegree = 0]]",
+    selector: "[[outdegree = 0]], node[?terminal]",
+    style: { 'border-width': '5px' },
+  },
+  { 
+    selector: "node[?initial]",
     style: { 'border-width': '5px' },
   },
   {
@@ -34,6 +38,8 @@ export const style = [
       'target-arrow-color': Colors.defaultEdge,
       'target-arrow-shape': 'triangle',
       'arrow-scale': 1.5,
+      'source-distance-from-node':'5px',
+      'target-distance-from-node':'5px',
       'curve-style': 'bezier'
     }
   },
@@ -43,9 +49,7 @@ export const style = [
       'width': 3,
       'line-color': Colors.focusedEdge,
       'target-arrow-color': Colors.focusedEdge,
-      'target-arrow-shape': 'triangle',
       'z-compound-depth' : 'top',
-      'curve-style': 'bezier'
     }
   },
   {
@@ -153,8 +157,11 @@ export const style = [
   {
     selector: 'node.availablePath',
     style: {
-      'border-width':'5px',
-      'border-color': Colors.focusedNode
+      'border-width':'12px',
+      'width' : 25,
+      'height' : 25,
+      'border-color': Colors.focusedNode,
+      'underlay-padding':"15px"
     }
   },
 ]
