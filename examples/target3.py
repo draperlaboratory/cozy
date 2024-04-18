@@ -94,7 +94,7 @@ proj_tob_no_fail_check_patch.hook_symbol(connectionRead_mangled, connectionRead_
 proj_tob_no_fail_check_patch.hook_symbol("_ZNSt9basic_iosIcSt11char_traitsIcEE4initEPSt15basic_streambufIcS1_E", sysinfo_hook)
 
 def run(sess):
-    len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C, info_str="Requested size is too large!")
+    len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C, info_str="Requested size is too large or sysinfo returned error!")
     sess.add_directives(len_too_big)
 
     # This assertion is placed in the branch where we call connection_->read(len, boost::bind(&TransportPublisherLink::onMessage, this, _1, _2, _3, _4));
@@ -145,7 +145,7 @@ def run_tob_patched(proj):
 
     #len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x1C8, info_str="Requested size is too large!")
     len_too_big = cozy.directive.ErrorDirective.from_fun_offset(sess.proj, onMessageLength_mangled, 0x10C,
-                                                                info_str="Requested size is too large!")
+                                                                info_str="Requested size is too large or sysinfo returned errror!")
     sess.add_directives(len_too_big)
 
     # This assertion is placed in the branch where we call connection_->read(len, boost::bind(&TransportPublisherLink::onMessage, this, _1, _2, _3, _4));
