@@ -88,11 +88,19 @@ export const tidyMixin = {
     this.mergedNodes = []
     this.mergedEdges = []
     for (const node of this.nodes()) {
+      this.tidyStdOut(node)
+    }
+    for (const node of this.nodes()) {
       const addr = node.data().address
       if (addr in constructed) {
         this.mergedNodes.push(node)
+        const priorStdout = constructed[addr].data('newStdout')
+        if (priorStdout.length > 0) {
+          constructed[addr].data('stdout', priorStdout + '\n--\n' + node.data('newStdout'))
+        }
       } else {
         this.removePlainData(node)
+        node.data('stdout', node.data('newStdout'))
         constructed[addr] = node
       }
       if (node.hasClass('pathHighlight')) constructed[addr].data('traversed', true)
@@ -138,6 +146,17 @@ export const tidyMixin = {
     node.removeData('constraints')
     node.removeData('stdout')
     node.removeData('stderr')
+  },
+
+  // take a node from a tree, and derive what is *new* at that node
+  tidyStdOut(node) {
+    if (node.incomers('node').length == 1) {
+      const incomerStdout = node.incomers('node')[0].data('stdout')
+      console.log(incomerStdout)
+      node.data('newStdout', node.data('stdout').slice(incomerStdout.length, Infinity))
+    } else {
+      node.data('newStdout', node.data('stdout'))
+    }
   },
 
   // tidy extraneous data added to existing elements by merging. Constructed
