@@ -460,7 +460,7 @@ class ViewMenu extends Component {
         case Tidiness.tidy: this.tidy({}); break;
         case Tidiness.veryTidy: this.tidy({ mergeConstraints: true }); break;
       }
-      this.setState({ tidiness })
+      this.setState({ tidiness }, this.props.regenerateFocus)
     })
   }
 
@@ -471,7 +471,6 @@ class ViewMenu extends Component {
     // remove all foci, and reset viewport
     this.props.cyLeft.cy.refocus().fit()
     this.props.cyRight.cy.refocus().fit()
-    this.props.regenerateFocus()
   }
 
   toggleView(type) {

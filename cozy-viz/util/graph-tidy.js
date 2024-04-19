@@ -152,7 +152,6 @@ export const tidyMixin = {
   tidyStdOut(node) {
     if (node.incomers('node').length == 1) {
       const incomerStdout = node.incomers('node')[0].data('stdout')
-      console.log(incomerStdout)
       node.data('newStdout', node.data('stdout').slice(incomerStdout.length, Infinity))
     } else {
       node.data('newStdout', node.data('stdout'))
