@@ -500,17 +500,17 @@ class ViewMenu extends Component {
         title="View"
         setOpen=${o => props.setOpen(o)}>
         <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.untidy)}
+          onClick=${() => state.tidiness !== Tidiness.untidy && this.setTidiness(Tidiness.untidy)}
           selected=${state.tidiness == Tidiness.untidy}>
             Show All Blocks
         <//>
         <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.tidy)}
+          onClick=${() => state.tidiness !== Tidiness.tidy && this.setTidiness(Tidiness.tidy)}
           selected=${state.tidiness == Tidiness.tidy}>
             Merge Unless Constaints Change
         <//>
         <${MenuOption} 
-          onClick=${() => this.setTidiness(Tidiness.veryTidy)}
+          onClick=${() => state.tidiness !== Tidiness.veryTidy && this.setTidiness(Tidiness.veryTidy)}
           selected=${state.tidiness == Tidiness.veryTidy}>
             Merge Unless Branching Occurs
         <//>
