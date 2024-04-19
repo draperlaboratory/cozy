@@ -105,24 +105,19 @@ export default class App extends Component {
 
     this.lastSegmentSelect = segmentSelect
     
-    // ranges are connected sets of nodes, not necessarily linear
-    let selfRange
-
     // segments are linear sequences of nodes given by a top and bottom
     let selfSegment
 
     if (segmentSelect) {
       // if we're selecting a segment, choose the corresponding segment
-      selfRange = self.getRangeOf(ev.target)
-      selfSegment = self.rangeToSegment(selfRange)
-      self.blur().focusRange(selfRange)
+      selfSegment = self.rangeToSegment(self.getRangeOf(ev.target))
+      self.blur().focusRange(self.getRangeOf(ev.target))
     } else {
       // otherwise, bail out if we're not on a leaf
       if (ev.target.outgoers().length !== 0) return
       // and choose the full branch, if we are on a leaf
       const selfRoot = ev.cy.nodes().roots()[0]
       selfSegment = { top: selfRoot, bot: ev.target }
-      selfRange = self.segmentToRange(selfSegment)
       self.blur().focus(ev.target)
     }
 
@@ -185,8 +180,8 @@ export default class App extends Component {
 
   regenerateFocus() {
     this.setState({ 
-      leftFocus: this.state.leftFocus ? {... this.state.leftFocus} : null,
-      rightFocus: this.state.rightFocus ? {... this.state.rightFocus} : null,
+      leftFocus: this.state.leftFocus ? {top: this.cy1.cy.root, bot : this.cy1.cy.loci } : null,
+      rightFocus: this.state.rightFocus ? {top: this.cy2.cy.root, bot : this.cy2.cy.loci} : null,
     })
     // we sometimes need to regenerate focus, 
     // so that the assembly diff is regenerated, 

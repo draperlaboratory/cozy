@@ -453,8 +453,7 @@ class ViewMenu extends Component {
       // refocus all foci, and reset viewport
       this.props.cyLeft.cy.nodes().map(node => node.ungrabify())
       this.props.cyRight.cy.nodes().map(node => node.ungrabify())
-      this.props.cyLeft.cy.refocus().fit()
-      this.props.cyRight.cy.refocus().fit()
+
       switch (tidiness) {
         case Tidiness.untidy: break;
         case Tidiness.tidy: this.tidy({}); break;

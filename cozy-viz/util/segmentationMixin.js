@@ -41,6 +41,8 @@ export const segmentationMixin = {
   segmentToRange(segment) {
     return segment.bot.predecessors('node')
       .intersection(segment.top.successors('node'))
+      .union(segment.top)
+      .union(segment.bot)
   },
 
   rangeToSegment(range) {
