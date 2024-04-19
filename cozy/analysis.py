@@ -6,6 +6,7 @@ from angr import SimState
 
 import portion as P
 
+import cozy.log
 from . import claripy_ext, log, side_effect
 from .functools_ext import *
 import collections.abc
@@ -179,7 +180,17 @@ def compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff:
             return NotEqFieldDiff(diff)
     # claripy ast case
     elif isinstance(left_se, claripy.ast.Bits) and isinstance(right_se, claripy.ast.Bits):
-        if left_se is not right_se and joint_solver.satisfiable(extra_constraints=[left_se != right_se]):
+        def is_sat():
+            try:
+                return joint_solver.satisfiable(extra_constraints=[left_se != right_se])
+            except claripy.ClaripyZ3Error as err:
+                cozy.log.error("Unable to solve SMT formula when comparing side effects. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}", str(err))
+                return True
+            except claripy.ClaripySolverInterruptError as err:
+                cozy.log.error("Unable to solve SMT formula when comparing side effects. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}", str(err))
+                return True
+
+        if left_se is not right_se and is_sat():
             # Base case: leaf elements are not equal
             return NotEqLeaf(left_se, right_se)
         else:
@@ -260,10 +271,19 @@ class StateDiff:
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
 
+        try:
+            is_sat = joint_solver.satisfiable()
+        except claripy.ClaripyZ3Error as err:
+            cozy.log.error("Unable to determine if two states are compatible. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these two states compatible in our report. Note that there is unlikely to be any concrete examples generated for this pair.\nThe exception thrown was:\n{}", str(err))
+            is_sat = True
+        except claripy.ClaripySolverInterruptError as err:
+            cozy.log.error("Unable to determine if two states are compatible. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these two states compatible in our report. Note that there is unlikely to be any concrete examples generated for this pair.\nThe exception thrown was:\n{}", str(err))
+            is_sat = True
+
         # If joint_solver is not satisfiable, that means that the constrained set of possible
         # inputs to the function is the empty set. This means that these two states could not
         # have been reached with a given input, and we can therefore disregard this comparison
-        if not (joint_solver.satisfiable()):
+        if not is_sat:
             if use_unsat_core:
                 core = frozenset(joint_solver.unsat_core())
                 self.cores.append(core)
@@ -297,7 +317,17 @@ class StateDiff:
                     # There is not much point in adding the unsat core trick here, since we already know that the joint
                     # solver constraints without the extra_constraints are satisfiable. bytes_left != bytes_right are
                     # highly likely to be syntactically different from previous calls of this loop as well.
-                    if joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right]):
+
+                    try:
+                        is_sat = joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right])
+                    except claripy.ClaripyZ3Error as err:
+                        cozy.log.error("Unable to determine if memory contents at {} .. {} are equal or not. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", hex(addr_range.start), hex(addr_range.start + len(addr_range) - 1), str(err))
+                        is_sat = True
+                    except claripy.ClaripySolverInterruptError as err:
+                        cozy.log.error("Unable to determine if memory contents at {} .. {} are equal or not. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", hex(addr_range.start), hex(addr_range.start + len(addr_range) - 1), str(err))
+                        is_sat = True
+
+                    if is_sat:
                         # It is possible that there is a symbolic value stored in memory.
                         # Here we want to simplify this with respect to the joint constraints
                         if simplify:
@@ -321,7 +351,16 @@ class StateDiff:
                 reg_right = getattr(sr.regs, reg_name)
 
                 if reg_left is not reg_right:
-                    if joint_solver.satisfiable(extra_constraints=[reg_left != reg_right]):
+                    try:
+                        is_sat = joint_solver.satisfiable(extra_constraints=[reg_left != reg_right])
+                    except claripy.ClaripyZ3Error as err:
+                        cozy.log.error("Unable to determine if register {} is equal or not. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", reg_name, str(err))
+                        is_sat = True
+                    except claripy.ClaripySolverInterruptError as err:
+                        cozy.log.error("Unable to determine if register {} is equal or not. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", reg_name, str(err))
+                        is_sat = True
+
+                    if is_sat:
                         if simplify:
                             reg_left = claripy_ext.simplify_kb(reg_left, joint_solver.constraints)
                             reg_right = claripy_ext.simplify_kb(reg_right, joint_solver.constraints)
@@ -640,9 +679,17 @@ class Comparison:
                 joint_solver = claripy.Solver()
                 joint_solver.add(state_left.solver.constraints)
                 joint_solver.add(state_right.solver.constraints)
-                joint_solver.simplify()
 
-                if joint_solver.satisfiable(~assertion):
+                try:
+                    is_sat = joint_solver.satisfiable(~assertion)
+                except claripy.ClaripyZ3Error as err:
+                    cozy.log.error("Unable to solve SMT formula when checking verification condition. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to falsify the verification condition.\nThe exception thrown was:\n{}", str(err))
+                    is_sat = True
+                except claripy.ClaripySolverInterruptError as err:
+                    cozy.log.error("Unable to solve SMT formula when checking verification condition. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to falsify the verification condition.\nThe exception thrown was:\n{}", str(err))
+                    is_sat = True
+
+                if is_sat:
                     failure_list.append(pair_comp)
         return failure_list
 

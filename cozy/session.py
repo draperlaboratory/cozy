@@ -10,7 +10,7 @@ from angr.sim_manager import ErrorRecord, SimulationManager
 from . import log, side_effect
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
-
+import cozy
 
 class RunResult:
     """
@@ -354,7 +354,17 @@ class _SessionDirectiveExploration(_SessionExploration):
                     # To check for validity, we need to check that (not cond) is unsatisfiable
                     false_branch = found_state.copy()
                     false_branch.add_constraints(~cond)
-                    if false_branch.satisfiable():
+
+                    try:
+                        is_sat = false_branch.satisfiable()
+                    except claripy.ClaripyZ3Error as err:
+                        cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                        is_sat = True
+                    except claripy.ClaripySolverInterruptError as err:
+                        cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                        is_sat = True
+
+                    if is_sat:
                         if self.cache_intermediate_info:
                             _save_states([false_branch])
                         # If the false branch is satisfiable, add it to the list of failed assert states
@@ -369,7 +379,17 @@ class _SessionDirectiveExploration(_SessionExploration):
                     # continue execution regardless of what happens
                     true_branch = found_state.copy()
                     true_branch.add_constraints(cond)
-                    if not true_branch.satisfiable():
+
+                    try:
+                        is_sat = true_branch.satisfiable()
+                    except claripy.ClaripyZ3Error as err:
+                        cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                        is_sat = False
+                    except claripy.ClaripySolverInterruptError as err:
+                        cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                        is_sat = False
+
+                    if not is_sat:
                         if self.cache_intermediate_info:
                             _save_states([true_branch])
                         af = PostconditionFailedState(directive, cond, true_branch, len(self.postconditions_failed))
@@ -417,7 +437,17 @@ class _SessionDirectiveExploration(_SessionExploration):
                         if isinstance(directive, Assume):
                             cond = directive.condition_fun(found_state)
                             found_state.add_constraints(cond)
-                            if not found_state.satisfiable():
+
+                            try:
+                                is_sat = found_state.satisfiable()
+                            except claripy.ClaripyZ3Error as err:
+                                cozy.log.error("Unable to solve SMT state constraints after attaching assume. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the Assume condition to be satisfiable.\nThe information string attached to the Assume is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                                is_sat = True
+                            except claripy.ClaripySolverInterruptError as err:
+                                cozy.log.error("Unable to solve SMT state constraints after attaching assume. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that it is possible for the Assume condition to be satisfiable.\nThe information string attached to the Assume is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                                is_sat = True
+
+                            if not is_sat:
                                 self.assume_warnings.append((directive, found_state))
                                 info_str = "(unknown)" if directive.info_str is None else directive.info_str
                                 log.warning(
@@ -437,7 +467,17 @@ class _SessionDirectiveExploration(_SessionExploration):
                                 # To check for validity, we need to check that (not cond) is unsatisfiable
                                 false_branch = found_state.copy()
                                 false_branch.add_constraints(~cond)
-                                if false_branch.satisfiable():
+
+                                try:
+                                    is_sat = false_branch.satisfiable()
+                                except claripy.ClaripyZ3Error as err:
+                                    cozy.log.error("Unable to solve SMT formula when checking assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the assertion to fail.\nThe information string attached to the assertion is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                                    is_sat = True
+                                except claripy.ClaripySolverInterruptError as err:
+                                    cozy.log.error("Unable to solve SMT formula when checking assertion. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the assertion is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                                    is_sat = True
+
+                                if is_sat:
                                     if self.cache_intermediate_info:
                                         _save_states([false_branch])
                                     # If the false branch is satisfiable, add it to the list of failed assert states
@@ -452,7 +492,17 @@ class _SessionDirectiveExploration(_SessionExploration):
                                 # continue execution regardless of what happens
                                 true_branch = found_state.copy()
                                 true_branch.add_constraints(cond)
-                                if not true_branch.satisfiable():
+
+                                try:
+                                    is_sat = true_branch.satisfiable()
+                                except claripy.ClaripyZ3Error as err:
+                                    cozy.log.error("Unable to solve SMT formula when checking existential assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the assertion to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                                    is_sat = False
+                                except claripy.ClaripySolverInterruptError as err:
+                                    cozy.log.error("Unable to solve SMT formula when checking existential assertion. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that it is possible for the assertion to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
+                                    is_sat = False
+
+                                if not is_sat:
                                     if self.cache_intermediate_info:
                                         _save_states([true_branch])
                                     af = AssertFailedState(directive, cond, true_branch, len(self.asserts_failed))

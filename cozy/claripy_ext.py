@@ -1,5 +1,5 @@
 import typing
-
+import cozy
 import claripy
 
 from . import primitives
@@ -48,7 +48,16 @@ def model(constraints,
     solver.add(constraints)
     generated_models = []
     while len(generated_models) < n:
-        if solver.satisfiable(**kwargs):
+        try:
+            is_sat = solver.satisfiable(**kwargs)
+        except claripy.ClaripyZ3Error as err:
+            cozy.log.error("Unable to generate model for SMT formula. The SMT solver returned unknown instead of SAT or UNSAT.\nThe exception thrown was:\n{}", str(err))
+            return generated_models
+        except claripy.ClaripySolverInterruptError as err:
+            cozy.log.error("Unable to generate model for SMT formula. The SMT solver was interrupted, most likely due to resource exhaustion.\nThe exception thrown was:\n{}", str(err))
+            return generated_models
+
+        if is_sat:
             models = list(solver._models)
 
             ret = dict()
