@@ -187,6 +187,7 @@ button:disabled {
   overflow-y: scroll;
   border-top: 1px solid black;
   width: 100vw;
+  padding-bottom: .5em;
 }
 
 #diff-panel.resizing {

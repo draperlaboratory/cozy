@@ -9,7 +9,7 @@ export default class DiffPanel extends Component {
     this.state = {
       mode: null,
     }
-    
+
     this.diffPanel = createRef()
     this.dragHandle = createRef()
   }
@@ -377,12 +377,12 @@ class LineDiffView extends Component {
     let curLeft = 0
     let curRight = 0
     let mkHunk = ({ curLeft, curRight, leftContent, rightContent, leftClass, rightClass }) => Hunk({
-      highlight: this.props.highlight 
+      highlight: this.props.highlight
         ? () => this.props.highlight(leftIds[curLeft], rightIds[curRight])
-        : () => {},
+        : () => { },
       dim: this.props.dim
         ? () => this.props.dim()
-        : () => {},
+        : () => { },
       hunkCtx,
       curLeft,
       curRight,
@@ -567,7 +567,7 @@ class SideEffectDifference extends Component {
   }
 
   diffableSideEffects(effects, presence) {
-      
+
     let contents = ""
     let msg = ""
     let effectIdx = 0
@@ -596,8 +596,8 @@ class SideEffectDifference extends Component {
     const rslt = {}
     for (const channel in symbolicDiff) {
       const lines = {}
-      lines.left  = symbolicDiff[channel].map(([x,]) => ({body: x}))
-      lines.right = symbolicDiff[channel].map(([,x]) => ({body: x}))
+      lines.left = symbolicDiff[channel].map(([x,]) => ({ body: x }))
+      lines.right = symbolicDiff[channel].map(([, x]) => ({ body: x }))
       rslt[channel] = lines
     }
     return rslt
@@ -642,12 +642,14 @@ class SideEffectDifference extends Component {
     const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_sediff ?? []
     const symbolicDiff = props.leftFocus.bot.data().compatibilities[rightId].sediff ?? {}
     const chandivs = []
+    const replacer = (_, s) => s == "leafNeq" ? "These constraints are not equivalent"
+      : s == "fieldEq" ? "The remaining constrants shown here are equivalent"
+        : s
     if (state.view == "symbolic") {
-      console.log(symbolicDiff)
       for (const channel in symbolicDiff) {
         const chandiv = html`<div class="side-effect-channel">
           <h3>${channel}</h3>
-          ${symbolicDiff[channel].map(([,,x]) => html`<pre>${JSON.stringify(x, undefined, 2)}</pre>`)}
+          ${symbolicDiff[channel].map(([, , x]) => html`<pre>${JSON.stringify(x, replacer, 2)}</pre>`)}
         </div>`
         chandivs.push(chandiv)
       }
@@ -663,16 +665,16 @@ class SideEffectDifference extends Component {
           <h3>${channel}</h3>
           <${LineDiffView} 
             leftLines=${this.diffableSideEffects(
-              sediffs[channel].left, 
-              symbolicDiff[channel].map(([x,]) => x)
-            )}
+          sediffs[channel].left,
+          symbolicDiff[channel].map(([x,]) => x)
+        )}
             rightLines=${this.diffableSideEffects(
-              sediffs[channel].right, 
-              symbolicDiff[channel].map(([,y]) => y)
-            )}
-            diffWords=${(l,r) => this.diffWords(l,r)}
+          sediffs[channel].right,
+          symbolicDiff[channel].map(([, y]) => y)
+        )}
+            diffWords=${(l, r) => this.diffWords(l, r)}
             comparator=${() => true}
-            highlight=${(idLeft,idRight) => this.highlightNodes(idLeft, idRight)}
+            highlight=${(idLeft, idRight) => this.highlightNodes(idLeft, idRight)}
             dim=${() => this.dimAll()}
           />
         </div>`
@@ -692,10 +694,31 @@ class SideEffectDifference extends Component {
 }
 
 class Concretions extends Component {
-  render(props) {
+
+  constructor() {
+    super()
+    this.state = {
+      view: "shared"
+    }
+  }
+
+  render(props, state) {
     const rightId = props.rightFocus.bot.id()
+    const leftId = props.leftFocus.bot.id()
     const examples = []
-    const concretions = props.leftFocus.bot.data().compatibilities[rightId].conc_args
+    const sharedConcretions = props.leftFocus.bot.data().compatibilities[rightId].conc_args
+    const leftOnlyConcretions = Object.entries(props.leftFocus.bot.data().compatibilities).flatMap(
+      ([key, compat]) => key == rightId ? [] : compat.conc_args
+    )
+    const rightOnlyConcretions = Object.entries(props.rightFocus.bot.data().compatibilities).flatMap(
+      ([key, compat]) => key == leftId ? [] : compat.conc_args
+    )
+
+    const concretions =
+      state.view == "shared" ? sharedConcretions
+        : state.view == "left" ? leftOnlyConcretions
+          : state.view == "right" ? rightOnlyConcretions
+            : null
 
     for (const concretion of concretions) {
       examples.push(html`
@@ -703,8 +726,43 @@ class Concretions extends Component {
       `)
     }
 
-    return html`<div id="concretion-header">
-      Viewing ${concretions.length} concrete input examples
+    const sharedMsg = sharedConcretions.length == 0
+      ? "No concretions available"
+      : html`Viewing ${sharedConcretions.length} concrete input examples shared by both branches`
+
+    const leftMsg = leftOnlyConcretions.length == 0
+      ? rightOnlyConcretions.length == 0
+        ? "There are no inputs that go down the left but not the right branch. The two branches correspond to exactly the same inputs."
+        : "There are no inputs that go down the left but not the right branch. The left branch refines the right."
+      : html`Viewing ${sharedConcretions.length} concrete input examples that go down the left but not the right branch`
+
+    const rightMsg = rightOnlyConcretions.length == 0
+      ? leftOnlyConcretions.length == 0
+        ? "There are no inputs that go down the right but not the left branch. The two branches correspond to exactly the same inputs."
+        : "There are no inputs that go down the right but not the left branch. The right branch refines the left."
+      : html`Viewing ${sharedConcretions.length} concrete input examples that go down the right but not the left branch`
+
+    return html`
+    <div class="subordinate-buttons">
+      <button
+        data-selected=${state.view == "shared"}
+        onClick=${() => this.setState({ view: "shared" })}
+      >Shared</button>
+      <button
+        data-selected=${state.view == "left"}
+        onClick=${() => this.setState({ view: "left" })}
+      >Left Branch Only</button>
+      <button
+        data-selected=${state.view == "right"}
+        onClick=${() => this.setState({ view: "right" })}
+      >Right Branch Only</button>
+    </div>
+    <div id="concretion-header">
+      ${state.view == "shared" ? sharedMsg
+        : state.view == "left" ? leftMsg
+          : state.view == "right" ? rightMsg
+            : null
+      }
     </div>
     <div id="concretion-data">
       ${examples}
