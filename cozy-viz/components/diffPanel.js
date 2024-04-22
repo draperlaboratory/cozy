@@ -47,8 +47,8 @@ export default class DiffPanel extends Component {
     const concretionAvailable = props.leftFocus && props.rightFocus &&
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.conc_args
     const actionsAvailable =
-      props.rightFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0 ||
-      props.leftFocus?.top.outgoers("edge")[0]?.data().actions?.length > 0
+      props.rightFocus?.top.outgoers("edge")[0]?.data('actions')?.length > 0 ||
+      props.leftFocus?.top.outgoers("edge")[0]?.data('actions')?.length > 0
     const sideEffectsAvailable = props.leftFocus && props.rightFocus &&
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.conc_sediff
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter} ref=${this.diffPanel}>
@@ -118,7 +118,7 @@ class ActionDifference extends Component {
 
     for (const edge of segment) {
       const id = edge.id()
-      for (const line of edge.data().actions) {
+      for (const line of edge.data('actions')) {
         contents += line + '\n'
         lines.push(line)
         msgs.push(msg)
@@ -155,15 +155,15 @@ class ActionDifference extends Component {
   }
 
   highlightNodes(idLeft, idRight) {
-    const cyLeft = this.props.leftFocus.top.cy()
-    const cyRight = this.props.rightFocus.top.cy()
-    cyLeft.highlight(cyLeft.edges(`#${idLeft}`).source())
-    cyRight.highlight(cyRight.edges(`#${idRight}`).source())
+    const cyLeft = this.props.leftFocus.cy()
+    const cyRight = this.props.rightFocus.cy()
+    cyLeft.highlight(cyLeft.nodes(`#${idLeft}, [mergedIds*='#${idLeft}#']`))
+    cyRight.highlight(cyRight.nodes(`#${idRight}, [mergedIds*='#${idRight}#']`))
   }
 
   dimAll() {
-    this.props.leftFocus.top.cy().dim()
-    this.props.rightFocus.top.cy().dim()
+    this.props.leftFocus.cy().dim()
+    this.props.rightFocus.cy().dim()
   }
 
   compare(l, r) {
@@ -219,7 +219,7 @@ class AssemblyDifference extends Component {
     const lines = []
     const ids = []
     const msgs = []
-    const debug = focus.top.cy().debugData
+    const debug = focus.cy().debugData
 
     for (const node of segment) {
       const id = node.id()
@@ -244,15 +244,15 @@ class AssemblyDifference extends Component {
   }
 
   highlightNodes(idLeft, idRight) {
-    const cyLeft = this.props.leftFocus.top.cy()
-    const cyRight = this.props.rightFocus.top.cy()
-    cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
-    cyRight.highlight(cyRight.nodes(`#${idRight}`))
+    const cyLeft = this.props.leftFocus.cy()
+    const cyRight = this.props.rightFocus.cy()
+    cyLeft.highlight(cyLeft.nodes(`#${idLeft}, [mergedIds*='#${idLeft}#']`))
+    cyRight.highlight(cyRight.nodes(`#${idRight}, [mergedIds*='#${idRight}#']`))
   }
 
   dimAll() {
-    this.props.leftFocus.top.cy().dim()
-    this.props.rightFocus.top.cy().dim()
+    this.props.leftFocus.cy().dim()
+    this.props.rightFocus.cy().dim()
   }
 
   compare(l, r) {
@@ -604,15 +604,15 @@ class SideEffectDifference extends Component {
   }
 
   highlightNodes(idLeft, idRight) {
-    const cyLeft = this.props.leftFocus.top.cy()
-    const cyRight = this.props.rightFocus.top.cy()
-    if (idLeft) cyLeft.highlight(cyLeft.nodes(`#${idLeft}`))
-    if (idRight) cyRight.highlight(cyRight.nodes(`#${idRight}`))
+    const cyLeft = this.props.leftFocus.cy()
+    const cyRight = this.props.rightFocus.cy()
+    cyLeft.highlight(cyLeft.nodes(`#${idLeft}, [mergedIds*='#${idLeft}#']`))
+    cyRight.highlight(cyRight.nodes(`#${idRight}, [mergedIds*='#${idRight}#']`))
   }
 
   dimAll() {
-    this.props.leftFocus.top.cy().dim()
-    this.props.rightFocus.top.cy().dim()
+    this.props.leftFocus.cy().dim()
+    this.props.rightFocus.cy().dim()
   }
 
   diffWords(leftLine, rightLine) {

@@ -7,6 +7,7 @@ import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
+import { Segment } from '../util/segmentation.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
 import { tidyMixin, removeBranch } from '../util/graph-tidy.js';
@@ -110,14 +111,14 @@ export default class App extends Component {
 
     if (segmentSelect) {
       // if we're selecting a segment, choose the corresponding segment
-      selfSegment = self.rangeToSegment(self.getRangeOf(ev.target))
+      selfSegment = Segment.fromRange(self.getRangeOf(ev.target))
       self.blur().focusRange(self.getRangeOf(ev.target))
     } else {
       // otherwise, bail out if we're not on a leaf
       if (ev.target.outgoers().length !== 0) return
       // and choose the full branch, if we are on a leaf
       const selfRoot = ev.cy.nodes().roots()[0]
-      selfSegment = { top: selfRoot, bot: ev.target }
+      selfSegment = new Segment(selfRoot, ev.target)
       self.blur().focus(ev.target)
     }
 
@@ -135,7 +136,7 @@ export default class App extends Component {
         other.blur().focusRange(otherRange)
         if (other.loci.length == 1) {
           //if there's only one compatibility, introduce a segment
-          otherSegment = other.rangeToSegment(otherRange)
+          otherSegment = Segment.fromRange(otherRange)
         }
       } else {
         // if we're selecting a full branch, get compatible roots and focus those
@@ -146,7 +147,7 @@ export default class App extends Component {
         if (other.loci.length == 1) {
           // if there's only one compatibility, start a diff
           const otherRoot = other.nodes().roots()[0]
-          otherSegment = { top: otherRoot, bot: other.loci[0] }
+          otherSegment = new Segment(otherRoot, other.loci)
         }
       }
 
@@ -180,8 +181,8 @@ export default class App extends Component {
 
   regenerateFocus() {
     this.setState({ 
-      leftFocus: this.state.leftFocus ? {top: this.cy1.cy.root, bot : this.cy1.cy.loci } : null,
-      rightFocus: this.state.rightFocus ? {top: this.cy2.cy.root, bot : this.cy2.cy.loci} : null,
+      leftFocus: this.state.leftFocus ? new Segment(this.cy1.cy.root, this.cy1.cy.loci) : null,
+      rightFocus: this.state.rightFocus ? new Segment(this.cy2.cy.root, this.cy2.cy.loci) : null,
     })
     // we sometimes need to regenerate focus, 
     // so that the assembly diff is regenerated, 

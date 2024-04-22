@@ -63,10 +63,18 @@ export const tidyMixin = {
           if (candidate.data().simprocs) {
             out[0].data().simprocs.unshift(...candidate.data().simprocs)
           }
+          // we accoumulate actions into the child by putting them into its outgoing edges
+          for (const edge of out[0].outgoers('edge')) {
+            edge.data('actions', candidate.outgoers('edge')[0].data('actions').concat(edge.data('actions')))
+          }
           // introduce edges linking the child to its grandparent
           for (const parent of candidate.incomers('node')) {
             const edgeData = {
-              id: `${parent.id()}-${out[0].id()}`, source: parent.id(), target: out[0].id()
+              id: `${parent.id()}-${out[0].id()}`, 
+              source: parent.id(), 
+              target: out[0].id(),
+              // we copy the relevant actions (those associated with the grandparent) into the new edge
+              actions: candidate.incomers('edge').data('actions')
             }
             node.cy().add({ group: 'edges', data: edgeData })
           }
@@ -107,9 +115,11 @@ export const tidyMixin = {
         if (priorStdout.length > 0) {
           constructed[addr].data('stdout', priorStdout + '\n--\n' + node.data('newStdout'))
         }
+        constructed[addr].data('mergedIds', `${constructed[addr].data('mergedIds')}#${node.id()}#`)
       } else {
         this.removePlainData(node)
         node.data('stdout', node.data('newStdout'))
+        node.data('mergedIds', `#${node.id()}#`)
         constructed[addr] = node
       }
       if (node.hasClass('pathHighlight')) constructed[addr].data('traversed', true)
@@ -181,6 +191,7 @@ export const tidyMixin = {
       node.removeData("traversed")
       node.removeData("initial")
       node.removeData("terminal")
+      node.removeData("mergedIds")
     }
     for (const edge of this.edges()) {
       edge.removeData("traversals")
