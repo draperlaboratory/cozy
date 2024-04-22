@@ -115,7 +115,7 @@ export const tidyMixin = {
         if (priorStdout.length > 0) {
           constructed[addr].data('stdout', priorStdout + '\n--\n' + node.data('newStdout'))
         }
-        constructed[addr].data('mergedIds', `${constructed[addr].data('mergedIds')}#${node.id()}#`)
+        constructed[addr].data('mergedIds', `${constructed[addr].data('mergedIds')}${node.id()}#`)
       } else {
         this.removePlainData(node)
         node.data('stdout', node.data('newStdout'))
@@ -133,12 +133,15 @@ export const tidyMixin = {
       if (edge.source() == sourceRepr && edge.target() == targetRepr) {
         if (edge.hasClass("pathHighlight")) {
           edge.data("traversals", (edge.data("traversals") || 0) + 1)
+          edge.data('mergedIds', `#${edge.id()}#`)
         }
       } else {
         if (sourceRepr.edgesTo(targetRepr).length > 0) {
           if (edge.hasClass("pathHighlight")) {
             const traversals = sourceRepr.edgesTo(targetRepr)[0].data("traversals")
-            sourceRepr.edgesTo(targetRepr)[0].data("traversals", (traversals || 0) + 1)
+            sourceRepr.edgesTo(targetRepr)[0]
+              .data("traversals", (traversals || 0) + 1)
+              .data("mergedIds", `${sourceRepr.edgesTo(targetRepr)[0].mergedIds}${edge.id()}`)
           }
         } else {
           this.add({
@@ -146,6 +149,7 @@ export const tidyMixin = {
             data: {
               source: sourceRepr.id(),
               target: targetRepr.id(),
+              mergedIds: `#${edge.id()}#`,
               traversals: edge.hasClass("pathHighlight") ? 1 : 0
             }
           })
@@ -195,6 +199,7 @@ export const tidyMixin = {
     }
     for (const edge of this.edges()) {
       edge.removeData("traversals")
+      edge.removeData("mergedIds")
     }
   }
 }

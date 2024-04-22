@@ -155,10 +155,13 @@ class ActionDifference extends Component {
   }
 
   highlightNodes(idLeft, idRight) {
+    console.log(idLeft,idRight)
     const cyLeft = this.props.leftFocus.cy()
     const cyRight = this.props.rightFocus.cy()
-    cyLeft.highlight(cyLeft.nodes(`#${idLeft}, [mergedIds*='#${idLeft}#']`))
-    cyRight.highlight(cyRight.nodes(`#${idRight}, [mergedIds*='#${idRight}#']`))
+    const leftEdges = cyLeft.edges(`#${idLeft}, [mergedIds*='#${idLeft}#']`)
+    const rightEdges = cyRight.edges(`#${idRight}, [mergedIds*='#${idRight}#']`)
+    cyLeft.highlight(leftEdges.sources())
+    cyRight.highlight(rightEdges.sources())
   }
 
   dimAll() {
