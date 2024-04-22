@@ -177,8 +177,6 @@ class ActionDifference extends Component {
       const botId = this.props.rightFocus.bot.id()
       cyRight.highlight(cyRight.nodes(`#${botId}, [mergedIds*='#${botId}#']`))
     } else {
-      console.log(idRight)
-      console.log(cyRight.edges().map(edge => edge.data('mergedIds')))
       const rightEdges = cyRight.edges(`#${idRight}, [mergedIds*='#${idRight}#']`)
       cyRight.highlight(rightEdges.sources())
     }

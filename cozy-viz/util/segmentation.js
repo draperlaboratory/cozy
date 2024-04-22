@@ -20,12 +20,6 @@ export function getEdgesFromEnds(top, bottom) {
 // range), including edges
 export class Segment {
   constructor(top, bot) {
-    console.log(
-        bot.predecessors()
-        .intersection(top.successors())
-        .union(top)
-        .union(bot)
-        .jsons())
     this.cy = cytoscape({
       elements: 
         bot.predecessors()
