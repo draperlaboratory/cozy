@@ -63,9 +63,12 @@ export const tidyMixin = {
           if (candidate.data().simprocs) {
             out[0].data().simprocs.unshift(...candidate.data().simprocs)
           }
-          // we accoumulate actions into the child by putting them into its outgoing edges
-          for (const edge of out[0].outgoers('edge')) {
+          if (out[0].outgoers('edge').length) for (const edge of out[0].outgoers('edge')) {
+            // we accoumulate actions into the child by putting them into its outgoing edges
             edge.data('actions', candidate.outgoers('edge')[0].data('actions').concat(edge.data('actions')))
+          } else {
+            // unless it has no outgoing edges, in which case we accumulate them into the node itelf
+            out[0].data('actions', candidate.outgoers('edge')[0].data('actions'))
           }
           // introduce edges linking the child to its grandparent
           for (const parent of candidate.incomers('node')) {
@@ -133,15 +136,15 @@ export const tidyMixin = {
       if (edge.source() == sourceRepr && edge.target() == targetRepr) {
         if (edge.hasClass("pathHighlight")) {
           edge.data("traversals", (edge.data("traversals") || 0) + 1)
-          edge.data('mergedIds', `#${edge.id()}#`)
         }
+        edge.data('mergedIds', `#${edge.id()}#`)
       } else {
         if (sourceRepr.edgesTo(targetRepr).length > 0) {
           if (edge.hasClass("pathHighlight")) {
             const traversals = sourceRepr.edgesTo(targetRepr)[0].data("traversals")
             sourceRepr.edgesTo(targetRepr)[0]
               .data("traversals", (traversals || 0) + 1)
-              .data("mergedIds", `${sourceRepr.edgesTo(targetRepr)[0].mergedIds}${edge.id()}`)
+              .data("mergedIds", `${sourceRepr.edgesTo(targetRepr)[0].data('mergedIds')}${edge.id()}#`)
           }
         } else {
           this.add({

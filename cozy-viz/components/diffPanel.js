@@ -126,6 +126,15 @@ class ActionDifference extends Component {
       }
     }
 
+    if (focus.bot.data('actions')) {
+      for (const line of focus.bot.data('actions')) {
+        contents += line + '\n'
+        lines.push(line)
+        msgs.push(msg)
+        ids.push("bottomNode")
+      }
+    }
+
     return { contents, lines, ids, msgs }
   }
 
@@ -155,13 +164,25 @@ class ActionDifference extends Component {
   }
 
   highlightNodes(idLeft, idRight) {
-    console.log(idLeft,idRight)
     const cyLeft = this.props.leftFocus.cy()
     const cyRight = this.props.rightFocus.cy()
-    const leftEdges = cyLeft.edges(`#${idLeft}, [mergedIds*='#${idLeft}#']`)
-    const rightEdges = cyRight.edges(`#${idRight}, [mergedIds*='#${idRight}#']`)
-    cyLeft.highlight(leftEdges.sources())
-    cyRight.highlight(rightEdges.sources())
+    if (idLeft == 'bottomNode') {
+      const botId = this.props.leftFocus.bot.id()
+      cyLeft.highlight(cyLeft.nodes(`#${botId}, [mergedIds*='#${botId}#']`))
+    } else {
+      const leftEdges = cyLeft.edges(`#${idLeft}, [mergedIds*='#${idLeft}#']`)
+      cyLeft.highlight(leftEdges.sources())
+    }
+    if (idRight == 'bottomNode') {
+      const botId = this.props.rightFocus.bot.id()
+      cyRight.highlight(cyRight.nodes(`#${botId}, [mergedIds*='#${botId}#']`))
+    } else {
+      console.log(idRight)
+      console.log(cyRight.edges().map(edge => edge.data('mergedIds')))
+      const rightEdges = cyRight.edges(`#${idRight}, [mergedIds*='#${idRight}#']`)
+      cyRight.highlight(rightEdges.sources())
+    }
+
   }
 
   dimAll() {
