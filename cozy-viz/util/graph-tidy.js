@@ -56,19 +56,21 @@ export const tidyMixin = {
             out[0].data().vex = candidate.data().vex + '\n' + out[0].data().vex
           }
           /// we accumulate has_syscall, if defined, into the child
-          if ("has_syscall" in candidate.data()) {
+          if (candidate.data("has_syscall")) {
             out[0].data().has_syscall |= candidate.data().has_syscall
           }
           /// we accumulate simprocs, if defined, into the child
-          if (candidate.data().simprocs) {
+          if (candidate.data("simprocs")) {
             out[0].data().simprocs.unshift(...candidate.data().simprocs)
           }
-          if (out[0].outgoers('edge').length) for (const edge of out[0].outgoers('edge')) {
-            // we accoumulate actions into the child by putting them into its outgoing edges
-            edge.data('actions', candidate.outgoers('edge')[0].data('actions').concat(edge.data('actions')))
-          } else {
-            // unless it has no outgoing edges, in which case we accumulate them into the node itelf
-            out[0].data('actions', candidate.outgoers('edge')[0].data('actions'))
+          if (candidate.data("actions")) {
+            if (out[0].outgoers('edge').length) for (const edge of out[0].outgoers('edge')) {
+              // we accoumulate actions into the child by putting them into its outgoing edges
+              edge.data('actions', candidate.outgoers('edge')[0].data('actions').concat(edge.data('actions')))
+            } else {
+              // unless it has no outgoing edges, in which case we accumulate them into the node itelf
+              out[0].data('actions', candidate.outgoers('edge')[0].data('actions'))
+            }
           }
           // introduce edges linking the child to its grandparent
           for (const parent of candidate.incomers('node')) {
