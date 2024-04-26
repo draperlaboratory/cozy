@@ -756,13 +756,13 @@ class Concretions extends Component {
       ? rightOnlyConcretions.length == 0
         ? "There are no inputs that go down the left but not the right branch. The two branches correspond to exactly the same inputs."
         : "There are no inputs that go down the left but not the right branch. The left branch refines the right."
-      : html`Viewing ${sharedConcretions.length} concrete input examples that go down the left but not the right branch`
+      : html`Viewing ${leftOnlyConcretions.length} concrete input examples that go down the left but not the right branch`
 
     const rightMsg = rightOnlyConcretions.length == 0
       ? leftOnlyConcretions.length == 0
         ? "There are no inputs that go down the right but not the left branch. The two branches correspond to exactly the same inputs."
         : "There are no inputs that go down the right but not the left branch. The right branch refines the left."
-      : html`Viewing ${sharedConcretions.length} concrete input examples that go down the right but not the left branch`
+      : html`Viewing ${rightOnlyConcretions.length} concrete input examples that go down the right but not the left branch`
 
     return html`
     <div class="subordinate-buttons">
