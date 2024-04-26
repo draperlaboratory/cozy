@@ -101,6 +101,16 @@ function noStdDiffs(leaf, other) {
   else return noErrors(leaf, other)
 }
 
+function equivConstraints(leaf,other) {
+  const leftOnlyConcretions = Object.entries(leaf.data().compatibilities).flatMap(
+    ([key, compat]) => key == leaf.id() ? [] : compat.conc_args
+  )
+  const rightOnlyConcretions = Object.entries(other.data().compatibilities).flatMap(
+    ([key, compat]) => key == other.id() ? [] : compat.conc_args
+  )
+  return (rightOnlyConcretions.length + leftOnlyConcretions.length == 0)
+}
+
 const matchRegex = (regexStr) => (leaf, other) => {
   let regex
   try {
@@ -330,6 +340,7 @@ class PruneMenu extends Component {
       pruningRegisters: false,
       pruningCorrect: false,
       pruningDoRegex: false,
+      pruningEquivConstraints: false,
       pruningRegex: ".*",
     }
     this.prune.bind(this)
@@ -373,6 +384,7 @@ class PruneMenu extends Component {
 
     if (this.state.pruningMemory) test = extendTest(noMemoryDiffs, test)
     if (this.state.pruningStdout) test = extendTest(noStdDiffs, test)
+    if (this.state.pruningEquivConstraints) test = extendTest(equivConstraints, test)
     if (this.state.pruningRegisters) test = extendTest(noRegisterDiffs, test)
     if (this.state.pruningCorrect) test = extendTest(noErrors, test)
     if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
@@ -403,6 +415,9 @@ class PruneMenu extends Component {
         <//>
         <${MenuOption} onClick=${() => this.setPrune({ pruningCorrect: !state.pruningCorrect })}>
           <input type="checkbox" checked=${state.pruningCorrect}/> Error-free
+        <//>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningEquivConstraints: !state.pruningEquivConstraints })}>
+          <input type="checkbox" checked=${state.pruningEquivConstraints}/> Equivalent Constraints
         <//>
         <${MenuOption} onClick=${() => this.setPrune({ pruningDoRegex: !state.pruningDoRegex })}>
           <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
