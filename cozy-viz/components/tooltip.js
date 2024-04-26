@@ -173,8 +173,8 @@ export default class Tooltip extends Component {
             Vex IR
           </button>`
         }
-        ${this.state.node?.data().error ||
-          this.state.node?.data().spinning && html`
+        ${(this.state.node?.data().error ||
+          this.state.node?.data().spinning) && html`
           <button 
             data-highlighted=${state.mode == "errors"} 
             onClick=${() => this.setView("errors")}>
