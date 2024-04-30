@@ -58,6 +58,25 @@
       ];
     };
 
+    packages.x86_64-linux.tests = pkgs.stdenv.mkDerivation {
+      name = "cozy-test-artifacts";
+      src = ./.;
+
+      buildInputs = [
+        self.packages.x86_64-linux.default
+        pkgs.python311
+      ];
+
+      buildPhase = ''
+        mkdir $out
+        make -C ./test_programs
+        for test in "./tests/*"; do
+          python $test
+        done
+        cp *.json $out
+      '';
+    };
+
     devShells.x86_64-linux.testing = pkgs.mkShell {
       shellHook = ''
         export PYTHONPATH="$(git rev-parse --show-toplevel)":$PYTHONPATH
