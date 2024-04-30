@@ -32,6 +32,9 @@
         pyPkgs.setuptools
       ];
       propagatedBuildInputs = [
+        pyPkgs.lief
+        pyPkgs.requests
+        pyPkgs.angr
         pyPkgs.keystone-engine
         pyPkgs.intelhex
         lld_15
