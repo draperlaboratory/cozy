@@ -65,6 +65,7 @@
       buildInputs = [
         self.packages.x86_64-linux.default
         pkgs.python311
+        patcherex2
       ];
 
       buildPhase = ''

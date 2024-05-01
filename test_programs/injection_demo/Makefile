@@ -1,8 +1,8 @@
 CC = gcc
-BUILDTARGETS = injectionAttack injectionAttack-badPatch injectionAttack-goodPatch
+BUILDTARGETS = injectionAttack-badPatch injectionAttack-goodPatch
 PATCHTARGETS = injectionAttack-goodPatch-patcherex injectionAttack-badPatch-patcherex
 
-all: $(BUILDTARGETS) $(PATCHTARGETS)
+all: $(BUILDTARGETS) $(PATCHTARGETS) 
 
 $(BUILDTARGETS): % : %.o
 
@@ -12,3 +12,7 @@ $(PATCHTARGETS): injectionAttack
 	python micropatch.py
 
 $(patsubst %,%.o,$(TARGETS)): %.o : %.c
+
+clean:
+	rm *.o
+	rm $(BUILDTARGETS) $(PATCHTARGETS)
