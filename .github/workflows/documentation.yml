@@ -13,13 +13,14 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
       - name: Install dependencies
         run: |
           pip install sphinx sphinx-autoapi
       - name: Sphinx build
-        run: make -C docs html
+        run: TZ=UTC make -C docs html
+        # set timezone explitly as workaround for https://github.com/nektos/act/issues/1853
       - name: Add cozy-viz to pages deployment
         run: |
           DEST=./docs/build/html/cozy-viz/
