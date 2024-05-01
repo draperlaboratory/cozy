@@ -70,10 +70,10 @@
       buildPhase = ''
         mkdir $out
         make -C ./test_programs
-        for test in "./tests/*"; do
+        for test in ./tests/*; do
           python $test
         done
-        cp *.json $out
+        cp *.json $out/
       '';
     };
 
