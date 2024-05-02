@@ -179,8 +179,8 @@ comparison_good = cozy.analysis.Comparison(prepatched_results, postpatched_resul
 #                                      args=[command_symbols, role_symbols, data_symbols],
 #                                      num_examples=2)
 
-cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched,
-                                     prepatched_results, postpatched_results,
+cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched_good,
+                                     prepatched_results, postpatched_results_good,
                                      comparison_good, first_prog, second_prog,
                                      output_file="cmp_injection_demo_good.json",
                                      concrete_post_processor=concrete_post_processor,
