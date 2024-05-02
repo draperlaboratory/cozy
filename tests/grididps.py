@@ -135,7 +135,7 @@ cozy.execution_graph.dump_comparison(proj_prepatched, proj_consumePatch,
                                           include_actions=True,
                                           include_side_effects=True,
                                           args=args,
-                                          output_file="cmp_gridips_consume.json",
+                                          output_file="cmp_grididps_consume.json",
                                           num_examples=2, 
                                           concrete_post_processor=concrete_post_processor)
 
@@ -145,6 +145,6 @@ cozy.execution_graph.dump_comparison(proj_prepatched, proj_guardPatch,
                                      include_actions=True,
                                      include_side_effects=True,
                                      args=args,
-                                     output_file="cmp_gridips_guard.json",
+                                     output_file="cmp_grididps_guard.json",
                                      num_examples=2, 
                                      concrete_post_processor=concrete_post_processor)
