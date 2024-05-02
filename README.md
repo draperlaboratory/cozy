@@ -11,7 +11,8 @@ via a browser based rich user interface.
 
 ## Install
 
-cozy is now available as a Python package on PyPI under the name `cozy-re`. Install with pip via the following command:
+cozy is now available as a Python package on PyPI under the name `cozy-re`.
+Install with pip via the following command:
 
 ```commandline
 pip install cozy-re
@@ -25,7 +26,10 @@ https://draperlaboratory.github.io/cozy/
 
 ## Template Generator
 
-cozy now comes with a Python script template generator to help you get started with using the framework. The wizard will prompt you with a series of questions and generate the appropriate file with starter code. To run the generator, install cozy, then run the following command in the console:
+cozy now comes with a Python script template generator to help you get started
+with using the framework. The wizard will prompt you with a series of questions
+and generate the appropriate file with starter code. To run the generator,
+install cozy, then run the following command in the console:
 
 ```commandline
 python3 -m cozy
@@ -33,11 +37,14 @@ python3 -m cozy
 
 ## About
 
-cozy is being developed by Draper Laboratory under the [DARPA Assured Micropatching (AMP) program](https://www.darpa.mil/program/assured-micropatching).
+cozy is being developed by Draper Laboratory under the [DARPA Assured
+Micropatching (AMP)
+program](https://www.darpa.mil/program/assured-micropatching).
 
 ## Build Instructions
 
-To get started with building cozy, run the following commands in the project root folder to create a virtual environment and install angr:
+To get started with building cozy, run the following commands in the project
+root folder to create a virtual environment and install angr:
 
 ```commandline
 python3 -m venv venv
@@ -47,8 +54,8 @@ pip3 install angr sphinx sphinx-autoapi networkx claripy portion
 
 Alternatively, if you have `nix` installed and flakes enabled, run
 
-``` 
-nix develop .#testing 
+```commandline
+nix develop
 ```
 
 To enter a nix development shell with `cozy` and its dependencies available on
@@ -56,7 +63,8 @@ To enter a nix development shell with `cozy` and its dependencies available on
 
 ## Testing
 
-To run an example comparison, run one of the example scripts. In the root directory, run the following commands:
+To run an example comparison, run one of the example scripts. In the root
+directory, run the following commands:
 
 ```commandline
 source venv/bin/activate
@@ -67,9 +75,18 @@ python3 examples/cmp_null_deref.py
 Or just `python3 examples/cmp_null_deref.py` if you're in the nix development
 shell.
 
+If nix is available, then to run the full suite of tests used in CI, you can
+run:
+
+```commandline
+nix build .#tests
+```
+
 ### Building Docs
 
-Building the docs requires the use of sphinx and sphinx-autoapi, which you should have previously installed via pip3. To build fresh HTML docs, run the following:
+Building the docs requires the use of sphinx and sphinx-autoapi, which you
+should have previously installed via pip3. To build fresh HTML docs, run the
+following:
 
 ```commandline
 source venv/bin/activate

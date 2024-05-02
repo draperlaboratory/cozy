@@ -78,7 +78,7 @@
       '';
     };
 
-    devShells.x86_64-linux.testing = pkgs.mkShell {
+    devShells.x86_64-linux.default = pkgs.mkShell {
       shellHook = ''
         export PYTHONPATH="$(git rev-parse --show-toplevel)":$PYTHONPATH
       '';
