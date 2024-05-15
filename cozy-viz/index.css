@@ -53,6 +53,10 @@ button:disabled {
   font-weight: bold;
 }
 
+#menubar input[data-awaiting="true"] {
+  color: #999999;
+}
+
 /* Graph Panels */
 
 #labelLeft,

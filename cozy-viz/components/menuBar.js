@@ -342,6 +342,7 @@ class PruneMenu extends Component {
       pruningDoRegex: false,
       pruningEquivConstraints: false,
       pruningRegex: ".*",
+      awaitingPrune: null,
     }
     this.prune.bind(this)
   }
@@ -394,8 +395,11 @@ class PruneMenu extends Component {
 
   debounceRegex(e) {
     this.setState({ pruningRegex: e.target.value })
-    clearTimeout(this.regexDebounceTimeout)
-    this.regexDebounceTimeout = setTimeout(() => this.purePrune(), 1000)
+    if (this.state.pruningDoRegex) {
+      this.setState({ awaitingPrune: true })
+      clearTimeout(this.regexDebounceTimeout)
+      this.regexDebounceTimeout = setTimeout(() => this.setPrune({ awaitingPrune: null }), 1000)
+    }
   }
 
   render(props, state) { 
@@ -421,6 +425,7 @@ class PruneMenu extends Component {
         <//>
         <${MenuOption} onClick=${() => this.setPrune({ pruningDoRegex: !state.pruningDoRegex })}>
           <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
+            data-awaiting=${state.awaitingPrune}
             onClick=${e => e.stopPropagation()}
             onInput=${e => this.debounceRegex(e)} 
             value=${state.pruningRegex}/>
