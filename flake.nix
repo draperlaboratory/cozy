@@ -41,6 +41,16 @@
         pkgs.clang_15
       ];
     };
+
+    latestTextual = pyPkgs.textual.overridePythonAttrs {
+      version = "0.60.1";
+      src = pkgs.fetchFromGitHub {
+        owner = "Textualize";
+        repo = "textual";
+        rev = "refs/tags/v0.60.1";
+        hash = "sha256-TyyI+Q61t2h0KLWc73pKcZXKVYNB+8mgoFqjAxM7TiE=";
+      };
+    };
   in {
 
     packages.x86_64-linux.default = pyPkgs.buildPythonPackage {
@@ -88,6 +98,7 @@
         pyPkgs.networkx
         pyPkgs.sphinx
         pyPkgs.sphinx-autoapi
+        latestTextual
         portion
         patcherex2
       ];
