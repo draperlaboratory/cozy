@@ -65,6 +65,7 @@
         portion
         pyPkgs.angr
         pyPkgs.networkx
+        latestTextual
       ];
     };
 
