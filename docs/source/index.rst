@@ -14,6 +14,7 @@ Welcome to cozy's documentation!
    launchingavisualization
    concolic
    hooks
+   sideeffects
 
 
 
