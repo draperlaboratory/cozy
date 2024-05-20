@@ -21,7 +21,8 @@ dependencies = [
     "angr >= 9.2.96",
     "networkx >= 3.0",
     "claripy >= 9.2.96",
-    "portion >= 2.4.1"
+    "portion >= 2.4.1",
+    "textual >= 0.60.1",
 ]
 
 [project.urls]
