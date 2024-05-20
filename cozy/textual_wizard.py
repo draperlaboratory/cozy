@@ -189,8 +189,7 @@ class Stage(Enum):
     request_visualization = 12
     request_dump = 13
     request_dump_name = 14
-    confirm_dump_clobber = 15
-    complete = 16
+    complete = 15
 
 class Wizard(App):
 
@@ -202,14 +201,6 @@ class Wizard(App):
     Screen {
         padding:1
     }
-
-    #body {
-    }
-
-    OptionList {
-        height:4
-    }
-
     """
 
     def compose(self) -> ComposeResult:
@@ -269,7 +260,6 @@ class Wizard(App):
             case Stage.request_visualization: await self.set_request_visualization()
             case Stage.request_dump: await self.set_request_dump()
             case Stage.request_dump_name: await self.set_request_dump_name()
-            case Stage.confirm_dump_clobber: await self.set_confirm_dump_clobber()
             case Stage.complete: await self.complete()
         self.stage = stage
 
@@ -333,9 +323,7 @@ class Wizard(App):
     async def handle_request_function_name(self, message):
         self.results.fun_name = message.value
         self.resultview.mount(Markdown("**Target Function:** " + str(message.value)))
-        if message.value.startswith("0x"):
-            self.results.fun_name_processed = int(message.value, 16)
-        elif message.value.isdigit():
+        if message.value.startswith("0x") or message.value.isdigit():
             self.results.fun_name_processed = int(message.value, 16)
         else:
             self.results.fun_name_processed = message.value
@@ -414,6 +402,7 @@ class Wizard(App):
 
     async def handle_request_dump_name(self, message):
         self.resultview.mount(Markdown("**JSON Report name:** " + message.value))
+
         self.results.dump_name = message.value
         await self.set_stage(Stage.request_visualization)
 
@@ -458,7 +447,6 @@ class Wizard(App):
                 case Stage.request_textual_report: await self.handle_request_textual_report(message)
                 case Stage.request_visualization: await self.handle_request_visualization(message)
                 case Stage.request_dump: await self.handle_request_dump(message)
-                case Stage.confirm_dump_clobber: await self.handle_confirm_dump_clobber(message)
 
     async def on_directory_tree_file_selected(self, message: DirectoryTree.FileSelected) -> None:
         with self.app.batch_update():
