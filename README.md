@@ -24,7 +24,7 @@ The getting started guide and API reference can be found on our Github pages!:
 
 https://draperlaboratory.github.io/cozy/
 
-## Template Generator
+## Template Wizard
 
 cozy now comes with a Python script template generator to help you get started
 with using the framework. The wizard will prompt you with a series of questions
@@ -41,7 +41,12 @@ cozy is being developed by Draper Laboratory under the [DARPA Assured
 Micropatching (AMP)
 program](https://www.darpa.mil/program/assured-micropatching).
 
-## Build Instructions
+# Repo Build Instructions
+
+The following sections are for the case where you want to use cozy directly
+from the source code in this repository, not from the `cozy-re` PyPI package.
+
+## Setting up the Environment
 
 To get started with building cozy, run the following commands in the project
 root folder to create a virtual environment and install angr:
@@ -49,7 +54,7 @@ root folder to create a virtual environment and install angr:
 ```commandline
 python3 -m venv venv
 source venv/bin/activate
-pip3 install angr sphinx sphinx-autoapi networkx claripy portion
+pip3 install angr sphinx sphinx-autoapi networkx claripy portion textual
 ```
 
 Alternatively, if you have `nix` installed and flakes enabled, run
