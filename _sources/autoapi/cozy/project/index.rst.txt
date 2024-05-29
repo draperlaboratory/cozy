@@ -1,0 +1,205 @@
+cozy.project
+============
+
+.. py:module:: cozy.project
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.project.Session
+   cozy.project.Project
+
+
+Module Contents
+---------------
+
+.. py:class:: Session(proj, start_fun: str | int | None = None)
+
+   A session is a particular run of a project, consisting of attached directives (asserts/assumes).    You can malloc memory for storage prior to running the session.    Once you are ready to run the session, use the run method.
+   :ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify    properties of the state before a run.
+   :ivar cozy.project.Project proj: The Project tied to this session.
+   :ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the    session starts in an entry state.
+   :ivar list[Directive] directives: The directives added to this session.
+   :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
+
+   Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
+
+
+   .. py:method:: store_fs(filename: str, simfile: angr.SimFile) -> None
+
+      Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments        to state.fs.insert.
+
+      :param str filename: The filename of the new file.
+      :param angr.SimFile simfile: The file to make available to the simulated program.
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: malloc(num_bytes: int, name=None) -> int
+
+      Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory        before the :py:meth:`~cozy.project.Project.run` method is called.
+
+      :param int num_bytes: The number of bytes to allocate.
+      :return: A pointer to the allocated memory block.
+      :rtype: int
+
+
+
+   .. py:method:: store(addr: int, data: claripy.ast.bits, **kwargs)
+
+      Stores data at some address. This method simply forwards the arguments to state.memory.store.
+
+      :param int addr: Address to store the data at.
+      :param claripy.ast.bits data: The data to store in memory.
+      :param kwargs: Additional keyword arguments to pass to state.memory.store
+
+
+
+   .. py:property:: memory
+
+
+   .. py:property:: mem
+      Access memory using a dict-like interface. This property simply forwards to state.mem
+
+
+
+   .. py:method:: add_directives(*directives: cozy.directive.Directive) -> None
+
+      Adds multiple directives to the session.
+
+      :param Directive directives: The directives to add.
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: add_constraints(*constraints: claripy.ast.bool) -> None
+
+      Adds multiple constraints to the session's state.
+
+      :param claripy.ast.bool constraints: The constraints to add
+      :return: None
+      :rtype: None
+
+
+
+   .. py:property:: start_fun_addr
+
+
+   .. py:method:: _call(args: list[claripy.ast.bits], cache_intermediate_info: bool = True, ret_addr: int | None = None) -> angr.sim_manager.SimulationManager
+
+
+   .. py:method:: _session_exploration(cache_intermediate_info: bool = True) -> _SessionExploration
+
+
+   .. py:method:: _run_result(simgr: angr.sim_manager.SimulationManager, sess_exploration: _SessionExploration) -> RunResult
+
+
+   .. py:method:: run(args: list[claripy.ast.bits], cache_intermediate_info: bool = True, ret_addr: int | None = None, loop_bound: int | None = None) -> RunResult
+
+      Runs a session to completion, either starting from the start_fun used to create the session, or from the        program start. Note that currently a session may be run only once. If run is called multiple times, a        RuntimeError will be thrown.
+
+      :param list[claripy.ast.bits] args: The arguments to pass to the function. angr will utilize the function's        type signature to figure out the calling convention to use with the arguments.
+      :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be
+      cached. This is required for dumping the execution graph which is used in visualization.
+      :param int | None ret_addr: What address to return to if calling as a function
+      :param int | None loop_bound: Sets an upper bound on loop iteration count. Useful for programs with        non-terminating loops.
+      :return: The result of running this session.
+      :rtype: RunResult
+
+
+
+.. py:class:: Project(binary_path: str, fun_prototypes: dict[str | int, str] | None = None, load_debug_info: bool = False, **kwargs)
+
+   Represents a project for a single executable
+
+   :ivar angr.Project angr_proj: The angr project created for this cozy project.
+   :ivar dict[str | int, str] fun_prototypes: Maps function names or function addresses to their type signatures.
+
+   Constructor for a project.
+
+   :param str binary_path: The path to the binary to analyze.
+   :param dict[str | int, str] | None fun_prototypes: Initial dictionary that maps function names or addresses to their type signatures. If None is passed, fun_prototypes is initialized to the empty dictionary.
+   :param kwargs: Extra arguments to pass to angr.Project
+
+
+   .. py:method:: object_ranges(obj_filter: collections.abc.Callable[[cle.Backend], bool] | None = None) -> list[range]
+
+      Returns the ranges of the objects stored in the executable (for example: ELF objects). If obj_filter is specified, only objects that pass the filter make it into the return list.
+
+      :param Callable[[Backend], bool] | None obj_filter: Used to filter certain objects from the output list.
+      :return: A list of memory ranges.
+      :rtype: list[range]
+
+
+
+   .. py:method:: find_symbol_addr(sym_name: str) -> int
+
+      Finds the rebased addressed of a symbol. Functions are the most common symbol type.
+
+      :param str sym_name: The symbol to lookup.
+      :return: The rebased symbol address
+      :rtype: int
+
+
+
+   .. py:method:: add_prototype(fun: str | int, fun_prototype: str) -> None
+
+      Adds a function prototype to this project.
+
+      :param str | int fun: The function's name or address.
+      :param str fun_prototype: The function's type signature.
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: session(start_fun: str | int | None = None) -> cozy.session.Session
+
+      Returns a new session derived from this project.
+
+      :param str | int | None start_fun: The name or address of the function which this session will start with. If None is specified, then the program will start at the entry point (main function).
+      :return: The fresh session.
+      :rtype: Session
+
+
+
+   .. py:property:: cfg
+      Returns the control flow graph for this project. This property will cache the cfg in a pickle file
+      to speed up future runs. This means if you change the underlying program you will need to delete the
+      .cfg.pickle file located in the same directory as your executable.
+
+
+
+   .. py:property:: arch
+      Returns the underlying angr project architecture
+
+
+
+   .. py:method:: hook_symbol(symbol_name: str, simproc_class: type[angr.SimProcedure], kwargs=None, replace: bool | None = None) -> int
+
+      Hooks a symbol in the angr project. If the symbol is one from libc, this method will also replace
+      what is stored in :py:attr:`angr.SIM_PROCEDURES["libc"][symbol_name]`.
+
+      :param str symbol_name: The name of the symbol to hook.
+      :param type[SimProcedure] simproc_class: The class to use to hook the symbol. Note that this is not an instance        of SimProcedure, but is instead a reference to the class itself.
+      :param kwargs: These are the keyword arguments that will be passed to the procedure's `run` method eventually.
+      :param bool | None replace: Control the behavior on finding that the address is already hooked. If true,        silently replace the hook. If false, warn and do not replace the hook. If none (default), warn and replace the        hook.
+      :rtype: int
+      :return: The address of the new symbol.
+
+
+
+   .. py:method:: hook_syscall(syscall_name: str, simproc_class: type[angr.SimProcedure])
+
+      Hooks a syscall in the angr project.
+
+      :param str syscall_name: The name of the syscall to hook.
+      :param type[SimProcedure] simproc_class: The class to use to hook the symbol. Note that this is not an instance        of SimProcedure, but is instead a reference to the class itself.
+
+
+

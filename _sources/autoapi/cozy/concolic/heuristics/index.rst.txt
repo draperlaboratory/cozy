@@ -1,0 +1,196 @@
+cozy.concolic.heuristics
+========================
+
+.. py:module:: cozy.concolic.heuristics
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.concolic.heuristics.Session
+   cozy.concolic.heuristics.ArbitraryCandidate
+   cozy.concolic.heuristics.BBTransitionCandidate
+   cozy.concolic.heuristics.CompleteTermination
+   cozy.concolic.heuristics.CoverageTermination
+   cozy.concolic.heuristics.CyclomaticComplexityTermination
+
+
+Module Contents
+---------------
+
+.. py:class:: Session(proj, start_fun: str | int | None = None)
+
+   A session is a particular run of a project, consisting of attached directives (asserts/assumes).    You can malloc memory for storage prior to running the session.    Once you are ready to run the session, use the run method.
+   :ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify    properties of the state before a run.
+   :ivar cozy.project.Project proj: The Project tied to this session.
+   :ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the    session starts in an entry state.
+   :ivar list[Directive] directives: The directives added to this session.
+   :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
+
+   Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
+
+
+   .. py:method:: store_fs(filename: str, simfile: angr.SimFile) -> None
+
+      Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments        to state.fs.insert.
+
+      :param str filename: The filename of the new file.
+      :param angr.SimFile simfile: The file to make available to the simulated program.
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: malloc(num_bytes: int, name=None) -> int
+
+      Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory        before the :py:meth:`~cozy.project.Project.run` method is called.
+
+      :param int num_bytes: The number of bytes to allocate.
+      :return: A pointer to the allocated memory block.
+      :rtype: int
+
+
+
+   .. py:method:: store(addr: int, data: claripy.ast.bits, **kwargs)
+
+      Stores data at some address. This method simply forwards the arguments to state.memory.store.
+
+      :param int addr: Address to store the data at.
+      :param claripy.ast.bits data: The data to store in memory.
+      :param kwargs: Additional keyword arguments to pass to state.memory.store
+
+
+
+   .. py:property:: memory
+
+
+   .. py:property:: mem
+      Access memory using a dict-like interface. This property simply forwards to state.mem
+
+
+
+   .. py:method:: add_directives(*directives: cozy.directive.Directive) -> None
+
+      Adds multiple directives to the session.
+
+      :param Directive directives: The directives to add.
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: add_constraints(*constraints: claripy.ast.bool) -> None
+
+      Adds multiple constraints to the session's state.
+
+      :param claripy.ast.bool constraints: The constraints to add
+      :return: None
+      :rtype: None
+
+
+
+   .. py:property:: start_fun_addr
+
+
+   .. py:method:: _call(args: list[claripy.ast.bits], cache_intermediate_info: bool = True, ret_addr: int | None = None) -> angr.sim_manager.SimulationManager
+
+
+   .. py:method:: _session_exploration(cache_intermediate_info: bool = True) -> _SessionExploration
+
+
+   .. py:method:: _run_result(simgr: angr.sim_manager.SimulationManager, sess_exploration: _SessionExploration) -> RunResult
+
+
+   .. py:method:: run(args: list[claripy.ast.bits], cache_intermediate_info: bool = True, ret_addr: int | None = None, loop_bound: int | None = None) -> RunResult
+
+      Runs a session to completion, either starting from the start_fun used to create the session, or from the        program start. Note that currently a session may be run only once. If run is called multiple times, a        RuntimeError will be thrown.
+
+      :param list[claripy.ast.bits] args: The arguments to pass to the function. angr will utilize the function's        type signature to figure out the calling convention to use with the arguments.
+      :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be
+      cached. This is required for dumping the execution graph which is used in visualization.
+      :param int | None ret_addr: What address to return to if calling as a function
+      :param int | None loop_bound: Sets an upper bound on loop iteration count. Useful for programs with        non-terminating loops.
+      :return: The result of running this session.
+      :rtype: RunResult
+
+
+
+.. py:class:: ArbitraryCandidate
+
+   For use as the candidate heuristic in :py:meth:`cozy.exploration.ConcolicSim.generate_concrete`
+   This heuristic will choose the next exploration candidate by popping the last element off the candidate's list.
+
+
+   .. py:method:: __call__(candidate_states: list[angr.SimState])
+
+
+.. py:class:: BBTransitionCandidate(lookback: int = 2)
+
+   For use as the candidate heuristic in :py:meth:`cozy.exploration.ConcolicSim.generate_concrete`
+   This heuristic will select a candidate whose basic block history has been seen least frequently in the past. This
+   class keeps an internal record of candidates it chose in the past to compute this metric.
+
+   :param int lookback: The number of basic blocks we should look back to when computing a candidate's transition        history. This should be a small integer, somewhere in the range 1 to 6. This number should in general only        be increased if the total number of states we search goes up. The candidate state with the most unique        transition history will be chosen by this heuristic.
+
+
+   .. py:method:: __call__(candidate_states: list[angr.SimState])
+
+
+.. py:class:: CompleteTermination
+
+   This termination heuristic tells the concolic execution to explore until all states are deadended.
+
+
+   .. py:method:: __call__(simgr)
+
+
+.. py:class:: CoverageTermination(fun: angr.knowledge_plugins.Function, coverage_fraction: float = 0.9)
+
+   This termination heuristic tells the concolic execution to explore until a certain fraction of a
+   function's basic blocks have been visited at least once.
+
+   :param Function fun: The function that we are seeking a specific coverage over.
+   :param float coverage_fraction: A number in the range [0, 1] that determines what fraction of basic blocks need        to be visited before termination is reached.
+
+
+   .. py:method:: from_session(sess: cozy.project.Session, coverage_fraction: float = 0.9) -> CoverageTermination
+      :staticmethod:
+
+
+      Constructs a CoverageTermination object from an unrun session.
+
+      :param Session sess: The session which is set to call some specific function, but has not yet been run.
+      :param float coverage_fraction: A number in the range [0, 1] that determines what fraction of basic blocks need        to be visited before termination is reached.
+
+
+
+   .. py:method:: __call__(simgr)
+
+
+.. py:class:: CyclomaticComplexityTermination(fun: angr.knowledge_plugins.Function, fun_manager: angr.knowledge_plugins.FunctionManager, add_callees=True, multiplier: int | float = 1)
+
+   This termination heuristic tells the concolic execution to explore until a certain number of terminated
+   states are reached. If add_callees is False, then this value is equal to the cyclomatic complexity of the function.
+   Otherwise, it is equal to the cyclomatic complexity of the function plus the cyclomatic complexity of all callees
+   of the function (recursively).
+
+   :param bool add_callees: If this parameter is True, the cyclomatic complexity of all functions deeper in the        call graph will be summed to determine the maximum number of states to explore. If False, the upper bound        will be the cyclomatic complexity of the session.
+   :param int | float multiplier: The computed cyclomatic complexity sum will be multiplied by this value to        determine the number of states to explore
+
+
+   .. py:method:: from_session(sess: cozy.project.Session, add_callees=True, multiplier: int | float = 1) -> CyclomaticComplexityTermination
+      :staticmethod:
+
+
+      Constructs an object from a session. The session must be started from a specific function.
+
+      :param bool add_callees: If this parameter is True, the cyclomatic complexity of all functions deeper in the        call graph will be summed to determine the maximum number of states to explore. If False, the upper bound        will be the cyclomatic complexity of the session.
+      :param int | float multiplier: The computed cyclomatic complexity sum will be multiplied by this value to        determine the number of states to explore
+
+
+
+   .. py:method:: __call__(simgr)
+
+

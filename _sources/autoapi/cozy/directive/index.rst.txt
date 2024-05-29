@@ -1,0 +1,264 @@
+cozy.directive
+==============
+
+.. py:module:: cozy.directive
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.directive.Directive
+   cozy.directive.AssertType
+   cozy.directive.Assert
+   cozy.directive.Assume
+   cozy.directive.VirtualPrint
+   cozy.directive.ErrorDirective
+   cozy.directive.Breakpoint
+   cozy.directive.Postcondition
+
+
+Module Contents
+---------------
+
+.. py:class:: Directive
+
+   Abstract base class for all directives.
+
+
+.. py:class:: AssertType
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   An enum to determine the type of assertion.
+
+
+   .. py:attribute:: ASSERT_MUST
+      :value: 0
+
+
+      This type of assert will be triggered if the assertion condition can be falsified. This assertion type replicates
+      the behaviour of assertions as used in a typical testing environment. More precisely, this assertion uses
+      universal quantification. The assertion fails if the following condition does not hold: forall x . P(x), where
+      x is the program input, and P is the assertion condition.
+
+
+
+   .. py:attribute:: ASSERT_CAN
+      :value: 1
+
+
+      This type of assert will be triggered if the assertion condition cannot be satisfied, under the constraints of
+      the local state. This assertion type is a dual to ASSERT_MUST, and an exact analogue does not exist from
+      typical testing environments. More precisely, this assertion uses existential quantification. The assertion
+      fails if the following condition does not hold: exists x . P(x), where x is the program input, P is the
+      assertion condition, and C is the state's constraints.
+
+
+
+   .. py:attribute:: ASSERT_CAN_GLOBAL
+      :value: 2
+
+
+      This is type of assert is like ASSERT_CAN, but is computed under a global setting. If on any path the local
+      assertion exists x . P(x) holds, then all cases where the assertion failed will be scrubbed from the output.
+      This is much the same E from computation tree logic, which is also a global property. Note that this assertion
+      type should only be used in cases where the exploration is complete - ie all states can be explored. 
+
+
+
+.. py:class:: Assert(addr: int, condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None, assert_type: AssertType = AssertType.ASSERT_MUST)
+
+   Bases: :py:obj:`Directive`
+
+
+   An assert directive sets a breakpoint at a certain address.
+
+   :ivar int addr: The program address this assert is attached to.
+   :ivar Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the    SimState will be passed to this function, and an assertion condition should be returned. This is then used    internally by the SAT solver, along with the state's accumulated constraints.
+   :ivar str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
+   :ivar AssertType assert_type: The type of assert.
+
+   Constructor for an Assert object.
+
+   :param int addr: The address at which the assert will be triggered.
+   :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the        SimState will be passed to this function, and an assertion condition should be returned. This is then used        internally by the SAT solver, along with the state's accumulated constraints.
+   :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is        triggered.
+   :param AssertType assert_type: The type of assert to construct.
+
+
+   .. py:method:: from_fun_offset(project, fun_name: str, offset: int, condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None, assert_type: AssertType = AssertType.ASSERT_MUST)
+      :staticmethod:
+
+
+      Factory for an Assert object set at a certain offset from a function start.
+
+      :param cozy.project.Project project: The project which this assert is attached to. The project is used to compute the address of the assert.
+      :param fun_name str: The name of the function in which this assert will be located.
+      :param offset int: The offset into the function in which this assert will be located.
+      :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the        SimState will be passed to this function, and an assertion condition should be returned. This is then used        internally by the SAT solver, along with the state's accumulated constraints.
+      :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
+      :param AssertType assert_type: The type of assert to construct.
+      :rtype: Assert
+
+
+
+.. py:class:: Assume(addr: int, condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None)
+
+   Bases: :py:obj:`Directive`
+
+
+   An assume directive sets a breakpoint at a certain address. An assume simply adds an extra constraint to the state's accumulated constraints before resuming execution. An assume is useful for adding a precondition.
+
+   :ivar int addr: The program address this assume is attached to.
+   :ivar Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the SimState will be passed to this function, and a condition should be returned. This condition is then attached to the state's set of constraints.
+   :ivar str | None info_str: Human readable label for this assume.
+
+   Constructor for an Assume object.
+
+   :param int addr: The address at which the assume will be triggered.
+   :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the SimState will be passed to this function, and an assumption should be returned. This assumption is attached to the state's constraints for future execution.
+   :param str | None info_str: Human readable label for this assume.
+
+
+   .. py:method:: from_fun_offset(project, fun_name: str, offset: int, condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None)
+      :staticmethod:
+
+
+      Factory for an Assume object set at a certain offset from a function start.
+
+      :param cozy.project.Project project: The project this assume is attached to.
+      :param fun_name str: The name of the function in which this assume will be located.
+      :param offset int: The offset into the function in which this assume will be located.
+      :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the SimState will be passed to this function, and an assumption should be returned. This assumption is attached to the state's constraints for future execution.
+      :param str | None info_str: Human readable label for this assume.
+      :return: A new Assume object at the desired function offset.
+      :rtype: Assume
+
+
+
+.. py:class:: VirtualPrint(addr: int, log_fun: collections.abc.Callable[[angr.SimState], claripy.ast.Base], concrete_post_processor: collections.abc.Callable[[claripy.ast.Base], any] | None = None, info_str: str = 'Unknown Virtual Print: ', label=None)
+
+   Bases: :py:obj:`Directive`
+
+
+   This directive is used to log some piece of information about the program in a list attached to the state. When execution reaches the desired address, the log function will be called, and the result will be saved inside the state's globals dictionary.
+
+   :ivar int addr: The program address this virutal print is attached to.
+   :ivar Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a    claripy AST which should be logged. This value may be symbolic.
+   :ivar str info_str: Human readable label for this virtual print.
+   :ivar str label: Internal label used for side effect alignment. Side effects (including virtual prints) are diffed    if they have the same label.
+   :ivar Callable[[claripy.ast.Base], any] | None concrete_post_processor: concrete_post_processor takes as input a    concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a    log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to    pretty print to negative number. This is where concrete_post_processor is useful. In this example    concrete_post_processor would take a concrete bit vector representing a possible value of EAX and return a Python    integer (which can be negative). This is what is shown to the user.
+
+   Constructor for a VirtualPrint object.
+
+   :param int addr: The program address this virutal print is attached to.
+   :param Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a        claripy AST which should be logged. This value may be symbolic.
+   :param Callable[[claripy.ast.Base], any] | None concrete_post_processor: concrete_post_processor takes as input        a concretized version of the output from log_fun and returns a result which is printed to the screen. For        example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed        value, we want to pretty print to negative number. This is where concrete_post_processor is useful. In this        example concrete_post_processor would take a concrete bit vector representing a possible value of EAX and        return a Python integer (which can be negative). This is what is shown to the user.
+   :param str info_str: Human readable label for this virtual print.
+   :param str label: Internal label used for side effect alignment. Side effects (including virtual prints) are        diffed if they have the same label.
+
+
+   .. py:method:: effect_concrete_post_processor(concrete_value)
+
+
+   .. py:method:: from_fun_offset(project, fun_name: str, offset: int, log_fun: collections.abc.Callable[[angr.SimState], claripy.ast.Base], concrete_post_processor: collections.abc.Callable[[claripy.ast.Base], any] | None = None, info_str: str | None = None, label=None)
+      :staticmethod:
+
+
+      Factory for VirtualPrint object set at a certain offset from a function start.
+
+      :param cozy.project.Project project: The project which this virtual print is attached to. The project is used to compute the address of the virtual print.
+      :param str fun_name: The name of the function in which this virtual print will be located.
+      :param int offset: The offset into the function in which this virtual print will be located.
+      :param Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a        claripy AST which should be logged. The return value may be symbolic.
+      :param Callable[[claripy.ast.Base], any] | None concrete_post_processor: concrete_post_processor takes as input        a concretized version of the output from log_fun and returns a result which is printed to the screen. For        example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed        value, we want to pretty print to negative number. This is where concrete_post_processor is useful. In this        example concrete_post_processor would take a concrete bit vector representing a possible value of EAX and        return a Python integer (which can be negative). This is what is shown to the user.
+      :param str info_str: Human readable label for this virtual print.
+      :param str label: Internal label used for side effect alignment. Side effects (including virtual prints) are        diffed if they have the same label.
+      :return: A new VirtualPrint object at the desired function offset.
+      :rtype: VirtualPrint
+
+
+
+.. py:class:: ErrorDirective(addr: int, info_str: str | None = None)
+
+   Bases: :py:obj:`Directive`
+
+
+   If the program execution reaches the desired address, the state will be considered to be in an errored state and will be moved to the errored cache. This state will have no further execution.
+
+   :ivar int addr: The program address this error directive is attached to.
+   :ivar str: Human readable information for this error directive.
+
+   Constructor for an ErrorDirective object.
+
+   :param int addr: The program address this error directive is attached to.
+   :param str info_str: Human readable information for this error directive.
+
+
+   .. py:method:: from_fun_offset(project, fun_name: str, offset: int, info_str: str | None = None)
+      :staticmethod:
+
+
+      Factory for ErrorDirective object set at a certain offset from a function start.
+
+      :param cozy.project.Project project: The project this error directive should be attached to.
+      :param str fun_name: The name of the function in which this error directive will be located.
+      :param int offset: The offset into the function in which this error directive will be located.
+      :param str | None info_str: Human readable information for this error directive.
+      :return: A new ErrorDirective object at the desired function offset.
+      :rtype: ErrorDirective
+
+
+
+.. py:class:: Breakpoint(addr: int, breakpoint_fun: collections.abc.Callable[[angr.SimState], None])
+
+   Bases: :py:obj:`Directive`
+
+
+   This directive is used to halt execution at some particular address, and pass the current state to the provided
+   breakpoint function, which can then either modify the state or do some other side effect (like executing a Python
+   print() call).
+
+   :ivar int addr: The program address this breakpoint is attached to.
+   :ivar Callable[[SimState], None] breakpoint_fun: This function takes in the state reached by the program at the    attachment point.
+
+   Constructor for a VirtualPrint object.
+
+   :param int addr: The program address this breakpoint is attached to.
+   :param Callable[[SimState], None] breakpoint_fun: This function takes in the state reached by the program at        the attachment point.
+
+
+   .. py:method:: from_fun_offset(project, fun_name: str, offset: int, breakpoint_fun: collections.abc.Callable[[angr.SimState], None])
+      :staticmethod:
+
+
+      Factory for VirtualPrint object set at a certain offset from a function start.
+
+      :param cozy.project.Project project: The project which this virtual print is attached to. The project is used to compute the address of the virtual print.
+      :param str fun_name: The name of the function in which this virtual print will be located.
+      :param int offset: The offset into the function in which this virtual print will be located.
+      :param Callable[[SimState], None] breakpoint_fun: This function takes in the state reached by the program at        the attachment point.
+      :return: A new Breakpoint object at the desired function offset.
+      :rtype: Breakpoint
+
+
+
+.. py:class:: Postcondition(condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None, assert_type=AssertType.ASSERT_MUST)
+
+   Bases: :py:obj:`Directive`
+
+
+   A Postcondition is a special type of assertion that is executed on terminal states for which execution has been
+   completed. This is identical to attaching an ASSERT_MUST assertion to all return points. This type of property
+   is useful for verifying that a property holds in all terminal states. Note that if you are looking to add a
+   precondition, you can add your proposition to the session before the run via
+   :py:meth:`cozy.Session.add_constraints`.
+
+   :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches a terminal state, the        SimState will be passed to this function, and an assertion condition should be returned. This is then used        internally by the SAT solver, along with the state's accumulated constraints.
+   :param str | None info_str: Human readable label for this postcondition assertion, printed to the user if the        assert is triggered.
+   :param AssertType assert_type: The type of assert to construct.
+
+

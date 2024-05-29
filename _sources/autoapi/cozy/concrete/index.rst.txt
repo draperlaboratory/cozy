@@ -1,0 +1,145 @@
+cozy.concrete
+=============
+
+.. py:module:: cozy.concrete
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.concrete.T
+   cozy.concrete.U
+   cozy.concrete.V
+   cozy.concrete.B
+   cozy.concrete.C
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.concrete.PerformedSideEffect
+   cozy.concrete.ConcretePerformedSideEffect
+   cozy.concrete.CompatiblePairInput
+   cozy.concrete.TerminalStateInput
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.concrete.preorder_mapfold
+   cozy.concrete.preorder_fold
+   cozy.concrete.fmap
+   cozy.concrete.compose
+   cozy.concrete._concretize
+
+
+Module Contents
+---------------
+
+.. py:data:: T
+
+.. py:data:: U
+
+.. py:data:: V
+
+.. py:data:: B
+
+.. py:data:: C
+
+.. py:function:: preorder_mapfold(val0: any, f: collections.abc.Callable[[any, T], tuple[any, T]], accum0: T, sort=True) -> tuple[any, T]
+
+   Simultaneously maps and folds over a nested Python datastructure in preorder traversal order. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.
+
+   :param any val0: The datastructure to traverse.
+   :param Callable[[any, T], tuple[any, T]] f: This function takes as input a value inside the datastructure, the accumulated value and should return a mapped value and newly accumulated value.
+   :param T accum0: Initial accumulation parameter.
+   :return: The mapped datastructure and final accumulated value.
+   :rtype: tuple[any, T]
+
+
+.. py:function:: preorder_fold(val0: any, f: collections.abc.Callable[[any, U], U], accum0: U) -> U
+
+   Folds over a Python datastructure in preorder traversal. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.
+
+   :param any val0: The datastructure to traverse.
+   :param Callable[[any, U], U] f: This function takes as input the value inside the datastructure, the accumulated value and should return a new accumulated value.
+   :param U accum0: Initial accumulation parameter.
+   :return: The final accumulated value.
+   :rtype: U
+
+
+.. py:function:: fmap(val0: any, f: collections.abc.Callable[[any], any]) -> any
+
+   Maps a Python datastructure. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets.
+
+   :param any val0: The datastructure to map. Note that for dictionaries, both keys and values will be mapped.
+   :return: The mapped datastructure.
+   :rtype: any
+
+
+.. py:function:: compose(f: collections.abc.Callable[[B], C], g: collections.abc.Callable[[Ellipsis], B]) -> collections.abc.Callable[[Ellipsis], C]
+
+   Composes two functions, `f` and `g`, to create a new function h(\*a, \*\*kw) = f(g(\*a, \*\*kw))
+
+   :param Callable[[B], C] f: The first function to compose.
+   :param Callable[[...], B] g: The second function to compose.
+   :return: A newly composed function which takes in an arbitrary number of arguments and keyword arguments, and returns a C.
+   :rtype: Callable[[...], C]
+
+
+.. py:class:: PerformedSideEffect(state_history: angr.state_plugins.SimStateHistory, body, concrete_post_processor=None, label=None)
+
+   This class encapsulates the idea of a side effect whose body may consist of mixed symbolic and concrete values.
+
+   :param SimStateHistory state_history: The point in execution at which the side effect was performed.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and        claripy concrete and symbolic values.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the        side effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making        comparisons. For example, if you have two call sites to a network send function, you would want different        labels for the two different call locations.
+
+
+.. py:class:: ConcretePerformedSideEffect(base_effect: PerformedSideEffect, state_history: angr.state_plugins.SimStateHistory, body, concrete_post_processor=None, label=None)
+
+   This class encapsulates the idea of a side effect whose body previously consisted of mixed symbolic and concrete
+   values, but now consists of only concrete values (ie, BVV and FPV). At the point of the construction, this concrete
+   value has not yet been passed through the user provided concrete_post_processor, whose job is to take the concrete value
+   and transform the BVV values into ordinary Python values. The purpose of concrete_post_processor for instance could be
+   to transform a two's complement BVV that is negative into a negative Python integer. This will make the display
+   more readable to the user. Hence, the concrete_post_processor can be viewed as a post-processing function.
+
+   :param PerformedSideEffect base_effect: The non-symbolic side effect that was concretized.
+   :param SimStateHistory state_history: The point in execution at which the side effect was performed.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and        claripy concrete values.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the        side effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making        comparisons. For example, if you have two call sites to a network send function, you would want different        labels for the two different call locations.
+
+
+   .. py:property:: mapped_body
+
+
+.. py:function:: _concretize(solver, state_bundle, n=1)
+
+.. py:class:: CompatiblePairInput(args, mem_diff: dict[range, tuple[int, int]], reg_diff: dict[str, tuple[int, int]], left_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]], right_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]])
+
+   Stores information about the concretization of a compatible state pair.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[range, tuple[int, int]] mem_diff: Concretized version of memory difference. Each key is a memory address range, and each value is a concretized version of the data stored at that location for the prepatched, postpatched runs.
+   :ivar dict[str, tuple[int, int]] reg_diff: Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] left_side_effects: Concretized versions of side effects made by the prepatched state.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] right_side_effects: Concretized versions of side_effects made by the postpatched state.
+
+
+.. py:class:: TerminalStateInput(args, side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]])
+
+   Stores information about the concretization of a TerminalState.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[str, list[PerformedSideEffect]] side_effects: Concretized side effects outputted by the singleton state.
+
+

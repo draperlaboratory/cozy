@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>cozy.concolic.session &#8212; cozy 1.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=fd3f3429" />
+    <script src="../../../../_static/documentation_options.js?v=56dcb7b8"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="cozy.hooks" href="../../hooks/index.html" />
+    <link rel="prev" title="cozy.concolic.heuristics" href="../heuristics/index.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-cozy.concolic.session">
+<span id="cozy-concolic-session"></span><h1>cozy.concolic.session<a class="headerlink" href="#module-cozy.concolic.session" title="Link to this heading">¶</a></h1>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.concolic.session.JointConcolicSim" title="cozy.concolic.session.JointConcolicSim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JointConcolicSim</span></code></a></p></td>
+<td><p>Jointly runs two SimulationManager objects by concretizing symbols, then running the left and right simulations</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.concolic.session.ConcolicSim" title="cozy.concolic.session.ConcolicSim"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ConcolicSim</span></code></a></p></td>
+<td><p>This class implements concolic execution without using an external emulator</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.concolic.session.Session" title="cozy.concolic.session.Session"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Session</span></code></a></p></td>
+<td><p>A session is a particular run of a project, consisting of attached directives (asserts/assumes).    You can malloc memory for storage prior to running the session.    Once you are ready to run the session, use the run method.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.concolic.session.RunResult" title="cozy.concolic.session.RunResult"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RunResult</span></code></a></p></td>
+<td><p>This class is used for storing the results of running a session.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.concolic.session.JointConcolicSession" title="cozy.concolic.session.JointConcolicSession"><code class="xref py py-obj docutils literal notranslate"><span class="pre">JointConcolicSession</span></code></a></p></td>
+<td><p>This class is used for jointly running two sessions using concolic execution. The sessions need to be run</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.concolic.session.JointConcolicSim">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.concolic.session.</span></span><span class="sig-name descname"><span class="pre">JointConcolicSim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simgr_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimulationManager</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simgr_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimulationManager</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">frozenset</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_explorer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.concolic.session.ConcolicSim" title="cozy.concolic.session.ConcolicSim"><span class="pre">ConcolicSim</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_explorer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cozy.concolic.session.ConcolicSim" title="cozy.concolic.session.ConcolicSim"><span class="pre">ConcolicSim</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidate_heuristic_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidate_heuristic_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.JointConcolicSim" title="Link to this definition">¶</a></dt>
+<dd><p>Jointly runs two SimulationManager objects by concretizing symbols, then running the left and right simulations
+with the same concrete input. This joint simulator alternates between the left and right simulations
+when generating new concrete inputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>simgr_left</strong> (<em>SimulationManager</em>) – The first simulation manager to run in concolic execution</p></li>
+<li><p><strong>simgr_right</strong> (<em>SimulationManager</em>) – The second simulation manager to run in concolic execution.</p></li>
+<li><p><strong>left_explorer</strong> (<a class="reference internal" href="#cozy.concolic.session.ConcolicSim" title="cozy.concolic.session.ConcolicSim"><em>ConcolicSim</em></a>) – The first exploration method to use for concolic execution. Note that        this exploration technique will be attached to the left simulation manager.</p></li>
+<li><p><strong>right_explorer</strong> (<a class="reference internal" href="#cozy.concolic.session.ConcolicSim" title="cozy.concolic.session.ConcolicSim"><em>ConcolicSim</em></a>) – The second exploration method to use for concolic execution. Note that        this exploration technique will be attached to the right simulation manager.</p></li>
+<li><p><strong>candidate_heuristic_left</strong> (<em>Callable</em><em>[</em><em>[</em><em>list</em><em>[</em><em>angr.SimState</em><em>]</em><em>]</em><em>, </em><em>angr.SimState</em><em>] </em><em>| </em><em>None</em>) – The heuristic that        should be used to choose the deferred state that should be explored further. Note that this function should        mutate its input list (ie, remove the desired state), and return that desired state. Note that some        pre-made candidate heuristic techniques can be found in the <a class="reference internal" href="../heuristics/index.html#module-cozy.concolic.heuristics" title="cozy.concolic.heuristics"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.concolic.heuristics</span></code></a> module.</p></li>
+<li><p><strong>candidate_heuristic_right</strong> (<em>Callable</em><em>[</em><em>[</em><em>list</em><em>[</em><em>angr.SimState</em><em>]</em><em>]</em><em>, </em><em>angr.SimState</em><em>] </em><em>| </em><em>None</em>) – The heuristic that        should be used to choose the deferred state that should be explored further. Note that this function should        mutate its input list (ie, remove the desired state), and return that desired state. Note that some        pre-made candidate heuristic techniques can be found in the <a class="reference internal" href="../heuristics/index.html#module-cozy.concolic.heuristics" title="cozy.concolic.heuristics"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.concolic.heuristics</span></code></a> module.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.JointConcolicSim._swap_explore_mode">
+<span class="sig-name descname"><span class="pre">_swap_explore_mode</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.JointConcolicSim._swap_explore_mode" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.JointConcolicSim._generate_concrete">
+<span class="sig-name descname"><span class="pre">_generate_concrete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_stash_left</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_stash_right</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.JointConcolicSim._generate_concrete" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.JointConcolicSim.explore">
+<span class="sig-name descname"><span class="pre">explore</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">explore_fun_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimulationManager</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">explore_fun_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimulationManager</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">termination_fun_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimulationManager</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">termination_fun_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimulationManager</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_bound_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_bound_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.concolic.session.JointConcolicSim.explore" title="Link to this definition">¶</a></dt>
+<dd><p>Explores the simulations given in the left and right simulation manager.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>explore_fun_left</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimulationManager</em><em>]</em><em>, </em><em>None</em><em>] </em><em>| </em><em>None</em>) – If this parameter is not None, then        instead of <code class="xref py py-meth docutils literal notranslate"><span class="pre">SimulationManager.explore()</span></code> being called to do the exploration, we call explore_fun_left        instead.</p></li>
+<li><p><strong>explore_fun_right</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimulationManager</em><em>]</em><em>, </em><em>None</em><em>] </em><em>| </em><em>None</em>) – If this parameter is not None, then        instead of <code class="xref py py-meth docutils literal notranslate"><span class="pre">SimulationManager.explore()</span></code> being called to do the exploration, we call explore_fun_right        instead.</p></li>
+<li><p><strong>termination_fun_left</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimulationManager</em><em>]</em><em>, </em><em>bool</em><em>] </em><em>| </em><em>None</em>) – Every time we finish exploring one        concrete input, this function is called to determine if the exploration should terminate. If both termination        functions return True, then exploration is halted and this function returns. If this parameter is None, then        the left simulation manager will terminate only when no further exploration is possible (ie, execution is        complete). Pre-made termination functions can be found in the <a class="reference internal" href="../heuristics/index.html#module-cozy.concolic.heuristics" title="cozy.concolic.heuristics"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.concolic.heuristics</span></code></a> module.</p></li>
+<li><p><strong>termination_fun_right</strong> (<em>Callable</em><em>[</em><em>[</em><em>SimulationManager</em><em>]</em><em>, </em><em>bool</em><em>] </em><em>| </em><em>None</em>) – Every time we finish exploring one        concrete input, this function is called to determine if the exploration should terminate. If both termination        functions return True, then exploration is halted and this function returns. If this parameter is None, then        the right simulation manager will terminate only when no further exploration is possible (ie, execution is        complete). Pre-made termination functions can be found in the <a class="reference internal" href="../heuristics/index.html#module-cozy.concolic.heuristics" title="cozy.concolic.heuristics"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cozy.concolic.heuristics</span></code></a> module.</p></li>
+<li><p><strong>loop_bound_left</strong> (<em>int</em><em> | </em><em>None</em>) – Sets an upper bound on loop iteration count for the left session. Useful for        programs with non-terminating loops.</p></li>
+<li><p><strong>loop_bound_right</strong> (<em>int</em><em> | </em><em>None</em>) – Sets an upper bound on loop iteration count for the right session. Useful        for programs with non-terminating loops.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.concolic.session.</span></span><span class="sig-name descname"><span class="pre">ConcolicSim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">concrete_init</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.BVV</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">frozenset</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deferred_stash</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'deferred'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_only_recent_constraints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">angr.ExplorationTechnique</span></code></p>
+<p>This class implements concolic execution without using an external emulator
+like QEMU or Unicorn. This class functions by storing a concrete assignment
+for each symbolic variable. When the state branches, the assignment is
+substituted into both children’s constraints. If the substitution results
+in the constraints evaluating to false, that child is placed in the deferred
+stash. By querying the simulation manager’s active stash length, we can
+tell when the concrete execution ends. When concrete execution ends, we
+can either choose a new concrete substitution ourselves and set it with
+the <code class="xref py py-meth docutils literal notranslate"><span class="pre">ConcolicDeferred.set_concrete()</span></code> method. Alternatively we
+can take one of the deferred states and generate and autogenerate a new
+concrete substitution by finding a satisfying assignment for that state’s
+constraints.</p>
+<p>ConcolicSim constructor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>concrete_init</strong> (<em>dict</em><em>[</em><em>claripy.BVS</em><em>, </em><em>claripy.BVV</em><em>] </em><em>| </em><em>set</em><em>[</em><em>claripy.BVS</em><em>] </em><em>| </em><em>frozenset</em><em>[</em><em>claripy.BVS</em><em>]</em>) – Used to        initialize the concrete value. If this value is a substitution dictionary, then that dictionary is used as our        concrete input. If this value is a set or frozenset, then a substituting dictionary is autogenerated, subject        to the initial state’s constraints.</p></li>
+<li><p><strong>deferred_stash</strong> (<em>string</em>) – The name of the deferred stash</p></li>
+<li><p><strong>check_only_recent_constraints</strong> (<em>bool</em>) – If this value is true, then whenever child states are created, only        the new constraints are checked with respect to the concrete substitution. Here we assume that the parent of        the child already satisfied the concrete input on a previous iteration, so it’s safe to only check with respect        to the new constraints.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simgr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim.setup" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim.is_satisfied">
+<span class="sig-name descname"><span class="pre">is_satisfied</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constraints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.ast.bool</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim.is_satisfied" title="Link to this definition">¶</a></dt>
+<dd><p>Substitutes the current concrete input into the constraints, and returns True if the constraints are True after
+the substitution is made.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>constraints</strong> (<em>list</em><em>[</em><em>claripy.ast.bool</em><em>]</em>) – The constraints in which the concrete solution will be substituted.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If the constraints are True after substitution, then True is returned. Otherwise returns False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim._set_replacement_dict">
+<span class="sig-name descname"><span class="pre">_set_replacement_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">concrete</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim._set_replacement_dict" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim.set_concrete">
+<span class="sig-name descname"><span class="pre">set_concrete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simgr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">claripy.FPS</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.BVV</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">claripy.FPV</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim.set_concrete" title="Link to this definition">¶</a></dt>
+<dd><p>Sets the concrete input via a substitution dictionary. All the symbols used by the program should have concrete
+values provided for them. The active and deferred stash will be mutated to ensure that only states which
+are satisfied by the concrete substitution are active.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>concrete</strong> (<em>dict</em><em>[</em><em>claripy.BVS</em><em>, </em><em>claripy.BVV</em><em>]</em>) – A dictionary mapping each symbol to its concrete value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim._generate_concrete">
+<span class="sig-name descname"><span class="pre">_generate_concrete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simgr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimulationManager</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_stash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">frozenset</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidate_heuristic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim._generate_concrete" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim.generate_concrete">
+<span class="sig-name descname"><span class="pre">generate_concrete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simgr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimulationManager</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">frozenset</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidate_heuristic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim.generate_concrete" title="Link to this definition">¶</a></dt>
+<dd><p>Autogenerates a new concrete input by choosing a deferred state and finding a satisfying assignment
+with respect to that state’s constraints. The symbols provided will be used to internally generate
+a substitution dictionary. The candidate_heuristic is used to choose a state from the current stash
+of deferred states. If no heuristic is provided, the last state in the deferred stash will be chosen next.
+If there are any active states in the simulation manager, a ValueError will be thrown.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>simgr</strong> (<em>angr.SimulationManager</em>) – The simulation manager</p></li>
+<li><p><strong>symbols</strong> (<em>set</em><em>[</em><em>claripy.BVS</em><em>] </em><em>| </em><em>frozenset</em><em>[</em><em>claripy.BVS</em><em>]</em>) – The symbols that we will generate a substitution for.</p></li>
+<li><p><strong>candidate_heuristic</strong> (<em>Callable</em><em>[</em><em>[</em><em>list</em><em>[</em><em>angr.SimState</em><em>]</em><em>]</em><em>, </em><em>angr.SimState</em><em>] </em><em>| </em><em>None</em>) – The heuristic that should be        used to choose the deferred state that should be explored further. Note that this function should mutate its        input list (ie, remove the desired state), and return that desired state.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.ConcolicSim.filter">
+<span class="sig-name descname"><span class="pre">filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simgr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.ConcolicSim.filter" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.concolic.session.</span></span><span class="sig-name descname"><span class="pre">Session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_fun</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.Session" title="Link to this definition">¶</a></dt>
+<dd><p>A session is a particular run of a project, consisting of attached directives (asserts/assumes).    You can malloc memory for storage prior to running the session.    Once you are ready to run the session, use the run method.
+:ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify    properties of the state before a run.
+:ivar cozy.project.Project proj: The Project tied to this session.
+:ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the    session starts in an entry state.
+:ivar list[Directive] directives: The directives added to this session.
+:ivar bool has_run: True if the <a class="reference internal" href="../../project/index.html#cozy.project.Session.run" title="cozy.project.Session.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">cozy.project.Session.run()</span></code></a> method has been called, otherwise False.</p>
+<p>Constructs a session derived from a project. The <a class="reference internal" href="../../project/index.html#cozy.project.Project.session" title="cozy.project.Project.session"><code class="xref py py-meth docutils literal notranslate"><span class="pre">cozy.project.Project.session()</span></code></a> is the preferred method for creating a session, not this constructor.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.store_fs">
+<span class="sig-name descname"><span class="pre">store_fs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.SimFile</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.concolic.session.Session.store_fs" title="Link to this definition">¶</a></dt>
+<dd><p>Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments        to state.fs.insert.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – The filename of the new file.</p></li>
+<li><p><strong>simfile</strong> (<em>angr.SimFile</em>) – The file to make available to the simulated program.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.malloc">
+<span class="sig-name descname"><span class="pre">malloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#cozy.concolic.session.Session.malloc" title="Link to this definition">¶</a></dt>
+<dd><p>Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory        before the <code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code> method is called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>num_bytes</strong> (<em>int</em>) – The number of bytes to allocate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A pointer to the allocated memory block.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.store">
+<span class="sig-name descname"><span class="pre">store</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bits</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.Session.store" title="Link to this definition">¶</a></dt>
+<dd><p>Stores data at some address. This method simply forwards the arguments to state.memory.store.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>addr</strong> (<em>int</em>) – Address to store the data at.</p></li>
+<li><p><strong>data</strong> (<em>claripy.ast.bits</em>) – The data to store in memory.</p></li>
+<li><p><strong>kwargs</strong> – Additional keyword arguments to pass to state.memory.store</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.memory">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">memory</span></span><a class="headerlink" href="#cozy.concolic.session.Session.memory" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.mem">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mem</span></span><a class="headerlink" href="#cozy.concolic.session.Session.mem" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">Access</span> <span class="pre">memory</span> <span class="pre">using</span> <span class="pre">a</span> <span class="pre">dict-like</span> <span class="pre">interface.</span> <span class="pre">This</span> <span class="pre">property</span> <span class="pre">simply</span> <span class="pre">forwards</span> <span class="pre">to</span> <span class="pre">state.mem</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.add_directives">
+<span class="sig-name descname"><span class="pre">add_directives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">directives</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../directive/index.html#cozy.directive.Directive" title="cozy.directive.Directive"><span class="pre">cozy.directive.Directive</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.concolic.session.Session.add_directives" title="Link to this definition">¶</a></dt>
+<dd><p>Adds multiple directives to the session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>directives</strong> (<a class="reference internal" href="../../directive/index.html#cozy.directive.Directive" title="cozy.directive.Directive"><em>Directive</em></a>) – The directives to add.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.add_constraints">
+<span class="sig-name descname"><span class="pre">add_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">constraints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#cozy.concolic.session.Session.add_constraints" title="Link to this definition">¶</a></dt>
+<dd><p>Adds multiple constraints to the session’s state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>constraints</strong> (<em>claripy.ast.bool</em>) – The constraints to add</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.start_fun_addr">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">start_fun_addr</span></span><a class="headerlink" href="#cozy.concolic.session.Session.start_fun_addr" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session._call">
+<span class="sig-name descname"><span class="pre">_call</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.ast.bits</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_intermediate_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ret_addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">angr.sim_manager.SimulationManager</span></span></span><a class="headerlink" href="#cozy.concolic.session.Session._call" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session._session_exploration">
+<span class="sig-name descname"><span class="pre">_session_exploration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_intermediate_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../session/index.html#cozy.session._SessionExploration" title="cozy.session._SessionExploration"><span class="pre">_SessionExploration</span></a></span></span><a class="headerlink" href="#cozy.concolic.session.Session._session_exploration" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session._run_result">
+<span class="sig-name descname"><span class="pre">_run_result</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simgr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">angr.sim_manager.SimulationManager</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sess_exploration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../session/index.html#cozy.session._SessionExploration" title="cozy.session._SessionExploration"><span class="pre">_SessionExploration</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cozy.concolic.session.RunResult" title="cozy.concolic.session.RunResult"><span class="pre">RunResult</span></a></span></span><a class="headerlink" href="#cozy.concolic.session.Session._run_result" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.Session.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.ast.bits</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_intermediate_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ret_addr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_bound</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cozy.concolic.session.RunResult" title="cozy.concolic.session.RunResult"><span class="pre">RunResult</span></a></span></span><a class="headerlink" href="#cozy.concolic.session.Session.run" title="Link to this definition">¶</a></dt>
+<dd><p>Runs a session to completion, either starting from the start_fun used to create the session, or from the        program start. Note that currently a session may be run only once. If run is called multiple times, a        RuntimeError will be thrown.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>list</em><em>[</em><em>claripy.ast.bits</em><em>]</em>) – The arguments to pass to the function. angr will utilize the function’s        type signature to figure out the calling convention to use with the arguments.</p></li>
+<li><p><strong>cache_intermediate_info</strong> (<em>bool</em>) – If this flag is True, then information about intermediate states will be</p></li>
+</ul>
+</dd>
+</dl>
+<p>cached. This is required for dumping the execution graph which is used in visualization.
+:param int | None ret_addr: What address to return to if calling as a function
+:param int | None loop_bound: Sets an upper bound on loop iteration count. Useful for programs with        non-terminating loops.
+:return: The result of running this session.
+:rtype: RunResult</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.concolic.session.</span></span><span class="sig-name descname"><span class="pre">RunResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">deadended</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../terminal_state/index.html#cozy.terminal_state.DeadendedState" title="cozy.terminal_state.DeadendedState"><span class="pre">cozy.terminal_state.DeadendedState</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errored</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../terminal_state/index.html#cozy.terminal_state.ErrorState" title="cozy.terminal_state.ErrorState"><span class="pre">cozy.terminal_state.ErrorState</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">asserts_failed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../terminal_state/index.html#cozy.terminal_state.AssertFailedState" title="cozy.terminal_state.AssertFailedState"><span class="pre">cozy.terminal_state.AssertFailedState</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_warnings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><span class="pre">cozy.directive.Assume</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">postconditions_failed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../terminal_state/index.html#cozy.terminal_state.PostconditionFailedState" title="cozy.terminal_state.PostconditionFailedState"><span class="pre">cozy.terminal_state.PostconditionFailedState</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spinning</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../terminal_state/index.html#cozy.terminal_state.SpinningState" title="cozy.terminal_state.SpinningState"><span class="pre">cozy.terminal_state.SpinningState</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.RunResult" title="Link to this definition">¶</a></dt>
+<dd><p>This class is used for storing the results of running a session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>deadended</strong> (<em>list</em><em>[</em><a class="reference internal" href="../../analysis/index.html#cozy.analysis.DeadendedState" title="cozy.analysis.DeadendedState"><em>DeadendedState</em></a><em>]</em>) – States that reached normal termination.</p></li>
+<li><p><strong>errored</strong> (<em>list</em><em>[</em><a class="reference internal" href="../../session/index.html#cozy.session.ErrorState" title="cozy.session.ErrorState"><em>ErrorState</em></a><em>]</em>) – States that reached an error state. This may be triggered for example by program    errors such as division by 0, or by reaching a <a class="reference internal" href="../../directive/index.html#cozy.directive.ErrorDirective" title="cozy.directive.ErrorDirective"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.directive.ErrorDirective</span></code></a>.</p></li>
+<li><p><strong>asserts_failed</strong> (<em>list</em><em>[</em><em>AssertFailed</em><em>]</em>) – States where an assertion was able to be falsified.</p></li>
+<li><p><strong>assume_warnings</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><a class="reference internal" href="../../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><em>Assume</em></a><em>, </em><em>SimState</em><em>]</em><em>]</em>) – An assume warning occurs when a    <a class="reference internal" href="../../directive/index.html#cozy.directive.Assume" title="cozy.directive.Assume"><code class="xref py py-class docutils literal notranslate"><span class="pre">Assume</span></code></a> is reached, and the added assumption contradicts the constraints for that state.    This means that due to the assumption, the new constraints are not satisfiable.</p></li>
+<li><p><strong>postconditions_failed</strong> (<em>list</em><em>[</em><a class="reference internal" href="../../session/index.html#cozy.session.PostconditionFailedState" title="cozy.session.PostconditionFailedState"><em>PostconditionFailedState</em></a><em>]</em>) – States where the function returned, and the assertion    as part of the postcondition could be falsified.</p></li>
+<li><p><strong>spinning</strong> (<em>list</em><em>[</em><a class="reference internal" href="../../session/index.html#cozy.session.SpinningState" title="cozy.session.SpinningState"><em>SpinningState</em></a><em>]</em>) – States that were stashed due to a loop bound being breached.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.assertion_triggered">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">assertion_triggered</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#cozy.concolic.session.RunResult.assertion_triggered" title="Link to this definition">¶</a></dt>
+<dd><p>Returns True if there were any assertions triggered during this run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if there were assertions triggered.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.postcondition_triggered">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">postcondition_triggered</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#cozy.concolic.session.RunResult.postcondition_triggered" title="Link to this definition">¶</a></dt>
+<dd><p>Returns True if there were any postcondition assertions triggered during this run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True if there were postcondition assertions triggered.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.__str__">
+<span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.RunResult.__str__" title="Link to this definition">¶</a></dt>
+<dd><p>Return str(self).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.report">
+<span class="sig-name descname"><span class="pre">report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_post_processor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.concolic.session.RunResult.report" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a composite human readable report with information about errored states, asserts failed,        postconditions failed, and spinning states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The arguments to concretize</p></li>
+<li><p><strong>concrete_post_processor</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on        another part of the input arguments.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to show the user.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The report as a string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.report_errored">
+<span class="sig-name descname"><span class="pre">report_errored</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_post_processor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.concolic.session.RunResult.report_errored" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a human readable report about a list of errored states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The arguments to concretize</p></li>
+<li><p><strong>concrete_post_processor</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on        another part of the input arguments.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to show the user for each errored state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The report as a string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.report_spinning">
+<span class="sig-name descname"><span class="pre">report_spinning</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_post_processor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.concolic.session.RunResult.report_spinning" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a human readable report about a list of failed postcondition assertions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The arguments to concretize</p></li>
+<li><p><strong>concrete_post_processor</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on        another part of the input arguments.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to show the user for each assertion failed        state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The report as a string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.report_postconditions_failed">
+<span class="sig-name descname"><span class="pre">report_postconditions_failed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_post_processor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.concolic.session.RunResult.report_postconditions_failed" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a human readable report about the failed postcondition assertions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The arguments to concretize</p></li>
+<li><p><strong>concrete_post_processor</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on        another part of the input arguments.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to show the user for each assertion failed        state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The report as a string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.RunResult.report_asserts_failed">
+<span class="sig-name descname"><span class="pre">report_asserts_failed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concrete_post_processor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_examples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#cozy.concolic.session.RunResult.report_asserts_failed" title="Link to this definition">¶</a></dt>
+<dd><p>Creates a human readable report about any failed assertions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>any</em>) – The arguments to concretize</p></li>
+<li><p><strong>concrete_post_processor</strong> (<em>Callable</em><em>[</em><em>[</em><em>any</em><em>]</em><em>, </em><em>any</em><em>] </em><em>| </em><em>None</em>) – This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two’s complement, or slicing off parts of the argument based on        another part of the input arguments.</p></li>
+<li><p><strong>num_examples</strong> (<em>int</em>) – The maximum number of concrete examples to show the user for each assertion failed        state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The report as a string</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cozy.concolic.session.JointConcolicSession">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cozy.concolic.session.</span></span><span class="sig-name descname"><span class="pre">JointConcolicSession</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sess_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../session/index.html#cozy.session.Session" title="cozy.session.Session"><span class="pre">cozy.session.Session</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">sess_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../session/index.html#cozy.session.Session" title="cozy.session.Session"><span class="pre">cozy.session.Session</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidate_heuristic_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidate_heuristic_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">angr.SimState</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">termination_heuristic_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.sim_manager.SimulationManager</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">termination_heuristic_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">collections.abc.Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">angr.sim_manager.SimulationManager</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.concolic.session.JointConcolicSession" title="Link to this definition">¶</a></dt>
+<dd><p>This class is used for jointly running two sessions using concolic execution. The sessions need to be run
+jointly because the concrete values generated during concolic execution need to be fed to both programs.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cozy.concolic.session.JointConcolicSession.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.ast.bits</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.ast.bits</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">frozenset</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_intermediate_info</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ret_addr_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ret_addr_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_bound_left</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loop_bound_right</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="../../session/index.html#cozy.session.RunResult" title="cozy.session.RunResult"><span class="pre">cozy.session.RunResult</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="../../session/index.html#cozy.session.RunResult" title="cozy.session.RunResult"><span class="pre">cozy.session.RunResult</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.concolic.session.JointConcolicSession.run" title="Link to this definition">¶</a></dt>
+<dd><p>Jointly run two sessions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args_left</strong> (<em>list</em><em>[</em><em>claripy.ast.bits</em><em>]</em>) – The arguments to pass to the left session.</p></li>
+<li><p><strong>args_right</strong> (<em>list</em><em>[</em><em>claripy.ast.bits</em><em>]</em>) – The arguments to pass to the right session.</p></li>
+<li><p><strong>symbols</strong> (<em>set</em><em>[</em><em>claripy.BVS</em><em>] </em><em>| </em><em>frozenset</em><em>[</em><em>claripy.BVS</em><em>]</em>) – All symbolic values used in the two sessions. These        symbols may be passed as arguments, or may have been pre-stored in the memory of the session before this        method was called. This set is required during the concretization step where we need to generate concrete        values for all symbolic values in the program.</p></li>
+<li><p><strong>cache_intermediate_info</strong> (<em>bool</em>) – If this flag is True, then information about intermediate states will be</p></li>
+</ul>
+</dd>
+</dl>
+<p>cached. This is required for dumping the execution graph which is used in visualization.
+:param int | None ret_addr_left: What address to return to if calling as a function
+:param int | None ret_addr_right: What address to return to if calling as a function
+:param int | None loop_bound_left: Sets an upper bound on loop iteration count for the left session. Useful        for programs with non-terminating loops.
+:param int | None loop_bound_right: Sets an upper bound on loop iteration count for the right session. Useful        for programs with non-terminating loops.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The result of running the two sessions, where the first element of the return tuple being the left        session’s result, and the second element being the right session’s result.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[<a class="reference internal" href="#cozy.concolic.session.RunResult" title="cozy.concolic.session.RunResult">RunResult</a>, <a class="reference internal" href="#cozy.concolic.session.RunResult" title="cozy.concolic.session.RunResult">RunResult</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../launchingavisualization.html">Launching a Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concolic.html">Using Concolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../hooks.html">Dealing with Hooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../sideeffects.html">Modeling I/O Side Effects</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">cozy</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html">cozy.concolic</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../hooks/index.html">cozy.hooks</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">API Reference</a><ul>
+  <li><a href="../../index.html">cozy</a><ul>
+  <li><a href="../index.html">cozy.concolic</a><ul>
+      <li>Previous: <a href="../heuristics/index.html" title="previous chapter">cozy.concolic.heuristics</a></li>
+      <li>Next: <a href="../../hooks/index.html" title="next chapter">cozy.hooks</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="../../../../_sources/autoapi/cozy/concolic/session/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

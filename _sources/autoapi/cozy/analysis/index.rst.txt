@@ -1,0 +1,521 @@
+cozy.analysis
+=============
+
+.. py:module:: cozy.analysis
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.analysis.T
+   cozy.analysis.U
+   cozy.analysis.V
+   cozy.analysis.B
+   cozy.analysis.C
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.analysis.RunResult
+   cozy.analysis.CompatiblePairInput
+   cozy.analysis.PerformedSideEffect
+   cozy.analysis.ConcretePerformedSideEffect
+   cozy.analysis.TerminalState
+   cozy.analysis.DeadendedState
+   cozy.analysis.FieldDiff
+   cozy.analysis.EqFieldDiff
+   cozy.analysis.NotEqLeaf
+   cozy.analysis.NotEqFieldDiff
+   cozy.analysis.DiffResult
+   cozy.analysis.StateDiff
+   cozy.analysis.CompatiblePair
+   cozy.analysis.Comparison
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.analysis.preorder_mapfold
+   cozy.analysis.preorder_fold
+   cozy.analysis.fmap
+   cozy.analysis.compose
+   cozy.analysis._concretize
+   cozy.analysis._invalid_stack_addrs
+   cozy.analysis._invalid_stack_overlap
+   cozy.analysis._stack_addrs
+   cozy.analysis.nice_name
+   cozy.analysis.compare_side_effect
+   cozy.analysis.hexify
+
+
+Module Contents
+---------------
+
+.. py:data:: T
+
+.. py:data:: U
+
+.. py:data:: V
+
+.. py:data:: B
+
+.. py:data:: C
+
+.. py:function:: preorder_mapfold(val0: any, f: collections.abc.Callable[[any, T], tuple[any, T]], accum0: T, sort=True) -> tuple[any, T]
+
+   Simultaneously maps and folds over a nested Python datastructure in preorder traversal order. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.
+
+   :param any val0: The datastructure to traverse.
+   :param Callable[[any, T], tuple[any, T]] f: This function takes as input a value inside the datastructure, the accumulated value and should return a mapped value and newly accumulated value.
+   :param T accum0: Initial accumulation parameter.
+   :return: The mapped datastructure and final accumulated value.
+   :rtype: tuple[any, T]
+
+
+.. py:function:: preorder_fold(val0: any, f: collections.abc.Callable[[any, U], U], accum0: U) -> U
+
+   Folds over a Python datastructure in preorder traversal. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.
+
+   :param any val0: The datastructure to traverse.
+   :param Callable[[any, U], U] f: This function takes as input the value inside the datastructure, the accumulated value and should return a new accumulated value.
+   :param U accum0: Initial accumulation parameter.
+   :return: The final accumulated value.
+   :rtype: U
+
+
+.. py:function:: fmap(val0: any, f: collections.abc.Callable[[any], any]) -> any
+
+   Maps a Python datastructure. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets.
+
+   :param any val0: The datastructure to map. Note that for dictionaries, both keys and values will be mapped.
+   :return: The mapped datastructure.
+   :rtype: any
+
+
+.. py:function:: compose(f: collections.abc.Callable[[B], C], g: collections.abc.Callable[[Ellipsis], B]) -> collections.abc.Callable[[Ellipsis], C]
+
+   Composes two functions, `f` and `g`, to create a new function h(\*a, \*\*kw) = f(g(\*a, \*\*kw))
+
+   :param Callable[[B], C] f: The first function to compose.
+   :param Callable[[...], B] g: The second function to compose.
+   :return: A newly composed function which takes in an arbitrary number of arguments and keyword arguments, and returns a C.
+   :rtype: Callable[[...], C]
+
+
+.. py:class:: RunResult(deadended: list[cozy.terminal_state.DeadendedState], errored: list[cozy.terminal_state.ErrorState], asserts_failed: list[cozy.terminal_state.AssertFailedState], assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]], postconditions_failed: list[cozy.terminal_state.PostconditionFailedState], spinning: list[cozy.terminal_state.SpinningState])
+
+   This class is used for storing the results of running a session.
+
+   :ivar list[DeadendedState] deadended: States that reached normal termination.
+   :ivar list[ErrorState] errored: States that reached an error state. This may be triggered for example by program    errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
+   :ivar list[AssertFailed] asserts_failed: States where an assertion was able to be falsified.
+   :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a    :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state.    This means that due to the assumption, the new constraints are not satisfiable.
+   :ivar list[PostconditionFailedState] postconditions_failed: States where the function returned, and the assertion    as part of the postcondition could be falsified.
+   :ivar list[SpinningState] spinning: States that were stashed due to a loop bound being breached.
+
+
+   .. py:property:: assertion_triggered
+      :type: bool
+
+      Returns True if there were any assertions triggered during this run.
+
+      :return: True if there were assertions triggered.
+      :rtype: bool
+
+
+
+   .. py:property:: postcondition_triggered
+      :type: bool
+
+      Returns True if there were any postcondition assertions triggered during this run.
+
+      :return: True if there were postcondition assertions triggered.
+      :rtype: bool
+
+
+
+   .. py:method:: __str__()
+
+      Return str(self).
+
+
+
+   .. py:method:: report(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a composite human readable report with information about errored states, asserts failed,        postconditions failed, and spinning states.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_errored(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about a list of errored states.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_spinning(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about a list of failed postcondition assertions.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed        state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_postconditions_failed(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about the failed postcondition assertions.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed        state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_asserts_failed(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about any failed assertions.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed        state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+.. py:function:: _concretize(solver, state_bundle, n=1)
+
+.. py:class:: CompatiblePairInput(args, mem_diff: dict[range, tuple[int, int]], reg_diff: dict[str, tuple[int, int]], left_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]], right_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]])
+
+   Stores information about the concretization of a compatible state pair.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[range, tuple[int, int]] mem_diff: Concretized version of memory difference. Each key is a memory address range, and each value is a concretized version of the data stored at that location for the prepatched, postpatched runs.
+   :ivar dict[str, tuple[int, int]] reg_diff: Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] left_side_effects: Concretized versions of side effects made by the prepatched state.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] right_side_effects: Concretized versions of side_effects made by the postpatched state.
+
+
+.. py:class:: PerformedSideEffect(state_history: angr.state_plugins.SimStateHistory, body, concrete_post_processor=None, label=None)
+
+   This class encapsulates the idea of a side effect whose body may consist of mixed symbolic and concrete values.
+
+   :param SimStateHistory state_history: The point in execution at which the side effect was performed.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and        claripy concrete and symbolic values.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the        side effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making        comparisons. For example, if you have two call sites to a network send function, you would want different        labels for the two different call locations.
+
+
+.. py:class:: ConcretePerformedSideEffect(base_effect: PerformedSideEffect, state_history: angr.state_plugins.SimStateHistory, body, concrete_post_processor=None, label=None)
+
+   This class encapsulates the idea of a side effect whose body previously consisted of mixed symbolic and concrete
+   values, but now consists of only concrete values (ie, BVV and FPV). At the point of the construction, this concrete
+   value has not yet been passed through the user provided concrete_post_processor, whose job is to take the concrete value
+   and transform the BVV values into ordinary Python values. The purpose of concrete_post_processor for instance could be
+   to transform a two's complement BVV that is negative into a negative Python integer. This will make the display
+   more readable to the user. Hence, the concrete_post_processor can be viewed as a post-processing function.
+
+   :param PerformedSideEffect base_effect: The non-symbolic side effect that was concretized.
+   :param SimStateHistory state_history: The point in execution at which the side effect was performed.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and        claripy concrete values.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the        side effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making        comparisons. For example, if you have two call sites to a network send function, you would want different        labels for the two different call locations.
+
+
+   .. py:property:: mapped_body
+
+
+.. py:class:: TerminalState(state: angr.SimState, state_id: int, state_type_str: str)
+
+   Stores information pertaining specifically to a single SimState.
+
+   :ivar SimState state: The state we are storing information about.
+   :ivar int state_id: The index of this particular state in the corresponding list in RunResult. Note that errored states have separate state_ids from deadended states. Therefore a particular input state here is uniquely identified by the pair (state_id, state_tag), not just state_id by itself.
+   :ivar str state_type_str: A string representation of the state's type
+
+
+   .. py:property:: std_out
+      :type: bytes
+
+      The data that has been written to stdout when the program is in this state.
+
+      :getter: The data written to stdout
+      :type: bytes
+
+
+
+   .. py:property:: std_err
+      :type: bytes
+
+      The data that has been written to stderr when the program is in this state.
+
+      :getter: The data written to stderr
+      :type: bytes
+
+
+
+   .. py:property:: side_effects
+      :type: dict[str, list[cozy.side_effect.PerformedSideEffect]]
+
+
+
+   .. py:property:: virtual_prints
+      :type: list[cozy.side_effect.PerformedSideEffect]
+
+      Returns the output of the virtual prints that occurred while reaching this state.
+
+      :getter: A list of VirtualPrint directives, along with the values they produced.
+      :type: list[tuple[VirtualPrint, claripy.ast.Base]]
+
+
+
+   .. py:property:: mem_writes
+      :type: portion.IntervalDict
+
+      The memory writes that occurred while reaching this state.
+
+      :getter: An interval dictionary, with the keys being ranges and the values being tuple[int, frozenset[int]]. The first element of the tuple is a unique placeholder, the second element of the tuple are the possible instruction pointer values that wrote to this memory.
+      :type: P.IntervalDict
+
+
+
+   .. py:property:: malloced_names
+      :type: portion.IntervalDict
+
+
+
+   .. py:method:: concrete_examples(args: any, num_examples=3) -> list[cozy.concrete.TerminalStateInput]
+
+      Concretizes the arguments used to put the program in this singleton state.
+
+      :param any args: The input arguments to concretize. This argument may be a Python datastructure, the concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
+      :param int num_examples: The maximum number of concrete examples to generate for this singleton state.
+      :return: A list of concrete inputs that satisfies the constraints attached to the state.
+      :rtype: list[TerminalStateInput]
+
+
+
+.. py:class:: DeadendedState(state: angr.SimState, state_id: int)
+
+   Bases: :py:obj:`TerminalState`
+
+
+   This class is used to indicate that execution terminated normally in the contained state.
+
+   Constructor for DeadendedState
+
+   :ivar SimState state: The state that terminated normally.
+   :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
+
+
+.. py:function:: _invalid_stack_addrs(st: angr.SimState) -> range
+
+.. py:function:: _invalid_stack_overlap(invalid_stack_left: range, invalid_stack_right: range, stack_change: int)
+
+.. py:function:: _stack_addrs(st: angr.SimState) -> range
+
+.. py:function:: nice_name(state: angr.SimState, malloced_names: portion.IntervalDict[tuple[str, portion.Interval]], addr: int) -> str | None
+
+   This function attempts to create a human understandable name for an address, or returns None if it can't figure
+   one out.
+
+
+.. py:class:: FieldDiff
+
+.. py:class:: EqFieldDiff(left_body, right_body)
+
+   Bases: :py:obj:`FieldDiff`
+
+
+   For a field to be equal, all subcomponents of the body must be equal. In this case, left_body and right_body
+   should not hold any further FieldDiffs within themselves. Rather left_body and right_body should be the entire
+   fields for which differencing was checked (and it was determined that all subfields are equal).
+
+
+.. py:class:: NotEqLeaf(left_leaf, right_leaf)
+
+   Bases: :py:obj:`FieldDiff`
+
+
+   A not equal leaf is a field that cannot be further unpacked/traversed.
+
+
+.. py:class:: NotEqFieldDiff(body_diff)
+
+   Bases: :py:obj:`FieldDiff`
+
+
+   For a field to be not equal, there must be at least one subcomponent of the body that was not equal. In this case,
+   body_diff will hold further FieldDiffs within itself. Equal subfields of the bodies will be
+   represented by EqFieldDiff, whereas unequal subfields will be represented by further nested NotEqFieldDiff.
+
+
+.. py:function:: compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff
+
+.. py:class:: DiffResult(mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]], reg_diff: dict[str, tuple[claripy.ast.bits, claripy.ast.bits]], side_effect_diff: dict[str, list[tuple[cozy.side_effect.PerformedSideEffect | None, cozy.side_effect.PerformedSideEffect | None, FieldDiff]]])
+
+.. py:class:: StateDiff
+
+   StateDiff encapsulates the memoized state used by the difference method. This class is used internally by    Comparison and is typically not for external use.
+
+
+   .. py:method:: difference(sl: angr.SimState, sr: angr.SimState, ignore_addrs: collections.abc.Iterable[range] | None = None, compute_mem_diff=True, compute_reg_diff=True, compute_side_effect_diff=True, use_unsat_core=True, simplify=False) -> DiffResult | None
+
+      Compares two states to find differences in memory. This function will return None if the two states have        non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are        different between the two. This function is based off of        angr.analyses.congruency_check.CongruencyCheck().compare_states, but has been customized for our purposes. Note        that this function may use memoization to enhance performance.
+
+      :param SimState sl: The first state to compare
+      :param SimState sr: The second state to compare
+      :param collections.abc.Iterable[range] | None ignore_addrs: Memory addresses to ignore when doing the memory        diffing. This representation is more efficient than a set of integers since the ranges involved can be quite        large.
+      :param bool compute_mem_diff: If this flag is True, then we will diff the memory. If this is false, then the        first element of the return tuple will be None.
+      :param bool compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the        second element of the return tuple will be None.
+      :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up        comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
+      :return: None if the two states are not compatible, otherwise returns an object containing the memory,        register differences, and side effect differences.
+      :rtype: DiffResult | None
+
+
+
+.. py:function:: hexify(val0)
+
+   Recursively transforms all integers in a Python datastructure (that is mappable with functools_ext.fmap) to hex strings.
+
+   :param val0: The datastructure to traverse.
+   :return: A deep copy of the datastructure, with all integers converted to hex strings.
+
+
+.. py:class:: CompatiblePair(state_left: cozy.terminal_state.TerminalState, state_right: cozy.terminal_state.TerminalState, mem_diff: dict[range, tuple[claripy.ast.Base, claripy.ast.Base]], reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]], side_effect_diff: dict[str, list[tuple[cozy.side_effect.PerformedSideEffect | None, cozy.side_effect.PerformedSideEffect | None, FieldDiff]]], mem_diff_ip: dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]], compare_std_out: bool, compare_std_err: bool)
+
+   Stores information about comparing two compatible states.
+
+   :ivar TerminalState state_left: Information pertaining specifically to the pre-patched state being compared.
+   :ivar TerminalState state_right: Information pertaining specifically to the post-patched state being compared.
+   :ivar dict[range, tuple[claripy.ast.Base, claripy.ast.Base]] mem_diff: Maps memory addresses to pairs of claripy    ASTs, where the left element of the tuple is the data in memory for state_left, and the right element of the tuple    is what was found in memory for state_right. Only memory locations that are different are saved in this dict.
+   :ivar dict[str, tuple[claripy.ast.Base, claripy.ast.Base]] reg_diff: Similar to mem_diff, except that the dict is    keyed by register names. Note that some registers may be subparts of another. For example in x64, EAX is a    subregister of RAX.
+   :ivar dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]] side_effect_diff:     Maps side effect channels to a list of 3 element tuples, where the first element is the performed side effect    from the left binary, the second element is the performed side effect from the right binary, and the third element    is the diff between the body of the side effects.
+   :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses    to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the    frozensets will have a single element, but this may not be the case in the scenario where a symbolic value    determined the write address.
+   :ivar bool compare_std_out: If True then we should consider stdout when checking if the two input states are equal.
+   :ivar bool compare_std_err: If True then we should consider stderr when checking if the two input states are equal.
+
+
+   .. py:method:: equal_side_effects() -> bool
+
+
+   .. py:method:: equal() -> bool
+
+      Determines if the two compatible states are observationally equal. That is, they contain the same memory        contents, registers, stdout, and stderr after execution.
+
+      :return: True if the two compatible states are observationally equal, and False otherwise.
+      :rtype: bool
+
+
+
+   .. py:method:: concrete_examples(args: any, num_examples=3) -> list[cozy.concrete.CompatiblePairInput]
+
+      Concretizes the arguments used to put the program in these states by jointly using the constraints attached to        the compatible states.
+
+      :param any args: The input arguments to concretize. This argument may be a Python datastructure, the        concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
+      :param int num_examples: The maximum number of concrete examples to generate for this particular pair.
+      :return: A list of concrete inputs that satisfy both constraints attached to the states.
+      :rtype: list[CompatiblePairInput]
+
+
+
+.. py:class:: Comparison(pre_patched: cozy.session.RunResult, post_patched: cozy.session.RunResult, ignore_addrs: list[range] | None = None, ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_side_effects=True, compare_std_out=False, compare_std_err=False, use_unsat_core=True, simplify=False)
+
+   This class stores all compatible pairs and orphaned states. An orphan state is one in which there is no compatible    state in the other execution tree. In most scenarios there will be no orphaned states.
+
+   :ivar dict[tuple[SimState, SimState], CompatiblePair] pairs: pairs stores a dictionary that maps a pair of    (pre_patch_state, post_patch_state) compatible states to their comparison information
+   :ivar set[TerminalState] orphans_left: Pre-patched states for which there are 0 corresponding compatible states in    the post-patch
+   :ivar set[TerminalState] orphans_right: Post-patched states for which there are 0 corresponding compatible states    in the pre-patch
+
+   Compares a bundle of pre-patched states with a bundle of post-patched states.
+
+   :param project.RunResult pre_patched: The pre-patched state bundle
+   :param project.RunResult post_patched: The post-patched state bundle
+   :param list[range] | None ignore_addrs: A list of addresses ranges to ignore when comparing memory.
+   :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously        occupied by the stack are ignored.
+   :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
+   :param bool compare_registers: If True, then the analysis will compare registers used by the program.
+   :param bool compare_side_effects: If True, then the analysis will compare side effects outputted by the program.
+   :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results.        Note that angr currently concretizes values written to stdout, so these values will be binary strings.
+   :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
+   :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up        comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
+   :param bool simplify: If this flag is True, then symbolic memory and register differences will be simplified        as much as possible. This flag is typically only necessary if you want to do some deep inspection of symbolic        contents. simplify can speed things down a lot, and symbolic expressions are usually very complex to the point        where they are not easily understandable. This is why in most scenarios the flag should be left as False.
+
+
+   .. py:method:: get_pair(state_left: angr.SimState, state_right: angr.SimState) -> CompatiblePair
+
+      Retrieves a CompatiblePair given two compatible input states.
+
+      :param SimState state_left: The pre-patched state
+      :param SimState state_right: The post-patched state
+      :return: The CompatiblePair object corresponding to this compatible state pair.
+      :rtype: CompatiblePair
+
+
+
+   .. py:method:: is_compatible(state_left: angr.SimState, state_right: angr.SimState) -> bool
+
+      Returns True when the two input states are compatible based on the pairs stored in this object, and False        otherwise.
+
+      :param SimState state_left: The pre-patched state
+      :param SimState state_right: The post-patched state
+      :return: True if the input states are compatible, and False otherwise
+      :rtype: bool
+
+
+
+   .. py:method:: __iter__() -> collections.abc.Iterator[CompatiblePair]
+
+      Iterates over compatible pairs stored in the comparison.
+
+      :return: An iterator over compatible pairs.
+      :rtype: Iterator[CompatiblePair]
+
+
+
+   .. py:method:: verify(verification_assertion: Callable[[CompatiblePair], claripy.ast.Base | bool]) -> list[CompatiblePair]
+
+      Determines what compatible state pairs are valid with respect to a verification assertion. Note that the        comparison results are verified with respect to the verification_assertion if the returned list is empty        (has length 0).
+
+      :param Callable[[CompatiblePair], claripy.ast.Base | bool] verification_assertion: A function which takes in a        compatible pair and returns a claripy expression which must be satisfiable for all inputs while under the        joint constraints of the state pair. Alternatively the function can return a bool. If the return value        is False, this will be considered a verification failure. If the return value is True, this will be considered        a verification success.
+      :return: A list of all compatible pairs for which there was a concrete input that caused the verification        assertion to fail.
+      :rtype: list[CompatiblePair]
+
+
+
+   .. py:method:: report(args: any, concrete_post_processor: Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Generates a human-readable report of the result object, saved as a string. This string is suitable for printing.
+
+      :param any args: The symbolic/concolic arguments used during exeuction, here these args are concretized so that        we can give examples of concrete input.
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The number of concrete examples to show the user.
+      :return: A human-readable summary of the comparison.
+      :rtype: str
+
+
+

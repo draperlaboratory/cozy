@@ -1,0 +1,65 @@
+cozy.server
+===========
+
+.. py:module:: cozy.server
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.server.VizHandler
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.server.get_vizroot
+   cozy.server.start_viz_server
+
+
+Module Contents
+---------------
+
+.. py:function:: get_vizroot()
+
+.. py:class:: VizHandler(prepatch, postpatch, *args, **kwargs)
+
+   Bases: :py:obj:`http.server.SimpleHTTPRequestHandler`
+
+
+   Simple HTTP request handler with GET and HEAD commands.
+
+   This serves files from the current directory and any of its
+   subdirectories.  The MIME type for files is determined by
+   calling the .guess_type() method.
+
+   The GET and HEAD requests are identical except that the HEAD
+   request omits the actual contents of the file.
+
+
+
+   .. py:method:: do_GET()
+
+      Serve a GET request.
+
+
+
+.. py:function:: start_viz_server(pre={}, post={}, open_browser=False, port=8080)
+
+   Serves Cozy-Viz on localhost:8080.
+
+   Useful for visualization of information generated using
+   :func:`cozy.execution_graph.compare_and_dump`.
+
+   To include comparison data, use the `pre` and `post` arguments, and add
+   a query string to the URL, like so: `localhost:8080?pre=/pre&post=/post`.
+
+   :param dict, optional pre: served as JSON at `/pre` on the server. Default {}.
+   :param dict, optional post: served as JSON at `/post` on the server. Default {}.
+   :param int, optional port: An alternative port to serve on. Default 8080.
+
+

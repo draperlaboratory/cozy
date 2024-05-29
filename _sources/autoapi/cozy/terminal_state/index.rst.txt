@@ -1,0 +1,299 @@
+cozy.terminal_state
+===================
+
+.. py:module:: cozy.terminal_state
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.terminal_state.TerminalStateInput
+   cozy.terminal_state.Assert
+   cozy.terminal_state.VirtualPrint
+   cozy.terminal_state.Postcondition
+   cozy.terminal_state.PerformedSideEffect
+   cozy.terminal_state.TerminalState
+   cozy.terminal_state.DeadendedState
+   cozy.terminal_state.SpinningState
+   cozy.terminal_state.AssertFailedState
+   cozy.terminal_state.PostconditionFailedState
+   cozy.terminal_state.ErrorState
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.terminal_state._concretize
+
+
+Module Contents
+---------------
+
+.. py:function:: _concretize(solver, state_bundle, n=1)
+
+.. py:class:: TerminalStateInput(args, side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]])
+
+   Stores information about the concretization of a TerminalState.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[str, list[PerformedSideEffect]] side_effects: Concretized side effects outputted by the singleton state.
+
+
+.. py:class:: Assert(addr: int, condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None, assert_type: AssertType = AssertType.ASSERT_MUST)
+
+   Bases: :py:obj:`Directive`
+
+
+   An assert directive sets a breakpoint at a certain address.
+
+   :ivar int addr: The program address this assert is attached to.
+   :ivar Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the    SimState will be passed to this function, and an assertion condition should be returned. This is then used    internally by the SAT solver, along with the state's accumulated constraints.
+   :ivar str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
+   :ivar AssertType assert_type: The type of assert.
+
+   Constructor for an Assert object.
+
+   :param int addr: The address at which the assert will be triggered.
+   :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the        SimState will be passed to this function, and an assertion condition should be returned. This is then used        internally by the SAT solver, along with the state's accumulated constraints.
+   :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is        triggered.
+   :param AssertType assert_type: The type of assert to construct.
+
+
+   .. py:method:: from_fun_offset(project, fun_name: str, offset: int, condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None, assert_type: AssertType = AssertType.ASSERT_MUST)
+      :staticmethod:
+
+
+      Factory for an Assert object set at a certain offset from a function start.
+
+      :param cozy.project.Project project: The project which this assert is attached to. The project is used to compute the address of the assert.
+      :param fun_name str: The name of the function in which this assert will be located.
+      :param offset int: The offset into the function in which this assert will be located.
+      :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the        SimState will be passed to this function, and an assertion condition should be returned. This is then used        internally by the SAT solver, along with the state's accumulated constraints.
+      :param str | None info_str: Human readable label for this assertion, printed to the user if the assert is triggered.
+      :param AssertType assert_type: The type of assert to construct.
+      :rtype: Assert
+
+
+
+.. py:class:: VirtualPrint(addr: int, log_fun: collections.abc.Callable[[angr.SimState], claripy.ast.Base], concrete_post_processor: collections.abc.Callable[[claripy.ast.Base], any] | None = None, info_str: str = 'Unknown Virtual Print: ', label=None)
+
+   Bases: :py:obj:`Directive`
+
+
+   This directive is used to log some piece of information about the program in a list attached to the state. When execution reaches the desired address, the log function will be called, and the result will be saved inside the state's globals dictionary.
+
+   :ivar int addr: The program address this virutal print is attached to.
+   :ivar Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a    claripy AST which should be logged. This value may be symbolic.
+   :ivar str info_str: Human readable label for this virtual print.
+   :ivar str label: Internal label used for side effect alignment. Side effects (including virtual prints) are diffed    if they have the same label.
+   :ivar Callable[[claripy.ast.Base], any] | None concrete_post_processor: concrete_post_processor takes as input a    concretized version of the output from log_fun and returns a result which is printed to the screen. For example, a    log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed value, we want to    pretty print to negative number. This is where concrete_post_processor is useful. In this example    concrete_post_processor would take a concrete bit vector representing a possible value of EAX and return a Python    integer (which can be negative). This is what is shown to the user.
+
+   Constructor for a VirtualPrint object.
+
+   :param int addr: The program address this virutal print is attached to.
+   :param Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a        claripy AST which should be logged. This value may be symbolic.
+   :param Callable[[claripy.ast.Base], any] | None concrete_post_processor: concrete_post_processor takes as input        a concretized version of the output from log_fun and returns a result which is printed to the screen. For        example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed        value, we want to pretty print to negative number. This is where concrete_post_processor is useful. In this        example concrete_post_processor would take a concrete bit vector representing a possible value of EAX and        return a Python integer (which can be negative). This is what is shown to the user.
+   :param str info_str: Human readable label for this virtual print.
+   :param str label: Internal label used for side effect alignment. Side effects (including virtual prints) are        diffed if they have the same label.
+
+
+   .. py:method:: effect_concrete_post_processor(concrete_value)
+
+
+   .. py:method:: from_fun_offset(project, fun_name: str, offset: int, log_fun: collections.abc.Callable[[angr.SimState], claripy.ast.Base], concrete_post_processor: collections.abc.Callable[[claripy.ast.Base], any] | None = None, info_str: str | None = None, label=None)
+      :staticmethod:
+
+
+      Factory for VirtualPrint object set at a certain offset from a function start.
+
+      :param cozy.project.Project project: The project which this virtual print is attached to. The project is used to compute the address of the virtual print.
+      :param str fun_name: The name of the function in which this virtual print will be located.
+      :param int offset: The offset into the function in which this virtual print will be located.
+      :param Callable[[SimState], claripy.ast.Base] log_fun: This function takes in the current state and returns a        claripy AST which should be logged. The return value may be symbolic.
+      :param Callable[[claripy.ast.Base], any] | None concrete_post_processor: concrete_post_processor takes as input        a concretized version of the output from log_fun and returns a result which is printed to the screen. For        example, a log fun may return state.regs.eax to log the value of eax. But if eax represents a 32 bit signed        value, we want to pretty print to negative number. This is where concrete_post_processor is useful. In this        example concrete_post_processor would take a concrete bit vector representing a possible value of EAX and        return a Python integer (which can be negative). This is what is shown to the user.
+      :param str info_str: Human readable label for this virtual print.
+      :param str label: Internal label used for side effect alignment. Side effects (including virtual prints) are        diffed if they have the same label.
+      :return: A new VirtualPrint object at the desired function offset.
+      :rtype: VirtualPrint
+
+
+
+.. py:class:: Postcondition(condition_fun: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None, assert_type=AssertType.ASSERT_MUST)
+
+   Bases: :py:obj:`Directive`
+
+
+   A Postcondition is a special type of assertion that is executed on terminal states for which execution has been
+   completed. This is identical to attaching an ASSERT_MUST assertion to all return points. This type of property
+   is useful for verifying that a property holds in all terminal states. Note that if you are looking to add a
+   precondition, you can add your proposition to the session before the run via
+   :py:meth:`cozy.Session.add_constraints`.
+
+   :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches a terminal state, the        SimState will be passed to this function, and an assertion condition should be returned. This is then used        internally by the SAT solver, along with the state's accumulated constraints.
+   :param str | None info_str: Human readable label for this postcondition assertion, printed to the user if the        assert is triggered.
+   :param AssertType assert_type: The type of assert to construct.
+
+
+.. py:class:: PerformedSideEffect(state_history: angr.state_plugins.SimStateHistory, body, concrete_post_processor=None, label=None)
+
+   This class encapsulates the idea of a side effect whose body may consist of mixed symbolic and concrete values.
+
+   :param SimStateHistory state_history: The point in execution at which the side effect was performed.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and        claripy concrete and symbolic values.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the        side effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making        comparisons. For example, if you have two call sites to a network send function, you would want different        labels for the two different call locations.
+
+
+.. py:class:: TerminalState(state: angr.SimState, state_id: int, state_type_str: str)
+
+   Stores information pertaining specifically to a single SimState.
+
+   :ivar SimState state: The state we are storing information about.
+   :ivar int state_id: The index of this particular state in the corresponding list in RunResult. Note that errored states have separate state_ids from deadended states. Therefore a particular input state here is uniquely identified by the pair (state_id, state_tag), not just state_id by itself.
+   :ivar str state_type_str: A string representation of the state's type
+
+
+   .. py:property:: std_out
+      :type: bytes
+
+      The data that has been written to stdout when the program is in this state.
+
+      :getter: The data written to stdout
+      :type: bytes
+
+
+
+   .. py:property:: std_err
+      :type: bytes
+
+      The data that has been written to stderr when the program is in this state.
+
+      :getter: The data written to stderr
+      :type: bytes
+
+
+
+   .. py:property:: side_effects
+      :type: dict[str, list[cozy.side_effect.PerformedSideEffect]]
+
+
+
+   .. py:property:: virtual_prints
+      :type: list[cozy.side_effect.PerformedSideEffect]
+
+      Returns the output of the virtual prints that occurred while reaching this state.
+
+      :getter: A list of VirtualPrint directives, along with the values they produced.
+      :type: list[tuple[VirtualPrint, claripy.ast.Base]]
+
+
+
+   .. py:property:: mem_writes
+      :type: portion.IntervalDict
+
+      The memory writes that occurred while reaching this state.
+
+      :getter: An interval dictionary, with the keys being ranges and the values being tuple[int, frozenset[int]]. The first element of the tuple is a unique placeholder, the second element of the tuple are the possible instruction pointer values that wrote to this memory.
+      :type: P.IntervalDict
+
+
+
+   .. py:property:: malloced_names
+      :type: portion.IntervalDict
+
+
+
+   .. py:method:: concrete_examples(args: any, num_examples=3) -> list[cozy.concrete.TerminalStateInput]
+
+      Concretizes the arguments used to put the program in this singleton state.
+
+      :param any args: The input arguments to concretize. This argument may be a Python datastructure, the concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
+      :param int num_examples: The maximum number of concrete examples to generate for this singleton state.
+      :return: A list of concrete inputs that satisfies the constraints attached to the state.
+      :rtype: list[TerminalStateInput]
+
+
+
+.. py:class:: DeadendedState(state: angr.SimState, state_id: int)
+
+   Bases: :py:obj:`TerminalState`
+
+
+   This class is used to indicate that execution terminated normally in the contained state.
+
+   Constructor for DeadendedState
+
+   :ivar SimState state: The state that terminated normally.
+   :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
+
+
+.. py:class:: SpinningState(state: angr.SimState, state_id: int)
+
+   Bases: :py:obj:`TerminalState`
+
+
+   This class is used to indicate that the contained state was killed by the LocalLoopSeer, indicating that an upper
+   bound on number of loop iterations was reached.
+
+   Constructor for SpinningState
+
+   :ivar SimState state: The state that was spinning
+   :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.spinning`
+
+
+.. py:class:: AssertFailedState(assertion: cozy.directive.Assert, cond: claripy.ast.bool, failure_state: angr.SimState, state_id: int)
+
+   Bases: :py:obj:`TerminalState`
+
+
+   This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
+
+   :ivar Assert assertion: The assertion that was triggered.
+   :ivar claripy.ast.bool cond: The condition that caused the assertion to trigger
+
+   Constructor for AssertFailedState
+
+   :param Assert assertion: The assertion that was triggered.
+   :param claripy.ast.bool: The condition which if falsified will trigger the assertion.
+   :param SimState failure_state: The state that was created to test the assertion.
+   :param int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.asserts_failed`
+
+
+.. py:class:: PostconditionFailedState(postcondition: cozy.directive.Postcondition, cond: claripy.ast.bool, failure_state: angr.SimState, state_id: int)
+
+   Bases: :py:obj:`TerminalState`
+
+
+   This class is used to indicate that execution failed due to an :py:class:`~cozy.directive.Assert` being satisfiable.
+
+   :ivar Assert assertion: The assertion that was triggered.
+   :ivar claripy.ast.bool cond: The condition that caused the assertion to trigger
+
+   Constructor for AssertFailedState
+
+   :param Postcondition assertion: The postcondition that was triggered.
+   :param claripy.ast.bool: The condition which if falsified will trigger the postcondition assertion.
+   :param SimState failure_state: The state that was created to test the postcondition assertion.
+   :param int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.postconditions_failed`
+
+
+.. py:class:: ErrorState(error_record: angr.sim_manager.ErrorRecord, state_id: int)
+
+   Bases: :py:obj:`TerminalState`
+
+
+   This class is used to indicate a state that resulted in an error (either my an execution error or :py:class:`~cozy.directive.ErrorDirective`).
+
+   :ivar SimError error: The error that was thrown.
+   :ivar traceback: The traceback attached to the error.
+
+   Constructor for ErrorState
+
+   :param ErrorRecord error_record: The error thrown for this state.
+   :param int state_id: The identifier of the state, determined by it's position in the list :py:obj:`cozy.project.RunResult.errored`
+
+
