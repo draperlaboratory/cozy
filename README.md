@@ -9,6 +9,8 @@ via a browser based rich user interface.
 
 ![Screenshot](screenshots/cozy-viz-1.png)
 
+https://github.com/draperlaboratory/cozy/assets/53128179/0f5ab972-5d77-4723-9149-04c7427896d2
+
 ## Install
 
 cozy is now available as a Python package on PyPI under the name `cozy-re`.
@@ -34,6 +36,8 @@ install cozy, then run the following command in the console:
 ```commandline
 python3 -m cozy
 ```
+
+https://github.com/draperlaboratory/cozy/assets/53128179/ee1edf4d-4905-425c-9675-fe110bac7376
 
 ## About
 
