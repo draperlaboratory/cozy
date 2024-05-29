@@ -1,4 +1,4 @@
-# cozy (Comparative Symbolic Evaluation)
+# cozy (Comparative Symbolic Execution)
 
 cozy is a symbolic execution framework built around angr to enable comparative evaluation.
 The goal of comparative evaluation is to determine the precise changes made by software
@@ -41,7 +41,7 @@ cozy is being developed by Draper Laboratory under the [DARPA Assured
 Micropatching (AMP)
 program](https://www.darpa.mil/program/assured-micropatching).
 
-# Repo Build Instructions
+# Run from Source
 
 The following sections are for the case where you want to use cozy directly
 from the source code in this repository, not from the `cozy-re` PyPI package.
