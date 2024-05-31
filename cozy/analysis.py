@@ -681,7 +681,7 @@ class Comparison:
                 joint_solver.add(state_right.solver.constraints)
 
                 try:
-                    is_sat = joint_solver.satisfiable(~assertion)
+                    is_sat = joint_solver.satisfiable(extra_constraints=(~assertion,))
                 except claripy.ClaripyZ3Error as err:
                     cozy.log.error("Unable to solve SMT formula when checking verification condition. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to falsify the verification condition.\nThe exception thrown was:\n{}", str(err))
                     is_sat = True
