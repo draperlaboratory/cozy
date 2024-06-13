@@ -53,6 +53,10 @@ button:disabled {
   font-weight: bold;
 }
 
+#menubar .options-wrapper .option[data-disabled="true"] {
+  color: #999999;
+}
+
 #menubar input[data-awaiting="true"] {
   color: #999999;
 }

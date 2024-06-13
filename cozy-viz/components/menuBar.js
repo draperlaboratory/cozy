@@ -21,7 +21,6 @@ class Menu extends Component {
     this.options = createRef()
   }
 
-
   componentDidUpdate() {
     if (this.props.open == this.props.title) {
       computePosition(this.button.current, this.options.current, {
@@ -74,7 +73,8 @@ class MenuOption extends Component {
   render(props) {
     return html`<div class="option"
       data-selected=${props.selected} 
-      onClick=${props.onClick}>
+      data-disabled=${props.disabled}
+      onClick=${props.disabled ? null : props.onClick}>
           ${props.children}
     </div>`
   }
@@ -215,7 +215,7 @@ export default class MenuBar extends Component {
         <${MenuOption} onClick=${() => this.saveFile(props.getJSON())}>
           Save Graph
         <//>
-        <${MenuOption} onClick=${() => this.openReport()}>
+        <${MenuOption} disabled=${props.view != View.plain} onClick=${() => this.openReport()}>
           Open New Report
         <//>
       <//>
