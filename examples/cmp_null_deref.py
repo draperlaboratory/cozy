@@ -1,4 +1,5 @@
 import archinfo
+import claripy
 
 import cozy.analysis as analysis
 from cozy.project import Project
@@ -84,6 +85,8 @@ def run_post_patched():
 print("Running pre-patched.")
 (pre_proj, pre_patched) = run_pre_patched()
 
+#pre_patched.report([arg0])
+
 print("\nThere are {} deadended states, {} assert failed states, and {} errored states for the pre-patch run.".format(len(pre_patched.deadended), len(pre_patched.asserts_failed), len(pre_patched.errored)))
 
 print("\nRunning post-patch.")
@@ -93,6 +96,20 @@ print("\nThere are {} deadended states, {} assert failed states, and {} errored 
 
 args = [arg0]
 comparison_results = analysis.Comparison(pre_patched, post_patched, simplify=True)
+
+# The verification condition is not typically used in cozy analysis, however it can be helpful
+# as an automation step once the differences have been explored in the UI
+def verification_condition(pair: analysis.CompatiblePair):
+    return claripy.If(
+        arg0 == 0x0,
+        (pair.state_left.state.memory.load(0x0, 4) == 0x2a000000) & (pair.state_right.state.memory.load(0x0, 4) == 0x0),
+        pair.state_left.state.memory.load(0x0, 4) == pair.state_right.state.memory.load(0x0, 4)
+    )
+verification_results = comparison_results.verify(verification_condition)
+if len(verification_results) == 0:
+    print("Verification succeeded")
+else:
+    print("Verification failed")
 
 if dump_execution_graphs:
     execution_graph.dump_comparison(pre_proj, post_proj, pre_patched, post_patched, comparison_results, "null_pre.json", "null_post.json", args=args, num_examples=2)

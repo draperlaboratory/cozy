@@ -1,4 +1,4 @@
-# cozy (Comparative Symbolic Evaluation)
+# cozy (Comparative Symbolic Execution)
 
 cozy is a symbolic execution framework built around angr to enable comparative evaluation.
 The goal of comparative evaluation is to determine the precise changes made by software
@@ -8,6 +8,8 @@ has the ability to dump diff information in both a textual human-readable report
 via a browser based rich user interface.
 
 ![Screenshot](screenshots/cozy-viz-1.png)
+
+https://github.com/draperlaboratory/cozy/assets/53128179/0f5ab972-5d77-4723-9149-04c7427896d2
 
 ## Install
 
@@ -24,7 +26,7 @@ The getting started guide and API reference can be found on our Github pages!:
 
 https://draperlaboratory.github.io/cozy/
 
-## Template Generator
+## Template Wizard
 
 cozy now comes with a Python script template generator to help you get started
 with using the framework. The wizard will prompt you with a series of questions
@@ -35,13 +37,20 @@ install cozy, then run the following command in the console:
 python3 -m cozy
 ```
 
+https://github.com/draperlaboratory/cozy/assets/53128179/ee1edf4d-4905-425c-9675-fe110bac7376
+
 ## About
 
 cozy is being developed by Draper Laboratory under the [DARPA Assured
 Micropatching (AMP)
 program](https://www.darpa.mil/program/assured-micropatching).
 
-## Build Instructions
+# Run from Source
+
+The following sections are for the case where you want to use cozy directly
+from the source code in this repository, not from the `cozy-re` PyPI package.
+
+## Setting up the Environment
 
 To get started with building cozy, run the following commands in the project
 root folder to create a virtual environment and install angr:
@@ -49,7 +58,7 @@ root folder to create a virtual environment and install angr:
 ```commandline
 python3 -m venv venv
 source venv/bin/activate
-pip3 install angr sphinx sphinx-autoapi networkx claripy portion
+pip3 install angr sphinx sphinx-autoapi networkx claripy portion textual
 ```
 
 Alternatively, if you have `nix` installed and flakes enabled, run

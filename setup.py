@@ -5,7 +5,7 @@ with open("README.md", 'r') as f:
 
 setup(
    name='cozy-re',
-   version='1.3.0',
+   version='1.4.0',
    description='Python tool for comparing binaries via symbolic execution utilizing the angr framework.',
    long_description=long_description,
    author='Caleb Helbling',
@@ -16,5 +16,5 @@ setup(
       'License :: OSI Approved :: MIT License',
       'Operating System :: OS Independent'
    ],
-   install_requires=['angr', 'networkx', 'claripy', 'portion']
+   install_requires=['angr', 'networkx', 'claripy', 'portion', 'textual']
 )

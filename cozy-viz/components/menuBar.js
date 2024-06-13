@@ -58,7 +58,7 @@ class Menu extends Component {
         style=${menuStyle} 
         ref=${this.button} 
         onClick=${() => this.toggleOpen()}
-        onMouseEnter=${() => props.open && props.setOpen(props.title)}>
+        onMouseEnter=${() => props.open && this.props.enabled && props.setOpen(props.title)}>
         ${props.title}
       </button>
       ${props.open == props.title && html`

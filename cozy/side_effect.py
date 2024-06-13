@@ -11,7 +11,7 @@ class PerformedSideEffect:
         :param SimStateHistory state_history: The point in execution at which the side effect was performed.
         :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and\
         claripy concrete and symbolic values.
-        :param concrete_post_processor: The optional post processing function to apply to concretized versions of the
+        :param concrete_post_processor: The optional post processing function to apply to concretized versions of the\
         side effect's body if post processing is required.
         :param label: The label to apply to the side effect, used to align instances of side effects when making\
         comparisons. For example, if you have two call sites to a network send function, you would want different\
@@ -37,7 +37,7 @@ class ConcretePerformedSideEffect:
         :param SimStateHistory state_history: The point in execution at which the side effect was performed.
         :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and\
         claripy concrete values.
-        :param concrete_post_processor: The optional post processing function to apply to concretized versions of the
+        :param concrete_post_processor: The optional post processing function to apply to concretized versions of the\
         side effect's body if post processing is required.
         :param label: The label to apply to the side effect, used to align instances of side effects when making\
         comparisons. For example, if you have two call sites to a network send function, you would want different\
@@ -61,7 +61,7 @@ def perform(state: SimState, channel: str, body, concrete_post_processor=None, l
     :param str channel: The name of the channel in which the side effect should be performed. Different side effects\
     should be sent down different channels. For example, the virtual print side effect channel is different from the\
     networking side effect channel.
-    :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, \
+    :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples,\
     claripy concrete values, and claripy symbolic values. This should represent the payload of the side effect.
     :param concrete_post_processor: The optional post processing function to apply to concretized versions of the side\
     effect's body if post processing is required.

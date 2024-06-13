@@ -1,4 +1,5 @@
 import archinfo
+import claripy
 
 import cozy.analysis as analysis
 from cozy.project import Project
@@ -86,5 +87,13 @@ def run_post_patched():
 
 args = [arg0]
 comparison_results = analysis.Comparison(pre_patched, post_patched, simplify=True)
+
+def verification_condition(pair: analysis.CompatiblePair):
+    return claripy.If(
+        arg0 == 0x0,
+        (pair.state_left.state.memory.load(0x0, 4) == 0x2a000000) & (pair.state_right.state.memory.load(0x0, 4) == 0x0),
+        pair.state_left.state.memory.load(0x0, 4) == pair.state_right.state.memory.load(0x0, 4)
+    )
+comparison_results.verify(verification_condition)
 
 execution_graph.dump_comparison(pre_proj, post_proj, pre_patched, post_patched, comparison_results, "null_pre.json", "null_post.json", output_file="cmp_simple_cond.json", args=args, num_examples=2)
