@@ -1,7 +1,9 @@
 import { computePosition } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.5.1/+esm';
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
+import { render } from 'https://unpkg.com/preact@latest?module'
 import { Component, createRef } from 'https://unpkg.com/preact@latest?module'
 import { Status, Tidiness } from '../data/cozy-data.js'
+import Report from './report.js'
 import * as GraphStyle from '../util/graphStyle.js';
 import Colors from '../data/colors.js'
 import { View } from '../data/cozy-data.js'
@@ -192,6 +194,14 @@ export default class MenuBar extends Component {
     a.dispatchEvent(new MouseEvent("click"))
   }
 
+  openReport() {
+    this.reportWindow = open()
+    if (!this.reportWindow) {
+      alert("couldn't open report - double check that cozy has permission to open new windows in your popup-blocker")
+    }
+    render(html`<${Report} window=${this.reportWindow}/>`, this.reportWindow.document.body)
+  }
+
   render(props, state) {
     const enabled = props.status === Status.idle
     return html`<div id="menubar"
@@ -204,6 +214,9 @@ export default class MenuBar extends Component {
         setOpen=${o => this.setOpen(o)}>
         <${MenuOption} onClick=${() => this.saveFile(props.getJSON())}>
           Save Graph
+        <//>
+        <${MenuOption} onClick=${() => this.openReport()}>
+          Open New Report
         <//>
       <//>
       <${ViewMenu}

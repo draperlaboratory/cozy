@@ -10,7 +10,7 @@ import { focusMixin } from '../util/focusMixin.js';
 import { Segment } from '../util/segmentation.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
-import { tidyMixin, removeBranch } from '../util/graph-tidy.js';
+import { tidyMixin } from '../util/graph-tidy.js';
 import { Status, View } from '../data/cozy-data.js'
 import { breadthFirst } from '../data/layouts.js'
 
