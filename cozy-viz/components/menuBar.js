@@ -103,7 +103,7 @@ function noStdDiffs(leaf, other) {
   else return noErrors(leaf, other)
 }
 
-function equivConstraints(leaf,other) {
+function equivConstraints(leaf, other) {
   const leftOnlyConcretions = Object.entries(leaf.data().compatibilities).flatMap(
     ([key, compat]) => key == leaf.id() ? [] : compat.conc_args
   )
@@ -199,7 +199,10 @@ export default class MenuBar extends Component {
     if (!this.reportWindow) {
       alert("couldn't open report - double check that cozy has permission to open new windows in your popup-blocker")
     }
-    render(html`<${Report} window=${this.reportWindow}/>`, this.reportWindow.document.body)
+    render(html`<${Report} 
+      data=${this.props.getReportData()} 
+      window=${this.reportWindow}/>`,
+      this.reportWindow.document.body)
   }
 
   render(props, state) {
@@ -359,7 +362,7 @@ class PruneMenu extends Component {
     }
     this.prune.bind(this)
   }
-  
+
   // prune all branches whose compatibilities all fail some test (e.g. all have
   // the same memory contents as the given branch)
   prune(test) {
@@ -415,7 +418,7 @@ class PruneMenu extends Component {
     }
   }
 
-  render(props, state) { 
+  render(props, state) {
     return html`<${Menu} 
         enabled=${props.enabled}
         open=${props.open}
@@ -510,7 +513,7 @@ class ViewMenu extends Component {
       GraphStyle.settings[type] = !oldState[type];
       this.props.cyLeft.cy.style().update()
       this.props.cyRight.cy.style().update()
-      return { 
+      return {
         [type]: !oldState[type]
       }
     })
@@ -526,8 +529,8 @@ class ViewMenu extends Component {
 
   togglePostconditions() { this.toggleView("showingPostconditions") }
 
-  render (props, state) {
-      return html`<${Menu}
+  render(props, state) {
+    return html`<${Menu}
         enabled=${props.enabled}
         open=${props.open}
         title="View"

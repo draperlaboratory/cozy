@@ -45,6 +45,14 @@ export default class App extends Component {
     window.app = this
   }
 
+  getReportData() {
+    return {
+      prelabel: this.state.prelabel,
+      postlabel: this.state.postlabel,
+      pruningStatus: this.pruneMenu.current.state,
+    }
+  }
+
   componentDidMount() {
     const urlParams = new URLSearchParams(window.location.search);
     const isServedPre = urlParams.get('pre')
@@ -188,7 +196,6 @@ export default class App extends Component {
     // so that the assembly diff is regenerated, 
     // so that its lines are properly mapped on to the merged nodes.
   }
-
 
   async handleDrop(ev) {
     ev.stopPropagation()
@@ -350,7 +357,6 @@ export default class App extends Component {
     this.tooltip.current.clearTooltip()
   }
 
-
   render(_props, state) {
     // TODO I could get rid of a lot of lambdas here if I properly bound "this"
     // in some of these methods
@@ -361,6 +367,7 @@ export default class App extends Component {
         cyRight=${this.cy2}
         view=${state.view}
         layout=${state.layout}
+        getReportData=${() => this.getReportData()}
         regenerateFocus=${() => this.regenerateFocus()}
         resetLayout=${this.resetLayout}
         refreshLayout=${() => this.refreshLayout()}

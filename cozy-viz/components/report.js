@@ -14,10 +14,15 @@ export default class Report extends Component {
     this.props.window.document.head.appendChild(reportStyle)
   }
 
-  render() {
+  render(props) {
     return html`<main>
         <article>
           <h1 title="report-title">Cozy Report</h1>
+          <p>Comparing 
+            <code> ${props.data.prelabel} </code>
+            and
+            <code> ${props.data.postlabel} </code>.
+          </p>
         </article>
       </main>`
   }
