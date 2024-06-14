@@ -200,7 +200,7 @@ export default class MenuBar extends Component {
       alert("couldn't open report - double check that cozy has permission to open new windows in your popup-blocker")
     }
     render(html`<${Report} 
-      data=${this.props.getReportData()} 
+      data=${this.props.getReportInterface()} 
       window=${this.reportWindow}/>`,
       this.reportWindow.document.body)
   }

@@ -16,10 +16,17 @@ class ReportField extends Component {
     }
   }
 
+  onClick() {
+    this.props.focus()
+  }
+
   render(props) {
     const num = props.index + 1
     return html`<div class="report-field">
-      <h2 onMouseEnter=${e => this.onMouseEnter(e)}>
+      <h2 
+        onMouseEnter=${e => this.onMouseEnter(e)}
+        onClick=${() => this.onClick()}
+      >
         Path ${num}
       </h2>
       <form>
@@ -66,7 +73,8 @@ export default class Report extends Component {
     return panel.cy.nodes().leaves().map((leaf,idx) => {
       return html`<${ReportField}
         setStatus=${(status) => this.setBranchStatus(idx,status)}
-        leaf=${leaf} 
+        leaf=${leaf}
+        focus=${() => this.props.data.focusLeaf(leaf)}
         panel=${panel}
         index=${idx}/>`
     })
@@ -89,13 +97,15 @@ export default class Report extends Component {
     return html`<main>
         <article>
           <h1 title="report-title">Cozy Report</h1>
-          <h3>Summary:</h3>
-          <p>Comparing 
-            <code> ${props.data.prelabel} </code>
-            and
-            <code> ${props.data.postlabel}</code>.
-          </p>
-          <${ReportStatus} value=${progress} max=${fields.length}/>
+          <div id="summary">
+            <h3>Summary:</h3>
+            <p>Comparing 
+              <code> ${props.data.prelabel} </code>
+              and
+              <code> ${props.data.postlabel}</code>.
+            </p>
+            <${ReportStatus} value=${progress} max=${fields.length}/>
+          </div>
           ${fields}
         </article>
       </main>`

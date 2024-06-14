@@ -31,6 +31,18 @@ h1 {
   resize:vertical;
 }
 
+.report-field h2:hover {
+  text-decoration: underline;
+}
+
+.report-field h2:hover {
+  cursor: pointer;
+}
+
+#summary {
+  margin-bottom:5em;
+}
+
 #report-status {
   top:10px;
   border:1px solid grey;
@@ -46,3 +58,4 @@ h1 {
   padding-top:0px;
   margin-top:0px;
 }
+

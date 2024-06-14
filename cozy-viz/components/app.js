@@ -24,8 +24,8 @@ export default class App extends Component {
       status: Status.unloaded, // awaiting graph data
       layout: breadthFirst, // we start with the breadthfirst layout
       view: View.plain, //we start with all nodes visible, not a CFG
-      prelabel : "prepatch",
-      postlabel : "postpatch"
+      prelabel: "prepatch",
+      postlabel: "postpatch"
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -45,12 +45,26 @@ export default class App extends Component {
     window.app = this
   }
 
-  getReportData() {
+  // Produces an object encapsulating data and methods needed by a cozy report
+  // window.
+  getReportInterface() {
     return {
       prelabel: this.state.prelabel,
       postlabel: this.state.postlabel,
       pruningStatus: this.pruneMenu.current.state,
       leftPanelRef: this.cy1,
+      focusLeaf: (leaf) => {
+        const selfCy = this.cy1.cy
+        const otherCy = this.cy2.cy
+        const selfRoot = selfCy.nodes().roots()[0]
+        const selfSegment = new Segment(selfRoot, leaf)
+        const compatibilities = leaf.data().compatibilities
+        selfCy.blur().focus(leaf)
+        otherCy
+          .blur()
+          .focus(otherCy.nodes().filter(node => +node.data().id in compatibilities))
+        this.setState({ leftFocus: selfSegment, rightFocus: null })
+      },
     }
   }
 
@@ -108,13 +122,13 @@ export default class App extends Component {
     const segmentSelect = ev.originalEvent.shiftKey
     // we're refining if we click on an existing locus, there's more than
     // one such, and we're not switching from a shift to regular click
-    const refining = 
-      self.loci?.includes(ev.target) && 
+    const refining =
+      self.loci?.includes(ev.target) &&
       self.loci.length > 1 &&
       segmentSelect == this.lastSegmentSelect
 
     this.lastSegmentSelect = segmentSelect
-    
+
     // segments are linear sequences of nodes given by a top and bottom
     let selfSegment
 
@@ -132,8 +146,8 @@ export default class App extends Component {
     }
 
     // unconditionally focus the clicked segment
-    if (isLeft) this.setState({leftFocus: selfSegment})
-    else this.setState({rightFocus: selfSegment})
+    if (isLeft) this.setState({ leftFocus: selfSegment })
+    else this.setState({ rightFocus: selfSegment })
 
     // if we're not refining, we need to update the focus on the other side
     if (!refining) {
@@ -162,24 +176,24 @@ export default class App extends Component {
 
       if (otherSegment) {
         // if we picked out a corresponding segment, focus it.
-          if (isLeft) this.setState({rightFocus: otherSegment})
-        else this.setState({leftFocus: otherSegment})
+        if (isLeft) this.setState({ rightFocus: otherSegment })
+        else this.setState({ leftFocus: otherSegment })
       } else {
         //otherwise clear the focus
-        if (isLeft) this.setState({rightFocus: null, leftFocus: selfSegment})
-        else this.setState({leftFocus:null, rightFocus:selfSegment})
+        if (isLeft) this.setState({ rightFocus: null, leftFocus: selfSegment })
+        else this.setState({ leftFocus: null, rightFocus: selfSegment })
       }
     }
   }
 
   getJSON() {
     return JSON.stringify({
-      pre : {
+      pre: {
         data: JSON.parse(this.cy1.orig),
         name: this.state.prelabel
-      }, 
-      post : {
-        data : JSON.parse(this.cy2.orig),
+      },
+      post: {
+        data: JSON.parse(this.cy2.orig),
         name: this.state.postlabel
       }
     })
@@ -189,7 +203,7 @@ export default class App extends Component {
   setStatus(status) { this.setState({ status }) }
 
   regenerateFocus() {
-    this.setState({ 
+    this.setState({
       leftFocus: this.state.leftFocus ? new Segment(this.cy1.cy.root, this.cy1.cy.loci) : null,
       rightFocus: this.state.rightFocus ? new Segment(this.cy2.cy.root, this.cy2.cy.loci) : null,
     })
@@ -256,13 +270,13 @@ export default class App extends Component {
         this.batch(() => {
           this.cy1.cy?.blur()
           this.cy2.cy?.blur()
-          this.setState({leftFocus: null, rightFocus: null})
+          this.setState({ leftFocus: null, rightFocus: null })
           this.tooltip.current.clearTooltip()
         })
       }
     })
 
-    cy.on('zoom pan',() => {
+    cy.on('zoom pan', () => {
       this.tooltip.current.clearTooltip()
     })
 
@@ -345,7 +359,7 @@ export default class App extends Component {
       this.cy1.currentLayout = this.cy1.cy.layout(layout).run()
       this.cy2.currentLayout = this.cy2.cy.layout(layout).run()
 
-      return {view, layout}
+      return { view, layout }
     })
   }
 
@@ -368,7 +382,7 @@ export default class App extends Component {
         cyRight=${this.cy2}
         view=${state.view}
         layout=${state.layout}
-        getReportData=${() => this.getReportData()}
+        getReportInterface=${() => this.getReportInterface()}
         regenerateFocus=${() => this.regenerateFocus()}
         resetLayout=${this.resetLayout}
         refreshLayout=${() => this.refreshLayout()}
