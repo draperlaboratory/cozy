@@ -50,6 +50,7 @@ export default class App extends Component {
       prelabel: this.state.prelabel,
       postlabel: this.state.postlabel,
       pruningStatus: this.pruneMenu.current.state,
+      leftPanelRef: this.cy1,
     }
   }
 
