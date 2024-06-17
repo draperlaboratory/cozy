@@ -203,10 +203,20 @@ export default class App extends Component {
   setStatus(status) { this.setState({ status }) }
 
   regenerateFocus() {
-    this.setState({
-      leftFocus: this.state.leftFocus ? new Segment(this.cy1.cy.root, this.cy1.cy.loci) : null,
-      rightFocus: this.state.rightFocus ? new Segment(this.cy2.cy.root, this.cy2.cy.loci) : null,
-    })
+    const connectedLeft = this.cy1.cy.loci?.filter(node => node.inside())
+    const connectedRight = this.cy2.cy.loci?.filter(node => node.inside())
+
+    if (connectedLeft?.length == 0 || connectedRight?.length == 0) {
+      // we just throw away the focus if all the loci on either side have been filtered out
+      this.cy1.cy.blur()
+      this.cy2.cy.blur()
+      this.setState({ leftFocus: null, rightFocus: null })
+    } else {
+      this.setState({
+        leftFocus: this.state.leftFocus ? new Segment(this.cy1.cy.root, this.cy1.cy.loci) : null,
+        rightFocus: this.state.rightFocus ? new Segment(this.cy2.cy.root, this.cy2.cy.loci) : null,
+      })
+    }
     // we sometimes need to regenerate focus, 
     // so that the assembly diff is regenerated, 
     // so that its lines are properly mapped on to the merged nodes.
