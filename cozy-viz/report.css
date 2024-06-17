@@ -1,61 +1,64 @@
 body {
-  width: 100vw;
-  height: 100vw;
-  background: #eee;
-  font-family: Helvetica;
-  padding:0px;
-  margin:0px;
+    width: 100vw;
+    height: 100vw;
+    background: #eee;
+    font-family: Helvetica;
+    padding: 0px;
+    margin: 0px;
 }
 
 main {
-  width: 100vw;
-  display: flex;
-  justify-content:center;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
 }
 
 article {
-  width: 46em;
-  background: white;
-  padding:3em;
-  margin:1em;
-  min-height: 100vh;
+    width: 46em;
+    background: white;
+    padding: 3em;
+    margin: 1em;
+    min-height: 100vh;
 }
 
 h1 {
-  font-size:56px;
+    font-size: 56px;
+}
+
+.branch-data {
+    margin: 0px 0px 5px 0px
 }
 
 .report-field textarea {
-  width: 100%;
-  height:10em;
-  resize:vertical;
+    width: 100%;
+    height: 10em;
+    resize: vertical;
 }
 
 .report-field h2:hover {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 .report-field h2:hover {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 #summary {
-  margin-bottom:5em;
+    margin-bottom: 5em;
 }
 
 #report-status {
-  top:10px;
-  border:1px solid grey;
-  padding:1em;
-  background: white;
+    top: 10px;
+    border: 1px solid grey;
+    padding: 1em;
+    background: white;
 }
 
 #report-status progress {
-  width:100%;
+    width: 100%;
 }
 
 #report-status h3 {
-  padding-top:0px;
-  margin-top:0px;
+    padding-top: 0px;
+    margin-top: 0px;
 }
-

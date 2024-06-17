@@ -1,11 +1,62 @@
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component } from 'https://unpkg.com/preact@latest?module'
+import Colors from "../data/colors.js"
 
+class NodeBadge extends Component {
+
+  badgeStyle(color) {
+    return {
+      background: color,
+      color:"white",
+      fontWeight:"bold",
+      padding:"5px 10px 3px 10px", 
+      //less padding at the bottom because there's already naturally some space there for descenders.
+      borderRadius:"25px"
+    }
+  }
+
+  render(props) {
+    const node = props.node
+    if (node.data("error")) {
+      return html`<span style=${this.badgeStyle(Colors.focusedErrorNode)}>Error:</span>`
+    } else if (node.data("assertion_info")) {
+      return html `<span style=${this.badgeStyle(Colors.focusedAssertNode)}>Assertion:</span>`
+    } else if (node.data("postcondition_info")) {
+      return html `<span style=${this.badgeStyle(Colors.focusedPostconditionNode)}>Postcondition:</span>`
+    } else if (node.data("spinning")) {
+      return html`<span style=${this.badgeStyle(Colors.focusedErrorNode)}>Error:</span>`
+    }
+  }
+}
+
+class BranchData extends Component {
+
+  getData() {
+    return this.props.node.data("error") ||
+      this.props.node.data("assertion_info") ||
+      this.props.node.data("postcondition_info") ||
+      (this.props.node.data("spinning") && "Loop bounds exceeded") ||
+      null
+  }
+
+  render(props) {
+    const data = this.getData()
+    if (!data) return
+
+    return html`<div class="branch-data">
+      <${NodeBadge} node=${props.node}/> ${data}
+      </div>`
+  }
+}
 
 class ReportField extends Component {
-  onMouseEnter(e) {
+  onMouseEnter() {
     this.props.panel.cy.dim()
     this.props.panel.cy.highlight(this.props.leaf)
+  }
+
+  onMouseLeave() {
+    this.props.panel.cy.dim()
   }
 
   onCheck(e) {
@@ -24,11 +75,13 @@ class ReportField extends Component {
     const num = props.index + 1
     return html`<div class="report-field">
       <h2 
-        onMouseEnter=${e => this.onMouseEnter(e)}
+        onMouseEnter=${() => this.onMouseEnter()}
+        onMouseLeave=${() => this.onMouseLeave()}
         onClick=${() => this.onClick()}
       >
         Path ${num}
       </h2>
+      <${BranchData} node=${props.leaf}/>
       <form>
         <div>
         <textarea></textarea>
