@@ -7,6 +7,7 @@ import Tooltip from './tooltip.js';
 import DiffPanel from './diffPanel.js';
 import MenuBar from './menuBar.js';
 import { focusMixin } from '../util/focusMixin.js';
+import { checkedMixin } from '../util/checkedMixin.js';
 import { Segment } from '../util/segmentation.js';
 import { segmentationMixin } from '../util/segmentationMixin.js';
 import * as GraphStyle from '../util/graphStyle.js';
@@ -25,7 +26,7 @@ export default class App extends Component {
       layout: breadthFirst, // we start with the breadthfirst layout
       view: View.plain, //we start with all nodes visible, not a CFG
       prelabel: "prepatch",
-      postlabel: "postpatch"
+      postlabel: "postpatch",
     }
     this.cy1 = createRef()
     this.cy2 = createRef()
@@ -53,7 +54,8 @@ export default class App extends Component {
       postlabel: this.state.postlabel,
       pruningStatus: this.pruneMenu.current.state,
       leftPanelRef: this.cy1,
-      focusLeaf: (leaf) => {
+      focusLeafById: (id) => {
+        const leaf = this.cy1.cy.nodes(`#${id}`)
         const selfCy = this.cy1.cy
         const otherCy = this.cy2.cy
         const selfRoot = selfCy.nodes().roots()[0]
@@ -262,6 +264,7 @@ export default class App extends Component {
     Object.assign(cy, focusMixin);
     Object.assign(cy, tidyMixin);
     Object.assign(cy, segmentationMixin);
+    Object.assign(cy, checkedMixin);
     cy.debugData = cy.nodes().roots()[0].data("debug")
 
     // set layout

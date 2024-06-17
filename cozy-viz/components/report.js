@@ -60,10 +60,16 @@ class ReportField extends Component {
   }
 
   onCheck(e) {
+    const cy = this.props.panel.cy
+    // pasing the ID rather than the node is necessary, since the graph may have
+    // been regenerated, and the leaf attached to the report may no longer be
+    // attached to the cytoscape graph
     if (e.target.checked) {
       this.props.setStatus("complete")
+      cy.addCheckMark(this.props.leaf.id())
     } else {
       this.props.setStatus(undefined)
+      cy.removeCheckMark(this.props.leaf.id())
     }
   }
 
@@ -106,14 +112,16 @@ class ReportStatus extends Component {
 
 export default class Report extends Component {
 
-  constructor() {
+  constructor(props) {
     super()
     this.state = {
       branchStatuses: {},
     }
+    const panel = props.data.leftPanelRef
+    this.leaves = [...panel.cy.nodes().leaves()]
   }
 
-  componentWillMount() {
+  componentDidMount() {
     const reportStyle = this.props.window.document.createElement("link")
     reportStyle.setAttribute("rel","stylesheet")
     const loc = window.location
@@ -123,11 +131,11 @@ export default class Report extends Component {
 
   getReportFields() {
     const panel = this.props.data.leftPanelRef
-    return panel.cy.nodes().leaves().map((leaf,idx) => {
+    return this.leaves.map((leaf,idx) => {
       return html`<${ReportField}
         setStatus=${(status) => this.setBranchStatus(idx,status)}
         leaf=${leaf}
-        focus=${() => this.props.data.focusLeaf(leaf)}
+        focus=${() => this.props.data.focusLeafById(leaf.id())}
         panel=${panel}
         index=${idx}/>`
     })

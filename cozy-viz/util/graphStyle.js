@@ -164,4 +164,19 @@ export const style = [
       'underlay-padding':"15px"
     }
   },
+  {
+    selector: 'node[?checked]',
+    style: {
+      'label':'×',
+      'font-size':'36px',
+      'text-halign':'center',
+      'text-valign':'center'
+    }
+  },
+  {
+    selector: 'node.pathHighlight[?checked]',
+    style: {
+      "color":"white"
+    }
+  }
 ]
