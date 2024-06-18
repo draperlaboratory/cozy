@@ -103,6 +103,13 @@ function noStdDiffs(leaf, other) {
   else return noErrors(leaf, other)
 }
 
+// this test preserves any pair where both sides aren't checked. So it removes
+// checked notes, and removes nodes all of whose partners are checked.
+function reviewed(leaf, other) {
+  if (!leaf.data("checked") && !other.data("checked")) return false
+  else return true
+}
+
 function equivConstraints(leaf, other) {
   const leftOnlyConcretions = Object.entries(leaf.data().compatibilities).flatMap(
     ([key, compat]) => key == leaf.id() ? [] : compat.conc_args
@@ -356,6 +363,7 @@ class PruneMenu extends Component {
       pruningRegisters: false,
       pruningCorrect: false,
       pruningDoRegex: false,
+      pruningChecked: false,
       pruningEquivConstraints: false,
       pruningRegex: ".*",
       awaitingPrune: null,
@@ -404,6 +412,7 @@ class PruneMenu extends Component {
     if (this.state.pruningEquivConstraints) test = extendTest(equivConstraints, test)
     if (this.state.pruningRegisters) test = extendTest(noRegisterDiffs, test)
     if (this.state.pruningCorrect) test = extendTest(noErrors, test)
+    if (this.state.pruningChecked) test = extendTest(reviewed, test)
     if (this.state.pruningDoRegex) test = extendTest(matchRegex(this.state.pruningRegex), test)
 
     this.prune(test)
@@ -438,6 +447,9 @@ class PruneMenu extends Component {
         <//>
         <${MenuOption} onClick=${() => this.setPrune({ pruningEquivConstraints: !state.pruningEquivConstraints })}>
           <input type="checkbox" checked=${state.pruningEquivConstraints}/> Equivalent Constraints
+        <//>
+        <${MenuOption} onClick=${() => this.setPrune({ pruningChecked: !state.pruningChecked })}>
+          <input type="checkbox" checked=${state.pruningChecked}/> Reviewed
         <//>
         <${MenuOption} onClick=${() => this.setPrune({ pruningDoRegex: !state.pruningDoRegex })}>
           <input type="checkbox" checked=${state.pruningDoRegex}/> Both Stdout Matching <input 
@@ -491,7 +503,6 @@ class ViewMenu extends Component {
       this.props.cyRight.cy.nodes().map(node => node.ungrabify())
       // restore any checked nodes
       this.props.cyLeft.cy.restoreCheckMarks()
-      this.props.cyRight.cy.restoreCheckMarks()
 
       switch (tidiness) {
         case Tidiness.untidy: break;

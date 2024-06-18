@@ -71,6 +71,7 @@ class ReportField extends Component {
       this.props.setStatus(undefined)
       cy.removeCheckMark(this.props.leaf.id())
     }
+    this.props.refreshPrune()
   }
 
   onClick() {
@@ -137,6 +138,7 @@ export default class Report extends Component {
         leaf=${leaf}
         focus=${() => this.props.data.focusLeafById(leaf.id())}
         panel=${panel}
+        refreshPrune=${this.props.data.refreshPrune}
         index=${idx}/>`
     })
   }
@@ -165,7 +167,7 @@ export default class Report extends Component {
               and
               <code> ${props.data.postlabel}</code>.
             </p>
-            <${ReportStatus} value=${progress} max=${fields.length}/>
+            <${ReportStatus} value=${progress} max=${fields.length} />
           </div>
           ${fields}
         </article>

@@ -4,7 +4,7 @@ export const checkedMixin = {
 
   setCheckMarks(nodes) {
     this.nodes().removeData("checked")
-    this.checkedIds = new Set(...nodes.map(node => node.id()))
+    this.checkedIds = new Set([...nodes.map(node => node.id())])
     nodes.data("checked", true)
   },
 

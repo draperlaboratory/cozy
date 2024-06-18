@@ -54,6 +54,14 @@ export default class App extends Component {
       postlabel: this.state.postlabel,
       pruningStatus: this.pruneMenu.current.state,
       leftPanelRef: this.cy1,
+      refreshPrune: () => {
+        //we might need to refresh the pruning of the tree, if we've
+        //checked/unchecked a new report item and the tree is pruning checked
+        //branches
+        if (this.pruneMenu.current.state.pruningChecked) {
+          this.pruneMenu.current.setPrune({})
+        }
+      },
       focusLeafById: (id) => {
         const leaf = this.cy1.cy.nodes(`#${id}`)
         const selfCy = this.cy1.cy
