@@ -11,7 +11,8 @@ class NodeBadge extends Component {
       fontWeight:"bold",
       padding:"5px 10px 3px 10px", 
       //less padding at the bottom because there's already naturally some space there for descenders.
-      borderRadius:"25px"
+      borderRadius:"25px",
+      printColorAdjust: "exact"
     }
   }
 
