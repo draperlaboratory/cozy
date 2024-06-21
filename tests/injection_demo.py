@@ -1,17 +1,21 @@
+import os
 import angr
-
 import cozy
 import cozy.concolic
 import claripy
 
-proj_prepatched = cozy.project.Project('test_programs/injection_demo/injectionAttack')
-proj_postpatched_good = cozy.project.Project('test_programs/injection_demo/injectionAttack-goodPatch-patcherex')
-# proj_postpatched_bad = cozy.project.Project('test_programs/injection_demo/injectionAttack-badPatch-patcherex')
-# ↑ uses too much memory for CI...
+full_suite = 'FULL_SUITE' in os.environ
 
+proj_prepatched = cozy.project.Project('test_programs/injection_demo/injectionAttack')
 proj_prepatched.add_prototype("main", "int main(int argc, char **argv)")
+
+proj_postpatched_good = cozy.project.Project('test_programs/injection_demo/injectionAttack-goodPatch-patcherex')
 proj_postpatched_good.add_prototype("main", "int main(int argc, char **argv)")
-# proj_postpatched_bad.add_prototype("main", "int main(int argc, char **argv)")
+
+if full_suite:
+    proj_postpatched_bad = cozy.project.Project('test_programs/injection_demo/injectionAttack-badPatch-patcherex')
+    proj_postpatched_bad.add_prototype("main", "int main(int argc, char **argv)")
+    # ↑ uses too much memory for CI, so it needs to be gated by FULL_SUITE
 
 INPUT_LEN = 20
 
@@ -155,30 +159,18 @@ def setup(proj: cozy.project.Project):
 
     return (args, sess)
 
-(args_prepatched, prepatched_sess) = setup(proj_prepatched)
-# (args_postpatched_bad, postpatched_sess_bad) = setup(proj_postpatched_bad)
-(args_postpatched_good, postpatched_sess_good) = setup(proj_postpatched_good)
-
-prepatched_results = prepatched_sess.run(args_prepatched)
-# postpatched_results_bad = postpatched_sess_bad.run(args_postpatched_bad)
-postpatched_results_good = postpatched_sess_good.run(args_postpatched_good)
-
 def concrete_post_processor(args):
     def transform_str(characters):
         return [chr(n.concrete_value) if (n.concrete_value >= 32 and n.concrete_value <= 126) else n.concrete_value for n in characters]
     return [transform_str(cs) for cs in args]
 
-# comparison_bad = cozy.analysis.Comparison(prepatched_results, postpatched_results_bad, use_unsat_core=False)
+(args_prepatched, prepatched_sess) = setup(proj_prepatched)
+prepatched_results = prepatched_sess.run(args_prepatched)
+
+(args_postpatched_good, postpatched_sess_good) = setup(proj_postpatched_good)
+postpatched_results_good = postpatched_sess_good.run(args_postpatched_good)
+
 comparison_good = cozy.analysis.Comparison(prepatched_results, postpatched_results_good, use_unsat_core=False)
-
-# cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched,
-#                                      prepatched_results, postpatched_results,
-#                                      comparison_bad, first_prog, second_prog,
-#                                      output_file="cmp_injection_demo_bad.json",
-#                                      concrete_post_processor=concrete_post_processor,
-#                                      args=[command_symbols, role_symbols, data_symbols],
-#                                      num_examples=2)
-
 cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched_good,
                                      prepatched_results, postpatched_results_good, comparison_good,
                                      'test_programs/injection_demo/injectionAttack',
@@ -187,3 +179,20 @@ cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched_good,
                                      concrete_post_processor=concrete_post_processor,
                                      args=[command_symbols, role_symbols, data_symbols],
                                      num_examples=2)
+
+if full_suite:
+    (args_postpatched_bad, postpatched_sess_bad) = setup(proj_postpatched_bad)
+    postpatched_results_bad = postpatched_sess_bad.run(args_postpatched_bad)
+
+
+    comparison_bad = cozy.analysis.Comparison(prepatched_results, postpatched_results_bad, use_unsat_core=False)
+
+    cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched_bad,
+                                         prepatched_results, postpatched_results_bad,
+                                         comparison_bad,
+                                         'test_programs/injection_demo/injectionAttack',
+                                         'test_programs/injection_demo/injectionAttack-badPatch-patcherex',
+                                         output_file="cmp_injection_demo_bad.json",
+                                         concrete_post_processor=concrete_post_processor,
+                                         args=[command_symbols, role_symbols, data_symbols],
+                                         num_examples=2)

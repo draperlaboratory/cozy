@@ -51,6 +51,28 @@
         hash = "sha256-TyyI+Q61t2h0KLWc73pKcZXKVYNB+8mgoFqjAxM7TiE=";
       };
     };
+
+    makeTests = conf : pkgs.stdenv.mkDerivation {
+      name = "cozy-test-artifacts";
+      src = ./.;
+      buildInputs = [
+        self.packages.x86_64-linux.default
+        pkgs.python311
+        patcherex2
+      ];
+
+      buildPhase = ''
+        ${if conf.full_suite then "export FULL_SUITE=true" else ""}
+        mkdir $out
+        make -C ./test_programs
+        for test in ./tests/*; do
+          python $test
+        done
+        cp *.json $out/
+      '';
+    };
+
+
   in {
 
     packages.x86_64-linux.default = pyPkgs.buildPythonPackage {
@@ -69,25 +91,9 @@
       ];
     };
 
-    packages.x86_64-linux.tests = pkgs.stdenv.mkDerivation {
-      name = "cozy-test-artifacts";
-      src = ./.;
+    packages.x86_64-linux.tests = makeTests { full_suite = false; };
 
-      buildInputs = [
-        self.packages.x86_64-linux.default
-        pkgs.python311
-        patcherex2
-      ];
-
-      buildPhase = ''
-        mkdir $out
-        make -C ./test_programs
-        for test in ./tests/*; do
-          python $test
-        done
-        cp *.json $out/
-      '';
-    };
+    packages.x86_64-linux.all_tests = makeTests { full_suite = true ; };
 
     devShells.x86_64-linux.default = pkgs.mkShell {
       shellHook = ''
