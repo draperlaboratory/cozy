@@ -7,11 +7,11 @@ class NodeBadge extends Component {
   badgeStyle(color) {
     return {
       background: color,
-      color:"white",
-      fontWeight:"bold",
-      padding:"5px 10px 3px 10px", 
+      color: "white",
+      fontWeight: "bold",
+      padding: "5px 10px 3px 10px",
       //less padding at the bottom because there's already naturally some space there for descenders.
-      borderRadius:"25px",
+      borderRadius: "25px",
       printColorAdjust: "exact"
     }
   }
@@ -21,9 +21,9 @@ class NodeBadge extends Component {
     if (node.data("error")) {
       return html`<span style=${this.badgeStyle(Colors.focusedErrorNode)}>Error:</span>`
     } else if (node.data("assertion_info")) {
-      return html `<span style=${this.badgeStyle(Colors.focusedAssertNode)}>Assertion:</span>`
+      return html`<span style=${this.badgeStyle(Colors.focusedAssertNode)}>Assertion:</span>`
     } else if (node.data("postcondition_info")) {
-      return html `<span style=${this.badgeStyle(Colors.focusedPostconditionNode)}>Postcondition:</span>`
+      return html`<span style=${this.badgeStyle(Colors.focusedPostconditionNode)}>Postcondition:</span>`
     } else if (node.data("spinning")) {
       return html`<span style=${this.badgeStyle(Colors.focusedErrorNode)}>Error:</span>`
     }
@@ -112,6 +112,49 @@ class ReportStatus extends Component {
   }
 }
 
+class ReportContents extends Component {
+  differenceBullets() {
+    const bullets = []
+    const pruningStatus = this.props.pruningStatus
+    if (pruningStatus.pruningMemory) {
+      bullets.push(html`<li> differ with respect to final memory contents </li>`)
+    }
+    if (pruningStatus.pruningStdout) {
+      bullets.push(html`<li> differ with respect to stdout behavior </li>`)
+    }
+    if (pruningStatus.pruningRegisters) {
+      bullets.push(html`<li> differ with respect to final register contents</li>`)
+    }
+    if (pruningStatus.pruningEquivConstraints) {
+      bullets.push(html`<li> differ with respect to final constraints</li>`)
+    }
+    if (pruningStatus.pruningCorrect) {
+      bullets.push(html`<li> have an error, or correspond to an erroring branch </li>`)
+    }
+    if (pruningStatus.pruningDoRegex) {
+      bullets.push(html`<li> don't match the regex <code>${pruningStatus.pruningRegex}</code>, 
+        or correspond to a branch that doesn't match this regex </li>`)
+    }
+    return bullets
+  }
+
+  render(props) {
+    const bullets = this.differenceBullets()
+    console.log(this.props.pruningStatus)
+    console.log(bullets)
+    return html`
+      <h3>Summary:</h3>
+      <p>Comparing 
+        <code> ${props.prelabel} </code>
+        and
+        <code> ${props.postlabel}</code>.
+      </p>
+      ${bullets.length > 0 && 
+          html`<p> Limiting attention to branches that: <ul>${bullets}</ul></p>`
+      }`
+  }
+}
+
 export default class Report extends Component {
 
   constructor(props) {
@@ -125,17 +168,17 @@ export default class Report extends Component {
 
   componentDidMount() {
     const reportStyle = this.props.window.document.createElement("link")
-    reportStyle.setAttribute("rel","stylesheet")
+    reportStyle.setAttribute("rel", "stylesheet")
     const loc = window.location
-    reportStyle.setAttribute("href",`${loc.origin}${loc.pathname}/report.css`)
+    reportStyle.setAttribute("href", `${loc.origin}${loc.pathname}/report.css`)
     this.props.window.document.head.appendChild(reportStyle)
   }
 
   getReportFields() {
     const panel = this.props.data.leftPanelRef
-    return this.leaves.map((leaf,idx) => {
+    return this.leaves.map((leaf, idx) => {
       return html`<${ReportField}
-        setStatus=${(status) => this.setBranchStatus(idx,status)}
+        setStatus=${(status) => this.setBranchStatus(idx, status)}
         leaf=${leaf}
         focus=${() => this.props.data.focusLeafById(leaf.id())}
         panel=${panel}
@@ -144,8 +187,8 @@ export default class Report extends Component {
     })
   }
 
-  setBranchStatus(idx, status)  {
-    this.setState(oldState => ({branchStatuses: { ...oldState.branchStatuses, [idx]: status }}))
+  setBranchStatus(idx, status) {
+    this.setState(oldState => ({ branchStatuses: { ...oldState.branchStatuses, [idx]: status } }))
   }
 
   getProgress() {
@@ -162,12 +205,11 @@ export default class Report extends Component {
         <article>
           <h1 title="report-title">Cozy Report</h1>
           <div id="summary">
-            <h3>Summary:</h3>
-            <p>Comparing 
-              <code> ${props.data.prelabel} </code>
-              and
-              <code> ${props.data.postlabel}</code>.
-            </p>
+            <${ReportContents}
+              prelabel=${props.data.prelabel}
+              postlabel=${props.data.postlabel} 
+              pruningStatus=${props.data.pruningStatus}
+            />
             <${ReportStatus} value=${progress} max=${fields.length} />
           </div>
           ${fields}

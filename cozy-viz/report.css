@@ -47,15 +47,12 @@ h1 {
     cursor: pointer;
 }
 
-#summary {
-    margin-bottom: 5em;
-}
-
 #report-status {
     top: 10px;
     border: 1px solid grey;
     padding: 1em;
     background: white;
+    margin: 2em 0 4em 0;
 }
 
 #report-status progress {
