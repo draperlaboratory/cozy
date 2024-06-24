@@ -120,19 +120,27 @@ function equivConstraints(leaf, other) {
   return (rightOnlyConcretions.length + leftOnlyConcretions.length == 0)
 }
 
-const matchRegex = (regexStr) => (leaf, other) => {
-  let regex
+const matchRegex = (regexStrs) => (leaf, other) => {
+  const regexes = []
   try {
-    regex = new RegExp(regexStr)
+    for (const regexStr of regexStrs.split('||')) {
+      regexes.push(new RegExp(regexStr))
+    }
   } catch (e) {
     if (matchRegex.debounce) return
     matchRegex.debounce = true
     alert("Unreadable Regular Expression")
     setTimeout(() => matchRegex.debounce = false, 500)
   }
-  if (!leaf.data().stdout.match(regex)) return false
-  if (!other.data().stdout.match(regex)) return false
-  else return noErrors(leaf, other)
+  for (const regex of regexes) {
+    if (
+      leaf.data().stdout.match(regex) &&
+      other.data().stdout.match(regex)
+    ) { 
+      return noErrors(leaf, other) 
+    }
+  }
+  return false
 }
 
 function MenuBadge(props) {
@@ -423,7 +431,7 @@ class PruneMenu extends Component {
     if (this.state.pruningDoRegex) {
       this.setState({ awaitingPrune: true })
       clearTimeout(this.regexDebounceTimeout)
-      this.regexDebounceTimeout = setTimeout(() => this.setPrune({ awaitingPrune: null }), 1000)
+      this.regexDebounceTimeout = setTimeout(() => this.setPrune({ awaitingPrune: null }), 500)
     }
   }
 
