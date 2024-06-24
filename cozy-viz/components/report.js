@@ -140,8 +140,6 @@ class ReportContents extends Component {
 
   render(props) {
     const bullets = this.differenceBullets()
-    console.log(this.props.pruningStatus)
-    console.log(bullets)
     return html`
       <h3>Summary:</h3>
       <p>Comparing 

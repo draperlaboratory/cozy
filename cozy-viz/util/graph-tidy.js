@@ -115,17 +115,22 @@ export const tidyMixin = {
     for (const node of this.nodes()) {
       const addr = node.data().address
       if (addr in constructed) {
+        // node is already represented 
         this.mergedNodes.push(node)
+        // so we mark it as merged
         const priorStdout = constructed[addr].data('newStdout')
         if (priorStdout.length > 0) {
           constructed[addr].data('stdout', priorStdout + '\n--\n' + node.data('newStdout'))
         }
         constructed[addr].data('mergedIds', `${constructed[addr].data('mergedIds')}${node.id()}#`)
+        // and merge its stdout, and id with the representation
       } else {
+        // node isn't represented
         this.removePlainData(node)
         node.data('stdout', node.data('newStdout'))
         node.data('mergedIds', `#${node.id()}#`)
         constructed[addr] = node
+        // so we touch it up a bit and add it to the CFG
       }
       if (node.hasClass('pathHighlight')) constructed[addr].data('traversed', true)
       if (node.incomers().length == 0) constructed[addr].data('initial', true)

@@ -165,7 +165,9 @@ export const style = [
     }
   },
   {
-    selector: 'node[?checked]',
+    //we don't display checks in CFG mode, since we don't really have
+    //meaningful branches there.
+    selector: 'node[?checked][^mergedIds]',
     style: {
       'label':'×',
       'font-size':'36px',
