@@ -7,8 +7,8 @@ import Menu from './menu.js'
 import SearchMenu from './searchMenu.js'
 import PruneMenu from './pruneMenu.js'
 import ViewMenu from './viewMenu.js'
+import LayoutMenu from './layoutMenu.js'
 import { View } from '../data/cozy-data.js'
-import { breadthFirst, cola, cose } from '../data/layouts.js'
 
 export default class MenuBar extends Component {
   constructor() {
@@ -115,35 +115,14 @@ export default class MenuBar extends Component {
         open=${state.open}
         setOpen=${o => this.setOpen(o)}
       />
-      <${Menu} 
-        enabled=${enabled}
+      <${LayoutMenu}
         open=${state.open}
-        title="Layout"
-        setOpen=${o => this.setOpen(o)}>
-        <${Menu.Option} 
-          onClick=${() => this.resetLayout(breadthFirst, View.plain)}
-          selected=${props.layout.name == "breadthfirst" && props.view == View.plain}>
-            Tree
-        <//>
-        <${Menu.Option} 
-          onClick=${() => this.resetLayout(breadthFirst, View.cfg)}
-          selected=${props.layout.name == "breadthfirst" && props.view == View.cfg}>
-            CFG - Tree layout
-        <//>
-        <${Menu.Option} onClick=${() => this.resetLayout()}
-          onClick=${() => this.resetLayout(cose, View.cfg)}
-          selected=${props.layout.name == "cose" && props.view == View.cfg}>
-            CFG - Cose layout
-        <//>
-        <${Menu.Option} 
-          onClick=${() => this.resetLayout(cola, View.cfg)}
-          selected=${props.layout.name == "cola" && props.view == View.cfg}>
-            CFG - Cola layout
-        <//>
-        <${Menu.Option} onClick=${() => this.resetLayout()}>
-            Refresh
-        <//>
-      <//>
+        enabled=${enabled}
+        setOpen=${o => this.setOpen(o)}
+        layout=${props.layout}
+        view=${props.view}
+        resetLayout=${(o,v) => this.resetLayout(o,v)}
+      />
       <${SearchMenu}
         enabled=${enabled}
         open=${state.open}
