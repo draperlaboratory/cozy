@@ -47,11 +47,6 @@ export default class MenuBar extends Component {
     }
   }
 
-  setTidiness(level) {
-    this.props.setTidiness(level)
-    this.setOpen(null)
-  }
-
   resetLayout(layout, view) {
     this.props.resetLayout(layout, view)
     this.setOpen(null)
