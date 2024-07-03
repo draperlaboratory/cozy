@@ -1,0 +1,89 @@
+cozy.stubs
+==========
+
+.. py:module:: cozy.stubs
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.stubs.unstripped_binary_path
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.stubs.Stubber
+
+
+Module Contents
+---------------
+
+.. py:class:: Stubber(binary_path: str)
+
+   A Stubber outputs Python source code that represents stubs for the callees of a given binary function.
+
+   If `foo` is the function to be analyzed, and `foo` calls a two-argument function `bar`, then the following stub
+   will be among those generated for `foo`:
+
+   .. code-block:: python
+
+   class bar(angr.SimProcedure):
+       def run(self, arg0, arg1):
+           pass
+
+   The stub can then be filled out and used during symbolic execution.
+
+   :param str binary_path: Path for the binary under analysis.
+   :ivar angr.analyses.cfg.cfg_fast.CFGFast cfg: CFG for the binary.
+   :ivar networkx.classes.multidigraph.MultiDiGraph cg: Call graph for the binary.
+
+
+   .. py:method:: extract_func(func_name: str) -> angr.knowledge_plugins.functions.function.Function
+
+      Returns the function with the given name from the CFG.
+
+      :param str func_name: Name of the function to extract.
+      :return: Function with the given name.
+      :rtype: angr.knowledge_plugins.functions.function.Function
+
+
+
+   .. py:method:: get_callees(func_name: str) -> list[angr.knowledge_plugins.functions.function.Function]
+
+      Returns the list of functions called by function `func_name`.
+
+      :param str func_name: Name of the caller function.
+      :return: The list of functions called by `func_name`.
+      :rtype: list[angr.knowledge_plugins.functions.function.Function] 
+
+
+
+   .. py:method:: make_stub(func: angr.knowledge_plugins.functions.function.Function) -> str
+
+      Returns an empty Python class definition (in string form) named after `func` that inherits from `angr.SimProcedure`.
+
+      :param angr.knowledge_plugins.functions.function.Function func: Function to be stubbed.
+      :return: Empty Python class definition representing a symbolic execution stub for function `func`.
+      :rtype: str
+
+
+
+   .. py:method:: make_callee_stubs(func_name: str) -> list[str]
+
+      Returns a list of stubs for the callees of function `func_name`.
+
+      :param str func_name: Name of the caller function.
+      :return: Stubs for the callees of function `func_name`.
+      :rtype: list[str]
+
+
+
+.. py:data:: unstripped_binary_path
+   :value: '../test_programs/GridIDPS/build/amp_challenge_arm.ino_unstripped.elf'
+
+

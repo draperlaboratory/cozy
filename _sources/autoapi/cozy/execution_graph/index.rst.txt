@@ -1,0 +1,219 @@
+cozy.execution_graph
+====================
+
+.. py:module:: cozy.execution_graph
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.execution_graph.ExecutionGraph
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.execution_graph._serialize_diff
+   cozy.execution_graph._serialized_field_diff
+   cozy.execution_graph.dump_comparison
+   cozy.execution_graph.visualize_comparison
+   cozy.execution_graph._generate_comparison
+
+
+Module Contents
+---------------
+
+.. py:function:: _serialize_diff(diff, nice_name_a: collections.abc.Callable[[int], str | None] | None = None, nice_name_b: collections.abc.Callable[[int], str | None] | None = None)
+
+.. py:function:: _serialized_field_diff(diff: any)
+
+.. py:function:: dump_comparison(proj_a: cozy.project.Project, proj_b: cozy.project.Project, rslt_a: cozy.session.RunResult, rslt_b: cozy.session.RunResult, comparison_results: cozy.analysis.Comparison, file_name_a: str = 'prepatch', file_name_b: str = 'postpatch', output_file: str = 'cozy-result.json', concrete_post_processor: collections.abc.Callable[[any], any] | None = None, include_vex: bool = False, include_simprocs: bool = False, flag_syscalls: bool = False, include_actions: bool = False, include_debug: bool = False, include_side_effects: bool = True, args: any = [], num_examples: int = 0) -> None
+
+   Generates and saves JSON data for Cozy-Viz.
+
+   Generates JSON data for Cozy-Viz from the results of two symbolic
+   executions, and saves the result to two files, one for pre and one for post.
+
+   :param Project proj_a: The project associated with the first execuction.
+   :param Project proj_b: The project associated with the second execuction.
+   :param RunResult rslt_a: The result of the first execution.
+   :param RunResult rslt_b: The result of the second execution.
+   :param analysis.Comparison comparison_results: The comparison we wish to dump.
+   :param str, optional file_name_a: A name for the prepatch binary, displayed in visualization. 
+       Default "prepatch".
+   :param str, optional file_name_b: A name for the postpatch binary, displayed in visualization.
+       Default "postpatch"
+   :param str, optional output_file: A name for generated JSON file. Default "cozy-result.json".
+   :param Callable [[any],any] | None, optional concrete_post_processor: This function is used to
+       post-process concretized versions of args before they are added to the
+       return string. Some examples of this function include converting an integer
+       to a negative number due to use of two's complement, or slicing off parts of
+       the argument based on another part of the input arguments. Default None.
+   :param bool, optional include_vex: whether to, for each SimState, generate the
+       corresponding VEX IR and include the result in the JSON. Default False.
+   :param bool, optional include_simprocs: whether to, for each SimState, flag any
+       SimProcedure locations occurring in the corrsponding basic block. Default False.
+   :param bool, optional include_simprocs: whether to include a listing of
+       SimProcedures called in each basic block. Default False.
+   :param bool, optional include_actions: whether to include logging of
+       read/write operations on memory and registers. Default False.
+   :param bool, optional include_debug: whether to include debugging information
+       recovered from DWARF metadata. Default False.
+   :param bool, optional include_side_effects: whether to include cozy side effects,
+       like virtual prints, if present. Default True.
+   :param any, optional args: The input arguments to concretize. This argument
+       may be a Python datastructure, the concretizer will make a deep copy with
+       claripy symbolic variables replaced with concrete values. See
+       :class:`cozy.analysis.CompatiblePair`. Default = [].
+   :param int, optional num_examples: The number of concrete examples to
+       generate and incorporate into the JSON, for each dead-end state. Default 0.
+
+
+.. py:function:: visualize_comparison(proj_a: cozy.project.Project, proj_b: cozy.project.Project, rslt_a: cozy.session.RunResult, rslt_b: cozy.session.RunResult, comparison_results: cozy.analysis.Comparison, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, include_vex: bool = False, include_simprocs: bool = False, flag_syscalls: bool = False, include_actions: bool = False, include_debug: bool = False, include_side_effects: bool = True, args: any = [], num_examples: int = 0, open_browser=False, port=8080)
+
+   Generates and visualizes JSON data for Cozy-Viz.
+
+   Generates JSON data suitable for visual comparison using Cozy-Viz from the     results of two symbolic executions, and launches a server to view the data.
+
+   :param Project proj_a: The project associated with the first execuction.
+   :param Project proj_b: The project associated with the second execuction.
+   :param RunResult rslt_a: The result of the first execution.
+   :param RunResult rslt_b: The result of the second execution.
+   :param analysis.Comparison comparison_results: The comparison we wish to dump.
+   :param Callable [[any],any] | None, optional concrete_post_processor: This function is used to
+       post-process concretized versions of args before they are added to the
+       return string. Some examples of this function include converting an integer
+       to a negative number due to use of two's complement, or slicing off parts of
+       the argument based on another part of the input arguments. Default None.
+   :param bool, optional include_vex: whether to, for each SimState, generate the
+       corresponding VEX IR and include the result in the JSON. Default False.
+   :param bool, optional include_simprocs: whether to include a listing of
+       SimProcedures called in each basic block. Default False.
+   :param bool, optional include_actions: whether to include logging of
+       read/write operations on memory and registers. Default False.
+   :param bool, optional include_debug: whether to include debugging information
+       recovered from DWARF metadata. Default False.
+   :param bool, optional include_side_effects: whether to include cozy side effects,
+       like virtual prints, if present. Default True.
+   :param any, optional args: The input arguments to concretize. This argument
+       may be a Python datastructure, the concretizer will make a deep copy with
+       claripy symbolic variables replaced with concrete values. See
+       :class:`cozy.analysis.CompatiblePair`. Default [].
+   :param int, optional num_examples: The number of concrete examples to
+       generate and incorporate into the JSON, for each dead-end state. Default 0.
+   :param bool, optional open_browser: Automatically open cozy-viz with the
+       comparison data loaded. Default False.
+   :param int, optional port: The port to serve cozy-viz on. Default 8080.
+
+
+.. py:function:: _generate_comparison(proj_a: cozy.project.Project, proj_b: cozy.project.Project, rslt_a: cozy.session.RunResult, rslt_b: cozy.session.RunResult, comparison_results: cozy.analysis.Comparison, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, include_vex: bool = False, include_simprocs: bool = False, flag_syscalls: bool = False, include_actions: bool = False, include_debug: bool = False, include_side_effects: bool = True, args: any = [], num_examples: int = 0) -> tuple[networkx.DiGraph, networkx.DiGraph]
+
+   Generates JSON data for Cozy-Viz.
+
+   Generates JSON data suitable for visual comparison using Cozy-Viz from the     results of two symbolic executions.
+
+   :param Project proj_a: The project associated with the first execuction.
+   :param Project proj_b: The project associated with the second execuction.
+   :param RunResult rslt_a: The result of the first execution.
+   :param RunResult rslt_b: The result of the second execution.
+   :param Callable [[any],any] | None, optional concrete_post_processor: This function is used to
+       post-process concretized versions of args before they are added to the
+       return string. Some examples of this function include converting an integer
+       to a negative number due to use of two's complement, or slicing off parts of
+       the argument based on another part of the input arguments. Default None.
+   :param bool, optional include_vex: whether to, for each SimState, generate the
+       corresponding VEX IR and include the result in the JSON. Default False.
+   :param bool, optional include_simprocs: whether to include a listing of
+       SimProcedures called in each basic block. Default False.
+   :param bool, optional include_actions: whether to include logging of
+       read/write operations on memory and registers. Default False.
+   :param bool, optional include_debug: whether to include debugging information
+       recovered from DWARF metadata. Default False.
+   :param bool, optional include_side_effects: whether to include cozy side effects,
+       like virtual prints, if present. Default True.
+   :param any, optional args: The input arguments to concretize. This argument
+       may be a Python datastructure, the concretizer will make a deep copy with
+       claripy symbolic variables replaced with concrete values. See
+       :class:`cozy.analysis.CompatiblePair`. Default = [].
+   :param int, optional num_examples: The number of concrete examples to
+       generate and incorporate into the JSON, for each dead-end state. Default 0.
+
+   :return (networkx.DiGraph, networkx.DiGraph): A pair of directed graphs
+       representing the two symbolic executions.
+
+
+.. py:class:: ExecutionGraph(proj: cozy.project.Project, result: cozy.session.RunResult)
+
+   This class is used to store a `networkx.DiGraph`, decorated with     `SimStates`, representing the full history of a symbolic program execution. 
+   It constructs an ExecutionGraph, from a project and the results of an
+   executed project session.
+
+   :ivar Project proj: the project associated with the execution.
+   :ivar RunResult result: the result of the execution.
+
+
+   .. py:method:: _get_bbl_asm(b: angr.block.Block)
+
+      An internal method which renders the assembly corresponding to a given basic block as a formatted string
+
+      :param Block b: The block to render.
+      :return str: The rendered string.
+
+
+
+   .. py:method:: _list_simprocs(b: angr.block.Block)
+
+      An internal method which lists SimProcedure calls occuring in a block
+
+      :param Block b: the block to scan
+
+
+
+   .. py:method:: _has_syscall(b: angr.block.Block)
+
+      An internal method which checks whether the jumpkind of a Block is
+      a syscall.
+
+      :param Block b: the relevant Block
+      :return bool: Whether the jumpkind is a syscall
+
+
+
+   .. py:method:: _list_actions(child: angr.SimState | angr.state_plugins.SimStateHistory, parent: angr.SimState)
+
+
+   .. py:method:: reconstruct_bbl_addr_graph()
+
+      Convert the SimState-decorated graph into a graph decorated with
+      integers, carrying symbolic program execution data in the attributes
+      `stdout`, `stderr`, `contents` (this holds a basic block),
+      `constraints`, `actions` (optionally) and `state`.
+
+      :return networkx.DiGraph: The resulting graph.
+
+
+
+   .. py:method:: reconstruct_bbl_pp_graph()
+
+      Convert the SimState-decorated graph into a graph decorated with
+      integers, carrying symbolic program execution data in the attributes
+      `stdout`, `stderr`, `contents`, `constraints` ,`vex` and `state`. The
+      difference from :func:`reconstruct_bbl_addr_graph` is that the data is
+      now pretty-printed and suitable for serialization.
+
+      :return networkx.DiGraph: The resulting graph.
+
+
+
+   .. py:method:: dump_bbp_pp_cytoscape(name: str)
+
+      Dump the graph as cytoscapejs readable JSON.
+
+      :param str name: The filename for the generated json.
+
+
+

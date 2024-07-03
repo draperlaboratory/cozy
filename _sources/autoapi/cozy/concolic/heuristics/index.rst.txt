@@ -1,0 +1,98 @@
+cozy.concolic.heuristics
+========================
+
+.. py:module:: cozy.concolic.heuristics
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.concolic.heuristics.ArbitraryCandidate
+   cozy.concolic.heuristics.BBTransitionCandidate
+   cozy.concolic.heuristics.CompleteTermination
+   cozy.concolic.heuristics.CoverageTermination
+   cozy.concolic.heuristics.CyclomaticComplexityTermination
+
+
+Module Contents
+---------------
+
+.. py:class:: ArbitraryCandidate
+
+   For use as the candidate heuristic in :py:meth:`cozy.exploration.ConcolicSim.generate_concrete`
+   This heuristic will choose the next exploration candidate by popping the last element off the candidate's list.
+
+
+   .. py:method:: __call__(candidate_states: list[angr.SimState])
+
+
+.. py:class:: BBTransitionCandidate(lookback: int = 2)
+
+   For use as the candidate heuristic in :py:meth:`cozy.exploration.ConcolicSim.generate_concrete`
+   This heuristic will select a candidate whose basic block history has been seen least frequently in the past. This
+   class keeps an internal record of candidates it chose in the past to compute this metric.
+
+   :param int lookback: The number of basic blocks we should look back to when computing a candidate's transition        history. This should be a small integer, somewhere in the range 1 to 6. This number should in general only        be increased if the total number of states we search goes up. The candidate state with the most unique        transition history will be chosen by this heuristic.
+
+
+   .. py:method:: __call__(candidate_states: list[angr.SimState])
+
+
+.. py:class:: CompleteTermination
+
+   This termination heuristic tells the concolic execution to explore until all states are deadended.
+
+
+   .. py:method:: __call__(simgr)
+
+
+.. py:class:: CoverageTermination(fun: angr.knowledge_plugins.Function, coverage_fraction: float = 0.9)
+
+   This termination heuristic tells the concolic execution to explore until a certain fraction of a
+   function's basic blocks have been visited at least once.
+
+   :param Function fun: The function that we are seeking a specific coverage over.
+   :param float coverage_fraction: A number in the range [0, 1] that determines what fraction of basic blocks need        to be visited before termination is reached.
+
+
+   .. py:method:: from_session(sess: cozy.project.Session, coverage_fraction: float = 0.9) -> CoverageTermination
+      :staticmethod:
+
+
+      Constructs a CoverageTermination object from an unrun session.
+
+      :param Session sess: The session which is set to call some specific function, but has not yet been run.
+      :param float coverage_fraction: A number in the range [0, 1] that determines what fraction of basic blocks need        to be visited before termination is reached.
+
+
+
+   .. py:method:: __call__(simgr)
+
+
+.. py:class:: CyclomaticComplexityTermination(fun: angr.knowledge_plugins.Function, fun_manager: angr.knowledge_plugins.FunctionManager, add_callees=True, multiplier: int | float = 1)
+
+   This termination heuristic tells the concolic execution to explore until a certain number of terminated
+   states are reached. If add_callees is False, then this value is equal to the cyclomatic complexity of the function.
+   Otherwise, it is equal to the cyclomatic complexity of the function plus the cyclomatic complexity of all callees
+   of the function (recursively).
+
+   :param bool add_callees: If this parameter is True, the cyclomatic complexity of all functions deeper in the        call graph will be summed to determine the maximum number of states to explore. If False, the upper bound        will be the cyclomatic complexity of the session.
+   :param int | float multiplier: The computed cyclomatic complexity sum will be multiplied by this value to        determine the number of states to explore
+
+
+   .. py:method:: from_session(sess: cozy.project.Session, add_callees=True, multiplier: int | float = 1) -> CyclomaticComplexityTermination
+      :staticmethod:
+
+
+      Constructs an object from a session. The session must be started from a specific function.
+
+      :param bool add_callees: If this parameter is True, the cyclomatic complexity of all functions deeper in the        call graph will be summed to determine the maximum number of states to explore. If False, the upper bound        will be the cyclomatic complexity of the session.
+      :param int | float multiplier: The computed cyclomatic complexity sum will be multiplied by this value to        determine the number of states to explore
+
+
+
+   .. py:method:: __call__(simgr)
+
+

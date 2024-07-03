@@ -1,0 +1,94 @@
+cozy.side_effect
+================
+
+.. py:module:: cozy.side_effect
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.side_effect.PerformedSideEffect
+   cozy.side_effect.ConcretePerformedSideEffect
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.side_effect.perform
+   cozy.side_effect.get_effects
+   cozy.side_effect.get_channel
+   cozy.side_effect.levenshtein_alignment
+   cozy.side_effect.test_levenshtein_alignment
+
+
+Module Contents
+---------------
+
+.. py:class:: PerformedSideEffect(state_history: angr.state_plugins.SimStateHistory, body, concrete_post_processor=None, label=None)
+
+   This class encapsulates the idea of a side effect whose body may consist of mixed symbolic and concrete values.
+
+   :param SimStateHistory state_history: The point in execution at which the side effect was performed.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and        claripy concrete and symbolic values.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the        side effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making        comparisons. For example, if you have two call sites to a network send function, you would want different        labels for the two different call locations.
+
+
+.. py:class:: ConcretePerformedSideEffect(base_effect: PerformedSideEffect, state_history: angr.state_plugins.SimStateHistory, body, concrete_post_processor=None, label=None)
+
+   This class encapsulates the idea of a side effect whose body previously consisted of mixed symbolic and concrete
+   values, but now consists of only concrete values (ie, BVV and FPV). At the point of the construction, this concrete
+   value has not yet been passed through the user provided concrete_post_processor, whose job is to take the concrete value
+   and transform the BVV values into ordinary Python values. The purpose of concrete_post_processor for instance could be
+   to transform a two's complement BVV that is negative into a negative Python integer. This will make the display
+   more readable to the user. Hence, the concrete_post_processor can be viewed as a post-processing function.
+
+   :param PerformedSideEffect base_effect: The non-symbolic side effect that was concretized.
+   :param SimStateHistory state_history: The point in execution at which the side effect was performed.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples, and        claripy concrete values.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the        side effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making        comparisons. For example, if you have two call sites to a network send function, you would want different        labels for the two different call locations.
+
+
+   .. py:property:: mapped_body
+
+
+.. py:function:: perform(state: angr.SimState, channel: str, body, concrete_post_processor=None, label=None)
+
+   Attaches a side effect to the passed state.
+
+   :param SimState state: The state in which the side effect should be performed and attached to.
+   :param str channel: The name of the channel in which the side effect should be performed. Different side effects    should be sent down different channels. For example, the virtual print side effect channel is different from the    networking side effect channel.
+   :param body: The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples,    claripy concrete values, and claripy symbolic values. This should represent the payload of the side effect.
+   :param concrete_post_processor: The optional post processing function to apply to concretized versions of the side    effect's body if post processing is required.
+   :param label: The label to apply to the side effect, used to align instances of side effects when making    comparisons. For example, if you have two call sites to a network send function, you would want different labels    for the two different call locations.
+
+
+.. py:function:: get_effects(state: angr.SimState) -> dict[str, list[PerformedSideEffect]]
+
+   Gets the side effects attached to a specific state
+
+   :param SimState state: The state from which we should retrieve the side effects.
+   :rtype: dict[str, list[PerformedSideEffect]]
+   :return: All side effects attached to this state. Each entry in the dictionary is a different channel.
+
+
+.. py:function:: get_channel(state: angr.SimState, channel: str) -> list[PerformedSideEffect]
+
+   Gets the side effects from the given channel attached to a specific state. An empty list is returned for channels
+   in which the channel has not yet been used.
+
+   :param SimState state: The state from which we should retrieve the side effects channel.
+   :param str channel: The name of the channel
+   :rtype: list[PerformedSideEffect]
+   :return: A list of side effects for the requested channel.
+
+
+.. py:function:: levenshtein_alignment(lst_a, lst_b, key=None)
+
+.. py:function:: test_levenshtein_alignment()
+

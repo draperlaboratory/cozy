@@ -1,0 +1,47 @@
+cozy.concrete
+=============
+
+.. py:module:: cozy.concrete
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.concrete.CompatiblePairInput
+   cozy.concrete.TerminalStateInput
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.concrete._concretize
+
+
+Module Contents
+---------------
+
+.. py:function:: _concretize(solver, state_bundle, n=1)
+
+.. py:class:: CompatiblePairInput(args, mem_diff: dict[range, tuple[int, int]], reg_diff: dict[str, tuple[int, int]], left_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]], right_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]])
+
+   Stores information about the concretization of a compatible state pair.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[range, tuple[int, int]] mem_diff: Concretized version of memory difference. Each key is a memory address range, and each value is a concretized version of the data stored at that location for the prepatched, postpatched runs.
+   :ivar dict[str, tuple[int, int]] reg_diff: Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] left_side_effects: Concretized versions of side effects made by the prepatched state.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] right_side_effects: Concretized versions of side_effects made by the postpatched state.
+
+
+.. py:class:: TerminalStateInput(args, side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]])
+
+   Stores information about the concretization of a TerminalState.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[str, list[PerformedSideEffect]] side_effects: Concretized side effects outputted by the singleton state.
+
+

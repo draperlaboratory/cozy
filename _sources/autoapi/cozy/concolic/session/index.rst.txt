@@ -1,0 +1,42 @@
+cozy.concolic.session
+=====================
+
+.. py:module:: cozy.concolic.session
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.concolic.session.JointConcolicSession
+
+
+Module Contents
+---------------
+
+.. py:class:: JointConcolicSession(sess_left: cozy.session.Session, sess_right: cozy.session.Session, candidate_heuristic_left: collections.abc.Callable[[list[angr.SimState]], angr.SimState] | None = None, candidate_heuristic_right: collections.abc.Callable[[list[angr.SimState]], angr.SimState] | None = None, termination_heuristic_left: collections.abc.Callable[[angr.sim_manager.SimulationManager], bool] | None = None, termination_heuristic_right: collections.abc.Callable[[angr.sim_manager.SimulationManager], bool] | None = None)
+
+   This class is used for jointly running two sessions using concolic execution. The sessions need to be run
+   jointly because the concrete values generated during concolic execution need to be fed to both programs.
+
+
+   .. py:method:: run(args_left: list[claripy.ast.bits], args_right: list[claripy.ast.bits], symbols: set[claripy.BVS] | frozenset[claripy.BVS], cache_intermediate_info: bool = True, ret_addr_left: int | None = None, ret_addr_right: int | None = None, loop_bound_left: int | None = None, loop_bound_right: int | None = None) -> tuple[cozy.session.RunResult, cozy.session.RunResult]
+
+      Jointly run two sessions.
+
+      :param list[claripy.ast.bits] args_left: The arguments to pass to the left session.
+      :param list[claripy.ast.bits] args_right: The arguments to pass to the right session.
+      :param set[claripy.BVS] | frozenset[claripy.BVS] symbols: All symbolic values used in the two sessions. These        symbols may be passed as arguments, or may have been pre-stored in the memory of the session before this        method was called. This set is required during the concretization step where we need to generate concrete        values for all symbolic values in the program.
+      :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be
+      cached. This is required for dumping the execution graph which is used in visualization.
+      :param int | None ret_addr_left: What address to return to if calling as a function
+      :param int | None ret_addr_right: What address to return to if calling as a function
+      :param int | None loop_bound_left: Sets an upper bound on loop iteration count for the left session. Useful        for programs with non-terminating loops.
+      :param int | None loop_bound_right: Sets an upper bound on loop iteration count for the right session. Useful        for programs with non-terminating loops.
+
+      :return: The result of running the two sessions, where the first element of the return tuple being the left        session's result, and the second element being the right session's result.
+      :rtype: tuple[RunResult, RunResult]
+
+
+
