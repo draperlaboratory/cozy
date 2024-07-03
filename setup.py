@@ -5,7 +5,7 @@ with open("README.md", 'r') as f:
 
 setup(
    name='cozy-re',
-   version='1.4.0',
+   version='1.5.0',
    description='Python tool for comparing binaries via symbolic execution utilizing the angr framework.',
    long_description=long_description,
    author='Caleb Helbling',
