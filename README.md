@@ -104,3 +104,21 @@ make html
 ```
 
 The output documents should be stored in docs/build/html
+
+### Pushing Release to PyPI
+
+This section is mostly for the cozy developers to remind us how to push to PyPI. See the page here for a more
+advanced tutorial: https://packaging.python.org/en/latest/tutorials/packaging-projects/. Run the following commands to
+push to PyPI:
+
+```
+pip3 install build
+# Sometimes twine gets updates that are needed to work with the PyPI repo
+pip3 install --upgrade twine
+# Remember to bump the version numbers in pyproject.toml and setup.py
+python3 -m build
+# Remember if you haven't already to set up your PyPI token in ~/.pypirc
+# Replace the version number with what you just built
+python3 -m twine upload dist/cozy_re-1.5.0*
+# Once you're done, make a release on Github and upload .whl and .tar.gz files that you just built. Enter changelog in the releases section.
+```
