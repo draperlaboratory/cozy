@@ -88,3 +88,47 @@ The available tools are:
 To compare a different set of branches, click a new terminal node in the left
 pane. This will highlight a new set of compatible branches on the right, and
 you can select one of those as above.
+
+### Refining The View
+
+The initial view presented by dragging in a trace is fully expanded: each basic
+block along each execution path is a node, all basic blocks are displayed, and
+all nodes with special features are highlighted. This can be a lot of
+information to deal with. To refine the view, you can use some of the menu
+options at the top of the cozy-viz interface. The available menu options are:
+
+1. File: this contains options for saving the trace you're currently viewing as
+   a file. This can be useful if you've summoned the visualizer from a script
+   with a preloaded trace, and it turns out you'd like to save that trace. It
+   also contains an option for creating a *report* - see below.
+2. View: this contains options for toggling the visibility of the different
+   kinds of special nodes: errors, [failed
+   post-conditions](https://draperlaboratory.github.io/cozy/autoapi/cozy/directive/index.html#cozy.directive.Postcondition), [failed asserts](https://draperlaboratory.github.io/cozy/autoapi/cozy/directive/index.html#cozy.directive.Assert), 
+   nodes containing syscalls, and nodes containing simulated procedure calls.
+   View also includes options for changing the "granularity" of the view,
+   either by merging sequences of nodes in which the constraints on input don't
+   change, or merging all sequences of nodes where no forking occurs.
+3. Prune: this lets you toggle different "prunings", which remove branchings
+   that aren't interestingly different from any of their compatible partners.
+   Options include pruning branches that don't differ from their partners in
+   memory contents, register contents, input constraints, stdout, or branches
+   whose stdout contents satisfy some regex also satisfied by all their partners.
+4. Layout: this lets you change the way the symbolic execution is laid out,
+   displaying it as a CFG using one of several graph-layout
+   algorithms. Note that while the symbolic execution is laid out as a CFG, it
+   won't be possible to select or compare pairs of branches in the ordinary
+   way, since the CFG obscures which sequences of nodes are branches in the
+   symbolic execution.
+5. Search: this lets you highlight sets of nodes whose stdout matches a certain
+   regex.
+
+### Report Generation
+
+The "Report" option under the file menu will open a report in a new window,
+based on whatever branches are visible (not pruned) at the time that the report
+window is opened. For each visible branch in the left pane, the report will
+contain a text field where notes about that branch and its partners can be
+recorded. Branches can be checked off as "reviewed" by clicking the checkboxes
+within the report. Reviewed branches will show an × in their final node, and
+can be hidden from view using one of the pruning options under the "prune" menu.
+Once a report is completed, it can be printed as a PDF.
