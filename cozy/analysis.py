@@ -231,7 +231,8 @@ class StateDiff:
                    compute_reg_diff=True,
                    compute_side_effect_diff=True,
                    use_unsat_core=True,
-                   simplify=False) -> DiffResult | None:
+                   simplify=False,
+                   extra_constraints=[]) -> DiffResult | None:
         """
         Compares two states to find differences in memory. This function will return None if the two states have\
         non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are\
@@ -270,6 +271,9 @@ class StateDiff:
         joint_solver = claripy.Solver(track=use_unsat_core) # The track parameter is required to generate an unsat core
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
+
+        for constraint in extra_constraints:
+            joint_solver.add(constraint)
 
         try:
             is_sat = joint_solver.satisfiable()
@@ -574,6 +578,17 @@ class Comparison:
         total_num_pairs = len(states_pre_patched) * len(states_post_patched)
         count = 0
 
+        extra_constraints = []
+
+        # If we use underconstrained symbolic execution, the initial register states for the two executions
+        # will not be the same. So let's go ahead and construct constraints that inform the SMT solver that the
+        # registers are the same at the start.
+        if pre_patched.initial_registers is not None and post_patched.initial_registers is not None:
+            for reg_name in pre_patched.initial_registers.keys():
+                value_left = pre_patched.initial_registers[reg_name]
+                value_right = post_patched.initial_registers[reg_name]
+                extra_constraints.append(value_left == value_right)
+
         for (i, state_pre) in enumerate(states_pre_patched):
             for (j, state_post) in enumerate(states_post_patched):
                 count += 1
@@ -589,12 +604,14 @@ class Comparison:
                 is_deadended_comparison = isinstance(state_pre, DeadendedState) and isinstance(state_post, DeadendedState)
 
                 diff = memoized_diff.difference(
-                    state_pre.state, state_post.state, pair_ignore_addrs,
+                    state_pre.state, state_post.state,
+                    pair_ignore_addrs,
                     compute_mem_diff=compare_memory if is_deadended_comparison else False,
                     compute_reg_diff=compare_registers if is_deadended_comparison else False,
                     compute_side_effect_diff=compare_side_effects if is_deadended_comparison else False,
                     use_unsat_core=use_unsat_core,
-                    simplify=simplify
+                    simplify=simplify,
+                    extra_constraints=extra_constraints
                 )
 
                 if diff is not None:

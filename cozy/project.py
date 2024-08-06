@@ -70,7 +70,7 @@ class Project:
         """
         self.fun_prototypes[fun] = fun_prototype
 
-    def session(self, start_fun: str | int | None=None) -> Session:
+    def session(self, start_fun: str | int | None=None, underconstrained_execution: bool=False) -> Session:
         """
         Returns a new session derived from this project.
 
@@ -78,7 +78,7 @@ class Project:
         :return: The fresh session.
         :rtype: Session
         """
-        return Session(self, start_fun=start_fun)
+        return Session(self, start_fun=start_fun, underconstrained_execution=underconstrained_execution)
 
     @property
     def cfg(self):

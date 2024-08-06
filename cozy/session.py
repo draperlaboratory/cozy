@@ -1,4 +1,5 @@
 import sys
+import uuid
 from collections.abc import Callable
 
 import portion as P
@@ -8,9 +9,14 @@ from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
 from . import log, side_effect
+from .concretization_strategies import SimConcretizationStrategyNorepeatsRangeMin
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
 import cozy
+
+# This size is used to malloc nonaliasing memory contents in underconstrained symbolic execution
+UNDERCONSTRAINED_CHUNK_SIZE = 20 * 1_000_000 # 20 megabytes
+UNDERCONSTRAINED_GRANULARITY = 5_000 # The amount of space each concretized memory write is granted
 
 class RunResult:
     """
@@ -30,13 +36,15 @@ class RunResult:
     def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
                  asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
                  postconditions_failed: list[PostconditionFailedState],
-                 spinning: list[SpinningState]):
+                 spinning: list[SpinningState],
+                 initial_registers: dict[str, claripy.ast.Bits] | None):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
         self.assume_warnings = assume_warnings
         self.postconditions_failed = postconditions_failed
         self.spinning = spinning
+        self.initial_registers = initial_registers
 
     @property
     def assertion_triggered(self) -> bool:
@@ -551,6 +559,23 @@ class _SessionBasicExploration(_SessionExploration):
             if self.cache_intermediate_info:
                 _save_states(simgr.active)
 
+# Pass a state.arch.registers to this function and receive a set of top level registers in return. This can be used
+# for enumerating registers without having to worry about subregisters
+"""
+def top_level_regs(reg_info: dict[str, tuple[int, int]]) -> set[str]:
+    results = P.IntervalDict()
+    for (name, (index, size)) in reg_info.items():
+        interval = P.closedopen(index, index+size)
+        current_val = results.get(index)
+        if current_val is None:
+            results[interval] = (name, interval)
+        else:
+            (_, current_interval) = current_val
+            if len(interval) > len(current_interval):
+                results[interval] = (name, interval)
+    return {name for (name, _) in results.values()}
+"""
+
 class Session:
     """
     A session is a particular run of a project, consisting of attached directives (asserts/assumes).\
@@ -565,27 +590,41 @@ class Session:
     :ivar list[Directive] directives: The directives added to this session.
     :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
     """
-    def __init__(self, proj, start_fun: str | int | None=None):
+    def __init__(self, proj, start_fun: str | int | None=None, underconstrained_execution: bool=False):
         """
         Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
         """
         self.proj = proj
 
         self.start_fun = start_fun
+        self.underconstrained_execution = underconstrained_execution
 
-        state_options = {
+        # Unfortunately adding options after constructing a base state does not work. So we have to define
+        # all the options up front in the __init__ constructor rather than _run
+        if underconstrained_execution:
+            add_options = {
+                angr.options.UNDER_CONSTRAINED_SYMEXEC,
+                angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS,
+                angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY
+            }
+        else:
+            add_options = {
                 angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY,
                 angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS,
-                angr.options.SYMBOLIC_WRITE_ADDRESSES,
-                angr.options.TRACK_MEMORY_ACTIONS,
-                angr.options.TRACK_REGISTER_ACTIONS,
+                angr.options.SYMBOLIC_WRITE_ADDRESSES
             }
+
+        add_options.add(angr.options.TRACK_MEMORY_ACTIONS)
+        add_options.add(angr.options.TRACK_REGISTER_ACTIONS)
 
         # Create the initial state
         if start_fun is None:
-            self.state = self.proj.angr_proj.factory.entry_state(add_options=state_options)
+            self.state = self.proj.angr_proj.factory.entry_state(add_options=add_options)
         else:
-            self.state = self.proj.angr_proj.factory.blank_state(add_options=state_options)
+            self.state = self.proj.angr_proj.factory.blank_state(add_options=add_options)
+
+        if underconstrained_execution:
+            self._initialize_regs(self.state)
 
         self.state.inspect.b('mem_write', when=angr.BP_AFTER, action=_on_mem_write)
         self.state.globals['mem_writes'] = P.IntervalDict()
@@ -596,6 +635,17 @@ class Session:
         # Initialize mutable state related to this session
         self.directives = []
         self.has_run = False
+
+    def _initialize_regs(self, state: angr.SimState):
+        # Make sure any unconstrained registers are initialized by poking them with a getattr request
+        top_level_regs = set(state.arch.register_names.values())
+        # Initialize top level registers first. This ensures that a register like rax is initialized before eax
+        for reg_name in top_level_regs:
+            getattr(state.regs, reg_name)
+        # Initialize any remaining registers that weren't covered by the first loop. On platforms like x64 this
+        # includes flag registers.
+        for reg_name in dir(state.regs):
+            getattr(state.regs, reg_name)
 
     def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
         """
@@ -683,7 +733,7 @@ class Session:
         else:
             return None
 
-    def _call(self, args: list[claripy.ast.bits], cache_intermediate_info: bool=True,
+    def _call(self, args: list[claripy.ast.bits] | None, cache_intermediate_info: bool=True,
               ret_addr: int | None=None) -> SimulationManager:
         if self.has_run:
             raise RuntimeError("This session has already been run once. Make a new session to run again.")
@@ -704,25 +754,43 @@ class Session:
 
             kwargs = dict() if ret_addr is None else {"ret_addr": ret_addr}
 
-            state = self.proj.angr_proj.factory.call_state(fun_addr, *args, base_state=self.state,
-                                                           prototype=fun_prototype,
-                                                           add_options={angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY,
-                                                                        angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS,
-                                                                        angr.options.SYMBOLIC_WRITE_ADDRESSES},
-                                                           **kwargs)
+            if args is None:
+                args = []
+                fun_prototype = None
+
+            state: SimState = self.proj.angr_proj.factory.call_state(
+                fun_addr, *args, base_state=self.state, prototype=fun_prototype, **kwargs
+            )
         else:
-            state = self.state
+            state: SimState = self.state
+
+        if self.underconstrained_execution:
+            single = angr.concretization_strategies.SimConcretizationStrategySingle()
+            big_memory_chunk = self.malloc(UNDERCONSTRAINED_CHUNK_SIZE, name="underconstrained_memory")
+            # Any time we want to concretize an unconstrained value, return a fresh chunk of memory. The maximum size
+            # of a concretized memory address should be UNCONSTRAINED_GRANULARITY.
+            nonaliasing = SimConcretizationStrategyNorepeatsRangeMin(uuid.uuid4(), min=big_memory_chunk, granularity=UNDERCONSTRAINED_GRANULARITY)
+
+            read_strategies = state.memory.read_strategies
+            read_strategies.clear()
+            read_strategies.append(single)
+            read_strategies.append(nonaliasing)
+
+            write_strategies = state.memory.write_strategies
+            write_strategies.clear()
+            write_strategies.append(single)
+            write_strategies.append(nonaliasing)
+        else:
+            # This concretization strategy is necessary for nullable symbolic pointers. The default
+            # concretization strategies attempts to concretize to integers within a small (128) byte
+            # range. If that fails, it just selects the maximum possible concrete value. This strategy
+            # will ensure that we generate up to 128 possible concrete values.
+            concrete_strategy = angr.concretization_strategies.SimConcretizationStrategyUnlimitedRange(128)
+            state.memory.read_strategies.insert(0, concrete_strategy)
+            state.memory.write_strategies.insert(0, concrete_strategy)
 
         if cache_intermediate_info:
             _save_states([state])
-
-        # This concretization strategy is necessary for nullable symbolic pointers. The default
-        # concretization strategies attempts to concretize to integers within a small (128) byte
-        # range. If that fails, it just selects the maximum possible concrete value. This strategy
-        # will ensure that we generate up to 128 possible concrete values.
-        concrete_strategy = angr.concretization_strategies.SimConcretizationStrategyUnlimitedRange(128)
-        state.memory.read_strategies.insert(0, concrete_strategy)
-        state.memory.write_strategies.insert(0, concrete_strategy)
 
         return self.proj.angr_proj.factory.simulation_manager(state)
 
@@ -744,16 +812,21 @@ class Session:
         else:
             spinning = []
 
-        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed, spinning)
+        if self.underconstrained_execution:
+            initial_registers = {reg_name: getattr(self.state.regs, reg_name) for reg_name in dir(self.state.regs)}
+        else:
+            initial_registers = None
 
-    def run(self, args: list[claripy.ast.bits], cache_intermediate_info: bool=True, ret_addr: int | None=None,
+        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed, spinning, initial_registers)
+
+    def run(self, args: list[claripy.ast.bits] | None=None, cache_intermediate_info: bool=True, ret_addr: int | None=None,
             loop_bound: int | None=None) -> RunResult:
         """
         Runs a session to completion, either starting from the start_fun used to create the session, or from the\
         program start. Note that currently a session may be run only once. If run is called multiple times, a\
         RuntimeError will be thrown.
 
-        :param list[claripy.ast.bits] args: The arguments to pass to the function. angr will utilize the function's\
+        :param list[claripy.ast.bits] | None args: The arguments to pass to the function. angr will utilize the function's\
         type signature to figure out the calling convention to use with the arguments.
         :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be
         cached. This is required for dumping the execution graph which is used in visualization.
@@ -764,7 +837,10 @@ class Session:
         :rtype: RunResult
         """
 
-        simgr = self._call(list(args), cache_intermediate_info=cache_intermediate_info, ret_addr=ret_addr)
+        if args is None and not self.underconstrained_execution:
+            raise ValueError("The args passed to run can only be None if underconstrained_execution has been enabled.")
+
+        simgr = self._call(args, cache_intermediate_info=cache_intermediate_info, ret_addr=ret_addr)
 
         if isinstance(loop_bound, int):
             simgr.use_technique(angr.exploration_techniques.LocalLoopSeer(bound=loop_bound))
