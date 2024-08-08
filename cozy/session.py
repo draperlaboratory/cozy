@@ -9,7 +9,7 @@ from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
 from . import log, side_effect
-from .concretization_strategies import SimConcretizationStrategyNorepeatsRangeMin
+from .underconstrained import SimConcretizationStrategyNorepeatsRangeMin
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
 import cozy
@@ -607,21 +607,23 @@ class Session:
                 angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS,
                 angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY
             }
+            plugin_preset = "underconstrained"
         else:
             add_options = {
                 angr.options.ZERO_FILL_UNCONSTRAINED_MEMORY,
                 angr.options.ZERO_FILL_UNCONSTRAINED_REGISTERS,
                 angr.options.SYMBOLIC_WRITE_ADDRESSES
             }
+            plugin_preset = "default"
 
         add_options.add(angr.options.TRACK_MEMORY_ACTIONS)
         add_options.add(angr.options.TRACK_REGISTER_ACTIONS)
 
         # Create the initial state
         if start_fun is None:
-            self.state = self.proj.angr_proj.factory.entry_state(add_options=add_options)
+            self.state = self.proj.angr_proj.factory.entry_state(add_options=add_options, plugin_preset=plugin_preset)
         else:
-            self.state = self.proj.angr_proj.factory.blank_state(add_options=add_options)
+            self.state = self.proj.angr_proj.factory.blank_state(add_options=add_options, plugin_preset=plugin_preset)
 
         if underconstrained_execution:
             self._initialize_regs(self.state)
