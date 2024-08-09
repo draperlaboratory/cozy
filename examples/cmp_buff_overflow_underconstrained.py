@@ -16,4 +16,4 @@ post_sess = post_proj.session('patch_fun', underconstrained_execution=True,
 post_patched_results = post_sess.run()
 
 comparison_results = analysis.Comparison(pre_patched_results, post_patched_results)
-print(comparison_results.report([]))
+print(comparison_results.report(post_patched_results.underconstrained_machine_state.args))

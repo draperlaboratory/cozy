@@ -8,7 +8,7 @@ import angr, claripy
 from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
-from . import log, side_effect
+from . import log, side_effect, claripy_ext
 from .underconstrained import SimConcretizationStrategyUnderconstrained
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
@@ -21,10 +21,22 @@ UNDERCONSTRAINED_GRANULARITY = 5_000 # The amount of space each concretized memo
 class UnderconstrainedMachineState:
     def __init__(self, initial_registers: dict[str, claripy.ast.Bits],
                  default_backer: angr.storage.DefaultMemory,
-                 concretization_strategy: SimConcretizationStrategyUnderconstrained):
+                 concretization_strategy: SimConcretizationStrategyUnderconstrained,
+                 underconstrained_memory_symbols):
         self.initial_registers = initial_registers
         self.default_backer = default_backer
         self.concretization_strategy = concretization_strategy
+        self.memory_symbols = underconstrained_memory_symbols
+
+    @property
+    def args(self):
+        return {
+            'initial_regs': self.initial_registers,
+            'memory_symbols': {
+                claripy_ext.get_symbol_name(sym): sym for sym in self.memory_symbols
+            }
+        }
+
 
 class RunResult:
     """
@@ -671,6 +683,7 @@ class Session:
         for (name, value) in machine_state.initial_registers.items():
             setattr(state.regs, name, value)
         state.memory.set_default_backer(machine_state.default_backer)
+        state.memory.set_symbols(machine_state.memory_symbols)
 
     def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
         """
@@ -815,7 +828,11 @@ class Session:
         if self.underconstrained_execution:
             initial_registers = {reg_name: getattr(self.state.regs, reg_name) for reg_name in dir(self.state.regs)}
             default_backer = self.state.memory.get_default_backer()
-            underconstrained_machine_state = UnderconstrainedMachineState(initial_registers, default_backer, self.underconstrained_concrete_strategy)
+            underconstrained_memory_symbols = self.state.memory.get_symbols()
+            underconstrained_machine_state = UnderconstrainedMachineState(
+                initial_registers, default_backer, self.underconstrained_concrete_strategy,
+                underconstrained_memory_symbols
+            )
         else:
             underconstrained_machine_state = None
 

@@ -1,4 +1,5 @@
 import angr
+import claripy
 from angr.storage.memory_mixins import DefaultMemory
 
 import cozy.log
@@ -9,6 +10,7 @@ class SimConcretizationStrategyUnderconstrained(angr.concretization_strategies.S
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.extra_constraints = []
+        self.multi_extra_constraints = []
         self.single = angr.concretization_strategies.SimConcretizationStrategySingle()
         self.multiple = angr.concretization_strategies.SimConcretizationStrategyUnlimitedRange(16)
         self.extra_constraints_symbols = set()
@@ -18,6 +20,18 @@ class SimConcretizationStrategyUnderconstrained(angr.concretization_strategies.S
             results = super()._concretize(memory, addr, extra_constraints=self.extra_constraints)
             self.extra_constraints.append(addr == results[0])
             self.extra_constraints_symbols.add(addr)
+
+    # TODO: See if we can improve this function to ensure that when we call the multiple concretization strategy that
+    # TODO: we receive consistent results. This implementation isn't quite right as it makes it easy to end up
+    # TODO: in a situtation where self.multi_extra_constraints becomes too constrained. Might have to do something
+    # TODO: with compatibilities, which seems like a bad idea.
+    def multi_concretize(self, memory, addr):
+        results = self.multiple._concretize(memory, addr, extra_constraints=(self.extra_constraints + self.multi_extra_constraints))
+        if len(results) > 0:
+            self.multi_extra_constraints.append(claripy.Or(*[addr == r for r in results]))
+            return results
+        else:
+            return self.multiple._concretize(memory, addr, extra_constraints=self.extra_constraints)
 
     def _concretize(self, memory, addr, **kwargs):
         single_value = self.single._concretize(memory, addr, extra_constraints=self.extra_constraints)
@@ -51,6 +65,7 @@ class SimConcretizationStrategyUnderconstrained(angr.concretization_strategies.S
                 else:
                     cozy.log.warning("Unable to find array base when concretizing symbolic address")
                 return self.multiple._concretize(memory, addr, extra_constraints=self.extra_constraints)
+                #return self.multi_concretize(memory, addr)
 
     def _any(self, *args, **kwargs):
         # The default SimConcretizationStrategyNorepeatsRange class chooses a concrete address using the _any
@@ -68,6 +83,7 @@ class DefaultMemoryUnderconstrained(DefaultMemory):
         super().__init__(*args, **kwargs)
         # Make a box so that if we change the backer in any copies, all copies get the update
         self.default_backer = Box(DefaultMemory(*args, **kwargs))
+        self.symbols = []
 
     def get_default_backer(self):
         return self.default_backer.value
@@ -75,15 +91,24 @@ class DefaultMemoryUnderconstrained(DefaultMemory):
     def set_default_backer(self, backer: DefaultMemory):
         self.default_backer.value = backer
 
+    def set_symbols(self, symbols):
+        self.symbols = symbols
+
+    def get_symbols(self):
+        return self.symbols
+
     def copy(self, *args, **kwargs):
         o = super().copy(*args, **kwargs)
         o.default_backer = self.default_backer
+        o.symbols = self.symbols
         return o
 
     def _default_value(self, addr, size, **kwargs):
         if angr.sim_options.UNDER_CONSTRAINED_SYMEXEC in self.state.options and type(addr) is int:
             self.default_backer.value.state = self.state
-            return self.default_backer.value.load(addr, size)
+            sym = self.default_backer.value.load(addr, size)
+            self.symbols.append(sym)
+            return sym
         return super()._default_value(addr, size, **kwargs)
 
 underconstrained_preset = angr.SimState._presets['default'].copy()

@@ -485,7 +485,7 @@ class CompatiblePair:
         Concretizes the arguments used to put the program in these states by jointly using the constraints attached to\
         the compatible states.
 
-        :param any args: The input arguments to concretize. This argument may be a Python datastructure, the\
+        :param any args: The input arguments to concretize. This argument may be a Python datastructure, the \
         concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
         :param int num_examples: The maximum number of concrete examples to generate for this particular pair.
         :return: A list of concrete inputs that satisfy both constraints attached to the states.
