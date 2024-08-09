@@ -6,7 +6,7 @@ import angr
 from angr import SimProcedure
 from cle import Backend
 
-from cozy.session import Session
+from cozy.session import Session, UnderconstrainedMachineState
 
 
 class Project:
@@ -70,15 +70,25 @@ class Project:
         """
         self.fun_prototypes[fun] = fun_prototype
 
-    def session(self, start_fun: str | int | None=None, underconstrained_execution: bool=False) -> Session:
+    def session(self, start_fun: str | int | None=None, underconstrained_execution: bool=False,
+                underconstrained_initial_state: UnderconstrainedMachineState | None=None) -> Session:
         """
         Returns a new session derived from this project.
 
-        :param str | int | None start_fun: The name or address of the function which this session will start with. If None is specified, then the program will start at the entry point (main function).
+        :param str | int | None start_fun: The name or address of the function which this session will start with.\
+        If None is specified, then the program will start at the entry point (main function).
+        :param bool underconstrained_execution: Set to True to enable underconstrained symbolic execution. With this\
+        option, all initial registers will be initialized with unconstrained fresh symbolic variables, and memory\
+        contents that are not initialized will likewise return fresh unconstrained symbolic variables.
+        :param UnderconstrainedMachineState underconstrained_initial_state: If this value is not None, then\
+        the inferred memory layout from a previous unconstrained symbolic execution should be used. You can retrieve\
+        this value from a previous :py:class:`~cozy.session.RunResult` via the\
+        :py:class:`cozy.session.RunResult.underconstrained_machine_state` field.
         :return: The fresh session.
         :rtype: Session
         """
-        return Session(self, start_fun=start_fun, underconstrained_execution=underconstrained_execution)
+        return Session(self, start_fun=start_fun, underconstrained_execution=underconstrained_execution,
+                       underconstrained_initial_state=underconstrained_initial_state)
 
     @property
     def cfg(self):

@@ -39,6 +39,14 @@ def simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bit
 def get_symbol_name(sym):
     return sym.args[0]
 
+def sub_asts(expr):
+    yield expr
+    for child in expr.children_asts():
+        yield child
+
+def sym_variables(expr):
+    return {child for child in sub_asts(expr) if child.depth == 1 and child.symbolic}
+
 def model(constraints,
           extra_symbols: set[typing.Union[claripy.BVS, claripy.FPS]] | frozenset[typing.Union[claripy.BVS, claripy.FPS]]=frozenset(),
           n=1,

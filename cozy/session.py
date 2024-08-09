@@ -9,7 +9,7 @@ from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
 
 from . import log, side_effect
-from .underconstrained import SimConcretizationStrategyNorepeatsRangeMin
+from .underconstrained import SimConcretizationStrategyUnderconstrained
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
 import cozy
@@ -17,6 +17,14 @@ import cozy
 # This size is used to malloc nonaliasing memory contents in underconstrained symbolic execution
 UNDERCONSTRAINED_CHUNK_SIZE = 20 * 1_000_000 # 20 megabytes
 UNDERCONSTRAINED_GRANULARITY = 5_000 # The amount of space each concretized memory write is granted
+
+class UnderconstrainedMachineState:
+    def __init__(self, initial_registers: dict[str, claripy.ast.Bits],
+                 default_backer: angr.storage.DefaultMemory,
+                 concretization_strategy: SimConcretizationStrategyUnderconstrained):
+        self.initial_registers = initial_registers
+        self.default_backer = default_backer
+        self.concretization_strategy = concretization_strategy
 
 class RunResult:
     """
@@ -32,19 +40,21 @@ class RunResult:
     :ivar list[PostconditionFailedState] postconditions_failed: States where the function returned, and the assertion\
     as part of the postcondition could be falsified.
     :ivar list[SpinningState] spinning: States that were stashed due to a loop bound being breached.
+    :ivar UnderconstrainedMachineState | None underconstrained_machine_state: The inferred memory layout of the input\
+    machine state. This field is not None only if underconstrained_execution is enabled for the session.
     """
     def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
                  asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
                  postconditions_failed: list[PostconditionFailedState],
                  spinning: list[SpinningState],
-                 initial_registers: dict[str, claripy.ast.Bits] | None):
+                 underconstrained_machine_state: UnderconstrainedMachineState | None):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
         self.assume_warnings = assume_warnings
         self.postconditions_failed = postconditions_failed
         self.spinning = spinning
-        self.initial_registers = initial_registers
+        self.underconstrained_machine_state = underconstrained_machine_state
 
     @property
     def assertion_triggered(self) -> bool:
@@ -559,23 +569,6 @@ class _SessionBasicExploration(_SessionExploration):
             if self.cache_intermediate_info:
                 _save_states(simgr.active)
 
-# Pass a state.arch.registers to this function and receive a set of top level registers in return. This can be used
-# for enumerating registers without having to worry about subregisters
-"""
-def top_level_regs(reg_info: dict[str, tuple[int, int]]) -> set[str]:
-    results = P.IntervalDict()
-    for (name, (index, size)) in reg_info.items():
-        interval = P.closedopen(index, index+size)
-        current_val = results.get(index)
-        if current_val is None:
-            results[interval] = (name, interval)
-        else:
-            (_, current_interval) = current_val
-            if len(interval) > len(current_interval):
-                results[interval] = (name, interval)
-    return {name for (name, _) in results.values()}
-"""
-
 class Session:
     """
     A session is a particular run of a project, consisting of attached directives (asserts/assumes).\
@@ -590,7 +583,8 @@ class Session:
     :ivar list[Directive] directives: The directives added to this session.
     :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
     """
-    def __init__(self, proj, start_fun: str | int | None=None, underconstrained_execution: bool=False):
+    def __init__(self, proj, start_fun: str | int | None=None, underconstrained_execution: bool=False,
+                 underconstrained_initial_state: UnderconstrainedMachineState | None=None):
         """
         Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
         """
@@ -625,8 +619,32 @@ class Session:
         else:
             self.state = self.proj.angr_proj.factory.blank_state(add_options=add_options, plugin_preset=plugin_preset)
 
+        if underconstrained_initial_state is not None:
+            self._apply_underconstrained_machine_state(self.state, underconstrained_initial_state)
+        else:
+            if underconstrained_execution:
+                self._initialize_regs(self.state)
+
+        # Initialize concretization strategies
         if underconstrained_execution:
-            self._initialize_regs(self.state)
+            if underconstrained_initial_state is not None:
+                concrete_strategy = underconstrained_initial_state.concretization_strategy
+            else:
+                big_memory_chunk = self.malloc(UNDERCONSTRAINED_CHUNK_SIZE, name="underconstrained_memory")
+                # Any time we want to concretize an unconstrained value, return a fresh chunk of memory. The maximum size
+                # of a concretized memory address should be UNCONSTRAINED_GRANULARITY.
+                concrete_strategy = SimConcretizationStrategyUnderconstrained(uuid.uuid4(), min=big_memory_chunk, granularity=UNDERCONSTRAINED_GRANULARITY)
+            self.underconstrained_concrete_strategy = concrete_strategy
+        else:
+            # This concretization strategy is necessary for nullable symbolic pointers. The default
+            # concretization strategies attempts to concretize to integers within a small (128) byte
+            # range. If that fails, it just selects the maximum possible concrete value. This strategy
+            # will ensure that we generate up to 128 possible concrete values.
+            concrete_strategy = angr.concretization_strategies.SimConcretizationStrategyUnlimitedRange(128)
+            self.underconstrained_concrete_strategy = None
+
+        self.state.memory.read_strategies.insert(0, concrete_strategy)
+        self.state.memory.write_strategies.insert(0, concrete_strategy)
 
         self.state.inspect.b('mem_write', when=angr.BP_AFTER, action=_on_mem_write)
         self.state.globals['mem_writes'] = P.IntervalDict()
@@ -648,6 +666,11 @@ class Session:
         # includes flag registers.
         for reg_name in dir(state.regs):
             getattr(state.regs, reg_name)
+
+    def _apply_underconstrained_machine_state(self, state: SimState, machine_state: UnderconstrainedMachineState):
+        for (name, value) in machine_state.initial_registers.items():
+            setattr(state.regs, name, value)
+        state.memory.set_default_backer(machine_state.default_backer)
 
     def store_fs(self, filename: str, simfile: angr.SimFile) -> None:
         """
@@ -766,31 +789,6 @@ class Session:
         else:
             state: SimState = self.state
 
-        if self.underconstrained_execution:
-            single = angr.concretization_strategies.SimConcretizationStrategySingle()
-            big_memory_chunk = self.malloc(UNDERCONSTRAINED_CHUNK_SIZE, name="underconstrained_memory")
-            # Any time we want to concretize an unconstrained value, return a fresh chunk of memory. The maximum size
-            # of a concretized memory address should be UNCONSTRAINED_GRANULARITY.
-            nonaliasing = SimConcretizationStrategyNorepeatsRangeMin(uuid.uuid4(), min=big_memory_chunk, granularity=UNDERCONSTRAINED_GRANULARITY)
-
-            read_strategies = state.memory.read_strategies
-            read_strategies.clear()
-            read_strategies.append(single)
-            read_strategies.append(nonaliasing)
-
-            write_strategies = state.memory.write_strategies
-            write_strategies.clear()
-            write_strategies.append(single)
-            write_strategies.append(nonaliasing)
-        else:
-            # This concretization strategy is necessary for nullable symbolic pointers. The default
-            # concretization strategies attempts to concretize to integers within a small (128) byte
-            # range. If that fails, it just selects the maximum possible concrete value. This strategy
-            # will ensure that we generate up to 128 possible concrete values.
-            concrete_strategy = angr.concretization_strategies.SimConcretizationStrategyUnlimitedRange(128)
-            state.memory.read_strategies.insert(0, concrete_strategy)
-            state.memory.write_strategies.insert(0, concrete_strategy)
-
         if cache_intermediate_info:
             _save_states([state])
 
@@ -816,10 +814,13 @@ class Session:
 
         if self.underconstrained_execution:
             initial_registers = {reg_name: getattr(self.state.regs, reg_name) for reg_name in dir(self.state.regs)}
+            default_backer = self.state.memory.get_default_backer()
+            underconstrained_machine_state = UnderconstrainedMachineState(initial_registers, default_backer, self.underconstrained_concrete_strategy)
         else:
-            initial_registers = None
+            underconstrained_machine_state = None
 
-        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed, spinning, initial_registers)
+        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed,
+                         spinning, underconstrained_machine_state)
 
     def run(self, args: list[claripy.ast.bits] | None=None, cache_intermediate_info: bool=True, ret_addr: int | None=None,
             loop_bound: int | None=None) -> RunResult:

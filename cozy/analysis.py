@@ -580,15 +580,6 @@ class Comparison:
 
         extra_constraints = []
 
-        # If we use underconstrained symbolic execution, the initial register states for the two executions
-        # will not be the same. So let's go ahead and construct constraints that inform the SMT solver that the
-        # registers are the same at the start.
-        if pre_patched.initial_registers is not None and post_patched.initial_registers is not None:
-            for reg_name in pre_patched.initial_registers.keys():
-                value_left = pre_patched.initial_registers[reg_name]
-                value_right = post_patched.initial_registers[reg_name]
-                extra_constraints.append(value_left == value_right)
-
         for (i, state_pre) in enumerate(states_pre_patched):
             for (j, state_post) in enumerate(states_post_patched):
                 count += 1
