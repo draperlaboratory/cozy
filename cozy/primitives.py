@@ -18,8 +18,8 @@ def sym_ptr(arch: Type[Arch], name: str | None=None) -> claripy.BVS:
     """
     global _malloc_name_ctr
     if name is None:
-        name = "symbolic_ptr_{}".format(_name_ctr)
-        _name_ctr += 1
+        name = "symbolic_ptr_{}".format(_malloc_name_ctr)
+        _malloc_name_ctr += 1
     return claripy.BVS(name, arch.bits)
 
 def sym_ptr_constraints(symbolic_ptr: claripy.ast.bits, concrete_addr: int, can_be_null: bool=True) -> claripy.ast.bool:
