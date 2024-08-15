@@ -28,6 +28,9 @@ def afl_hook(proj: Project):
 afl_hook(proj_prepatch)
 afl_hook(proj_postpatch)
 
+# These are global variables that must be equal after execution. Tuples are (pre_patch_name, post_patch_name, sym_size)
+global_vars_eq = [('file_name', 'file_name_5d99e8', 8), ('ignore_EPIPE', 'ignore_EPIPE_5d99e0', 1)]
+
 ###########
 # base64_
 ###########
@@ -159,6 +162,99 @@ def base64_encode():
 
     return (run, {'in_buff_contents': in_buff_contents, 'in_len': in_len})
 
+###########
+# clo
+###########
+
+def clone_quoting_options():
+    o_contents = claripy.BVS('o_contents', 0x38)
+    o = cozy.primitives.sym_ptr(proj_prepatch.arch, 'o')
+
+    def run(proj: Project):
+        proj.add_prototype('clone_quoting_options', 'void *clone_quoting_options(void *)')
+        sess = proj.session('clone_quoting_options')
+
+        o_addr = sess.malloc(0x38)
+        sess.store(o_addr, o_contents, endness=proj.arch.memory_endness)
+
+        sess.add_constraints(cozy.primitives.sym_ptr_constraints(o, o_addr, can_be_null=True))
+
+        return sess.run([o])
+
+    return (run, {'o': o, 'o_contents': o_contents})
+
+#def clone_quoting_options(proj: Project, prev_underconstrained_state=None):
+#    sess = proj.session('clone_quoting_options', underconstrained_execution=True, underconstrained_initial_state=prev_underconstrained_state)
+#    return sess.run()
+
+def close_stdout():
+    def run(proj: Project):
+        proj.add_prototype('close_stdout', 'void close_stdout()')
+        sess = proj.session('close_stdout')
+        return sess.run([])
+    return (run, dict())
+
+def close_stdout_set_file_name():
+    file = cozy.primitives.sym_ptr(proj_prepatch.arch, 'file')
+
+    def run(proj: Project):
+        proj.add_prototype('close_stdout_set_file_name', 'void close_stdout_set_file_name(char *)')
+        sess = proj.session('close_stdout_set_file_name')
+        return sess.run([file])
+
+    return (run, {'file': file})
+
+def close_stdout_set_ignore_EPIPE():
+    ignore = claripy.BVS('ignore', 8)
+
+    def run(proj: Project):
+        proj.add_prototype('close_stdout_set_ignore_EPIPE', 'void close_stdout_set_ignore_EPIPE(unsigned char)')
+        sess = proj.session('close_stdout_set_ignore_EPIPE')
+        return sess.run([ignore])
+
+    return (run, {'ignore': ignore})
+
+"""
+def file_symbols():
+    return {
+        '_flags': claripy.BVS('_flags', 0x4 * 8),
+        '_IO_read_ptr': claripy.BVS('_IO_read_ptr', 64),
+        '_IO_read_end': claripy.BVS('_IO_read_end', 64),
+        '_IO_read_base': claripy.BVS('_IO_read_base', 64),
+        '_IO_write_base': claripy.BVS('_IO_write_base', 64),
+        '_IO_write_ptr': claripy.BVS('_IO_write_ptr', 64),
+        '_IO_write_end': claripy.BVS('_IO_write_end', 64),
+        '_IO_buf_base': claripy.BVS('_IO_buf_base', 64),
+        '_IO_buf_end': claripy.BVS('_IO_buf_end', 64),
+        '_IO_save_base': claripy.BVS('_IO_save_base', 64),
+        '_IO_backup_base': claripy.BVS('_IO_backup_base', 64),
+        '_IO_save_end': claripy.BVS('_IO_save_end', 64),
+        '_markers': claripy.BVS('_markers', 64),
+        '_chain': claripy.BVS('_chain', 64),
+        '_fileno': claripy.BVS('_fileno', 0x4 * 8),
+        '_flags2': claripy.BVS('_flags2', 0x4 * 8),
+        '_old_offset': claripy.BVS('_old_offset', 64),
+        '_cur_column': claripy.BVS('_cur_column', 0x2 * 8),
+        '_vtable_offset': None
+    }
+
+def close_stream():
+    file_struct_contents = claripy.BVS('file_struct_contents', 0xd8)
+
+    def run(proj: Project):
+        proj.add_prototype('close_stream', 'int close_stream(void *)')
+        sess = proj.session('close_stream')
+        file_ptr = sess.malloc(0xd8, 'file_struct_contents')
+        sess.store(file_ptr, file_struct_contents)
+        return sess.run([file_ptr])
+
+    return (run, {'file_struct_contents': file_struct_contents})
+"""
+
+def close_stream_underconstrained(proj: Project, prev_underconstrained_state=None):
+    sess = proj.session('close_stream', underconstrained_execution=True, underconstrained_initial_state=prev_underconstrained_state)
+    return sess.run([])
+
 def verify_equivalence(comp: Comparison):
     for pair in comp.pairs.values():
         assert(len(pair.mem_diff) == 0)
@@ -186,15 +282,55 @@ def apply_callee_saved(comp: Comparison):
         for reg_name in to_remove:
             del pair.reg_diff[reg_name]
 
+def global_var_eq_condition(pair: cozy.analysis.CompatiblePair):
+    ret = None
+    for (sym_name_left, sym_name_right, size) in global_vars_eq:
+        pre = pair.state_left.state.memory.load(proj_prepatch.find_symbol_addr(sym_name_left), size)
+        post = pair.state_right.state.memory.load(proj_postpatch.find_symbol_addr(sym_name_right), size)
+        if ret is None:
+            ret = (pre == post)
+        else:
+            ret = ret & (pre == post)
+    return ret
 
-def run_and_verify(f, visualize=False):
+def apply_global_var_eq(comp: Comparison):
+    # Foreach global variable
+    for (sym_name_left, sym_name_right, size) in global_vars_eq:
+        # Get the prepatch and postpatch addrs
+        addr_pre = proj_prepatch.find_symbol_addr(sym_name_left)
+        addr_post = proj_postpatch.find_symbol_addr(sym_name_right)
+        # Remove these addrs from the mem_diff of all the pairs
+        for pair in comp.pairs.values():
+            to_remove = []
+            for rng in pair.mem_diff:
+                if rng.start == addr_pre or rng.start == addr_post:
+                    to_remove.append(rng)
+            for rng in to_remove:
+                del pair.mem_diff[rng]
+
+def run_and_verify(f, visualize=False, verification_condition=None):
     (run, args) = f()
     pre_results = run(proj_prepatch)
     post_results = run(proj_postpatch)
     comparison = cozy.analysis.Comparison(pre_results, post_results)
     apply_callee_saved(comparison)
+    assert(len(comparison.verify(global_var_eq_condition)) == 0)
+    apply_global_var_eq(comparison)
+    if verification_condition is not None:
+        assert(len(comparison.verify(verification_condition)) == 0)
     verify_equivalence(comparison)
     if visualize:
+        cozy.execution_graph.visualize_comparison(proj_prepatch, proj_postpatch, pre_results, post_results, comparison,
+                                                  args=args, num_examples=2, open_browser=True, include_actions=True)
+
+def run_and_verify_underconstrained(run, visualize=False):
+    pre_results = run(proj_prepatch)
+    post_results = run(proj_postpatch, prev_underconstrained_state=pre_results.underconstrained_machine_state)
+    comparison = cozy.analysis.Comparison(pre_results, post_results)
+    apply_callee_saved(comparison)
+    verify_equivalence(comparison)
+    if visualize:
+        args = post_results.underconstrained_machine_state.args
         cozy.execution_graph.visualize_comparison(proj_prepatch, proj_postpatch, pre_results, post_results, comparison,
                                                   args=args, num_examples=2, open_browser=True, include_actions=True)
 
@@ -203,3 +339,10 @@ run_and_verify(base64_decode_ctx)
 run_and_verify(base64_decode_ctx_init)
 run_and_verify(base64_encode_alloc)
 run_and_verify(base64_encode)
+
+run_and_verify(clone_quoting_options)
+run_and_verify(close_stdout)
+run_and_verify(close_stdout_set_file_name)
+run_and_verify(close_stdout_set_ignore_EPIPE)
+run_and_verify(close_stream)
+run_and_verify_underconstrained(close_stream_underconstrained)
