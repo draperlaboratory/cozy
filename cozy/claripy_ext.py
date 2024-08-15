@@ -103,7 +103,11 @@ def model(constraints,
                             else:
                                 ret[leaf] = zero(leaf)
             else:
-                raise ValueError("Failed to generate a model for a satisfiable solution")
+                if len(solver.constraints) == 0:
+                    for extra in extra_symbols:
+                        ret[extra] = zero(extra)
+                else:
+                    raise ValueError("Failed to generate a model for a satisfiable solution")
 
             # Set any symbols not in the model to 0
             for extra in extra_symbols:
