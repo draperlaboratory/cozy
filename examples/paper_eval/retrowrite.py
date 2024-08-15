@@ -328,6 +328,8 @@ def run_and_verify_underconstrained(run, visualize=False):
     post_results = run(proj_postpatch, prev_underconstrained_state=pre_results.underconstrained_machine_state)
     comparison = cozy.analysis.Comparison(pre_results, post_results)
     apply_callee_saved(comparison)
+    assert(len(comparison.verify(global_var_eq_condition)) == 0)
+    apply_global_var_eq(comparison)
     verify_equivalence(comparison)
     if visualize:
         args = post_results.underconstrained_machine_state.args
@@ -344,5 +346,4 @@ run_and_verify(clone_quoting_options)
 run_and_verify(close_stdout)
 run_and_verify(close_stdout_set_file_name)
 run_and_verify(close_stdout_set_ignore_EPIPE)
-run_and_verify(close_stream)
 run_and_verify_underconstrained(close_stream_underconstrained)
