@@ -320,6 +320,59 @@ def deregister_tm_clones():
         return sess.run([])
     return (run, dict())
 
+def do_decode():
+    raise NotImplementedError()
+
+def do_encode():
+    raise NotImplementedError()
+
+###########
+# e
+###########
+
+def emit_bug_reporting_address():
+    raise NotImplementedError
+
+###########
+# f
+###########
+
+def fadvise_underconstrained(proj: Project, prev_underconstrained_state=None):
+    sess = proj.session('fadvise', underconstrained_execution=True,
+                        underconstrained_initial_state=prev_underconstrained_state)
+    setup_afl(proj, sess)
+    return sess.run()
+
+###########
+# get_
+###########
+
+def get_quoting_style_underconstrained(proj: Project, prev_underconstrained_state=None):
+    sess = proj.session('get_quoting_style', underconstrained_execution=True,
+                        underconstrained_initial_state=prev_underconstrained_state)
+    setup_afl(proj, sess)
+    o_buff = sess.malloc(0x38)
+    o = cozy.primitives.sym_ptr(proj.arch, 'o')
+    sess.add_constraints(cozy.primitives.sym_ptr_constraints(o, o_buff))
+    return sess.run([o])
+
+def gettext_quote():
+    raise NotImplementedError()
+
+###########
+# i
+###########
+
+def isbase64_underconstrained(proj: Project, prev_underconstrained_state=None):
+    sess = proj.session('isbase64', underconstrained_execution=True,
+                        underconstrained_initial_state=prev_underconstrained_state)
+    setup_afl(proj, sess)
+    return sess.run()
+
+########################
+# END FUNCTION HARNESSES
+########################
+
 def verify_equivalence(comp: Comparison):
     for pair in comp.pairs.values():
         assert(len(pair.mem_diff) == 0)
@@ -451,7 +504,6 @@ def run_and_verify_underconstrained(name: str, run, return_size=64, visualize=Fa
         return
     print("PASSED: " + name)
 
-
 run_and_verify("base64_decode_alloc_ctx", base64_decode_alloc_ctx, return_size=8)
 run_and_verify("base64_decode_ctx", base64_decode_ctx, return_size=8)
 run_and_verify("base64_decode_ctx_init", base64_decode_ctx_init, return_size=0)
@@ -466,5 +518,11 @@ run_and_verify_underconstrained("close_stream", close_stream_underconstrained, r
 
 run_and_verify("decode_4", decode_4, return_size=8)
 run_and_verify("deregister_tm_clones", deregister_tm_clones, return_size=0)
+
+run_and_verify_underconstrained('fadvise', fadvise_underconstrained, return_size=0)
+
+run_and_verify_underconstrained('get_quoting_style', get_quoting_style_underconstrained, return_size=32)
+
+run_and_verify_underconstrained('isbase64', isbase64_underconstrained, return_size=8)
 
 print("Failed tests: ", failures)
