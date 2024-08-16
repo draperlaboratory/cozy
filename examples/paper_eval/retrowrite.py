@@ -4,6 +4,7 @@ import claripy
 import cozy
 from cozy.analysis import Comparison
 from cozy.project import Project
+from cozy.session import Session
 
 proj_prepatch = Project('test_programs/paper_eval/retrowrite/base64-gcc')
 proj_postpatch = Project('test_programs/paper_eval/retrowrite/base64-retrowrite')
@@ -16,20 +17,31 @@ class lava_get(angr.SimProcedure):
     def run(self, bug_num):
         return 0x0
 
-class __afl_maybe_log(angr.SimProcedure):
-    def run(self):
-        return 0x0
+# The __afl_maybe_log function inserted by retrowrite requires __afl_arena_ptr to be set to some value
+# if it is not set, the program will fork in preparation for fuzzing. Here we simulate the fact that
+# AFL is already initialized, skipping the forking process.
+afl_arena_range = range(0xde00000000, 0xdf00000000)
+
+class fread_unlocked(angr.SimProcedure):
+    def run(self, ptr, size, n, stream):
+        raise NotImplementedError()
 
 def afl_hook(proj: Project):
     proj.hook_symbol('lava_set', lava_set)
     proj.hook_symbol('lava_get', lava_get)
-    proj.hook_symbol('__afl_maybe_log', __afl_maybe_log)
 
 afl_hook(proj_prepatch)
 afl_hook(proj_postpatch)
 
+def setup_afl(proj: Project, sess: Session):
+    try:
+        addr = proj.find_symbol_addr("__afl_area_ptr")
+        sess.store(addr, claripy.BVV(afl_arena_range.start, 64), endness=proj.arch.memory_endness)
+    except RuntimeError:
+        pass
+
 # These are global variables that must be equal after execution. Tuples are (pre_patch_name, post_patch_name, sym_size)
-global_vars_eq = [('file_name', 'file_name_5d99e8', 8), ('ignore_EPIPE', 'ignore_EPIPE_5d99e0', 1)]
+global_vars_eq = [('file_name', 'file_name_5d99e8', 8), ('ignore_EPIPE', 'ignore_EPIPE_5d99e0', 1), (None, '__afl_prev_loc', 8), (None, '__afl_area_ptr', 8)]
 
 ###########
 # base64_
@@ -46,8 +58,8 @@ def base64_decode_alloc_ctx():
 
     def run(proj: Project):
         proj.add_prototype('base64_decode_alloc_ctx', 'int base64_decode_ctx(void *, char *, unsigned long, char *, unsigned long *)')
-
         sess = proj.session('base64_decode_alloc_ctx')
+        setup_afl(proj, sess)
 
         ctx = sess.malloc(8)
 
@@ -77,6 +89,8 @@ def base64_decode_ctx():
         proj.add_prototype('base64_decode_ctx', 'int base64_decode_ctx(void *, char *, unsigned long, char *, unsigned long *)')
         sess = proj.session('base64_decode_ctx')
 
+        setup_afl(proj, sess)
+
         ctx = sess.malloc(8)
 
         in_buff = sess.malloc(IN_LEN, name='in')
@@ -99,6 +113,7 @@ def base64_decode_ctx_init():
     def run(proj: Project):
         proj.add_prototype('base64_decode_ctx_init', 'void base64_decode_ctx_init(void *)')
         sess = proj.session('base64_decode_ctx_init')
+        setup_afl(proj, sess)
         ctx = sess.malloc(8)
 
         sess.store(ctx, ctx_contents, endness=proj.arch.memory_endness)
@@ -119,6 +134,7 @@ def base64_encode_alloc():
     def run(proj: Project):
         proj.add_prototype('base64_encode_alloc', 'unsigned long base64_encode_alloc(char *in, unsigned long, char **)')
         sess = proj.session('base64_encode_alloc')
+        setup_afl(proj, sess)
 
         in_buff = sess.malloc(MAX_IN_LEN, name='in')
         sess.add_constraints(in_len.SGE(0), in_len.SLE(MAX_IN_LEN))
@@ -148,6 +164,7 @@ def base64_encode():
     def run(proj: Project):
         proj.add_prototype('base64_encode', 'void base64_encode(char *in, unsigned long, char *, unsigned long)')
         sess = proj.session('base64_encode')
+        setup_afl(proj, sess)
 
         sess.add_constraints(out_len >= in_len)
 
@@ -173,6 +190,7 @@ def clone_quoting_options():
     def run(proj: Project):
         proj.add_prototype('clone_quoting_options', 'void *clone_quoting_options(void *)')
         sess = proj.session('clone_quoting_options')
+        setup_afl(proj, sess)
 
         o_addr = sess.malloc(0x38)
         sess.store(o_addr, o_contents, endness=proj.arch.memory_endness)
@@ -191,6 +209,7 @@ def close_stdout():
     def run(proj: Project):
         proj.add_prototype('close_stdout', 'void close_stdout()')
         sess = proj.session('close_stdout')
+        setup_afl(proj, sess)
         return sess.run([])
     return (run, dict())
 
@@ -200,6 +219,7 @@ def close_stdout_set_file_name():
     def run(proj: Project):
         proj.add_prototype('close_stdout_set_file_name', 'void close_stdout_set_file_name(char *)')
         sess = proj.session('close_stdout_set_file_name')
+        setup_afl(proj, sess)
         return sess.run([file])
 
     return (run, {'file': file})
@@ -210,6 +230,7 @@ def close_stdout_set_ignore_EPIPE():
     def run(proj: Project):
         proj.add_prototype('close_stdout_set_ignore_EPIPE', 'void close_stdout_set_ignore_EPIPE(unsigned char)')
         sess = proj.session('close_stdout_set_ignore_EPIPE')
+        setup_afl(proj, sess)
         return sess.run([ignore])
 
     return (run, {'ignore': ignore})
@@ -253,7 +274,51 @@ def close_stream():
 
 def close_stream_underconstrained(proj: Project, prev_underconstrained_state=None):
     sess = proj.session('close_stream', underconstrained_execution=True, underconstrained_initial_state=prev_underconstrained_state)
+    setup_afl(proj, sess)
     return sess.run([])
+
+###########
+# d
+###########
+
+def decode_4():
+    MAX_IN_LEN = 4
+    MAX_OUT_LEFT = 8
+
+    in_buff_contents = []
+    for i in range(MAX_IN_LEN):
+        char_sym = claripy.BVS('in_buff_char_{}'.format(i), 8)
+        in_buff_contents.append(char_sym)
+
+    inlen = claripy.BVS('inlen', 64)
+    outleft_sym = claripy.BVS('outleft_sym', 64)
+
+    def run(proj: Project):
+        proj.add_prototype('decode_4', 'unsigned char decode_4(char *, unsigned long, char **, unsigned long *)')
+        sess = proj.session('decode_4')
+        setup_afl(proj, sess)
+        in_buff = sess.malloc(MAX_IN_LEN)
+
+        for (i, char_sym) in enumerate(in_buff_contents):
+            sess.store(in_buff + i, char_sym, endness=proj.arch.memory_endness)
+
+        out_buff = sess.malloc(MAX_OUT_LEFT)
+        out_buff_ptr = sess.malloc(8)
+        sess.store(out_buff_ptr, claripy.BVV(out_buff, 64), endness=proj.arch.memory_endness)
+
+        outleft = sess.malloc(8)
+        sess.store(outleft, outleft_sym, endness=proj.arch.memory_endness)
+
+        return sess.run([in_buff, inlen, out_buff_ptr, outleft])
+
+    return (run, {'in_buff_contents': in_buff_contents, 'inlen': inlen, 'outleft': outleft_sym})
+
+def deregister_tm_clones():
+    def run(proj: Project):
+        proj.add_prototype('deregister_tm_clones', 'void deregister_tm_clones()')
+        sess = proj.session('deregister_tm_clones')
+        return sess.run([])
+    return (run, dict())
 
 def verify_equivalence(comp: Comparison):
     for pair in comp.pairs.values():
@@ -272,12 +337,12 @@ callee_saved = frozenset(
     ]
 )
 
-def apply_callee_saved(comp: Comparison):
+def ignore_registers(comp: Comparison, regs: frozenset[str]):
     # Ignore all registers that are not callee saved
     for pair in comp.pairs.values():
         to_remove = []
         for reg_name in pair.reg_diff.keys():
-            if reg_name not in callee_saved:
+            if reg_name not in regs:
                 to_remove.append(reg_name)
         for reg_name in to_remove:
             del pair.reg_diff[reg_name]
@@ -285,20 +350,27 @@ def apply_callee_saved(comp: Comparison):
 def global_var_eq_condition(pair: cozy.analysis.CompatiblePair):
     ret = None
     for (sym_name_left, sym_name_right, size) in global_vars_eq:
-        pre = pair.state_left.state.memory.load(proj_prepatch.find_symbol_addr(sym_name_left), size)
-        post = pair.state_right.state.memory.load(proj_postpatch.find_symbol_addr(sym_name_right), size)
-        if ret is None:
-            ret = (pre == post)
-        else:
-            ret = ret & (pre == post)
+        if sym_name_left is not None and sym_name_right is not None:
+            pre = pair.state_left.state.memory.load(proj_prepatch.find_symbol_addr(sym_name_left), size)
+            post = pair.state_right.state.memory.load(proj_postpatch.find_symbol_addr(sym_name_right), size)
+            if ret is None:
+                ret = (pre == post)
+            else:
+                ret = ret & (pre == post)
     return ret
 
 def apply_global_var_eq(comp: Comparison):
     # Foreach global variable
     for (sym_name_left, sym_name_right, size) in global_vars_eq:
         # Get the prepatch and postpatch addrs
-        addr_pre = proj_prepatch.find_symbol_addr(sym_name_left)
-        addr_post = proj_postpatch.find_symbol_addr(sym_name_right)
+        if sym_name_left is not None:
+            addr_pre = proj_prepatch.find_symbol_addr(sym_name_left)
+        else:
+            addr_pre = None
+        if sym_name_right is not None:
+            addr_post = proj_postpatch.find_symbol_addr(sym_name_right)
+        else:
+            addr_post = None
         # Remove these addrs from the mem_diff of all the pairs
         for pair in comp.pairs.values():
             to_remove = []
@@ -308,42 +380,91 @@ def apply_global_var_eq(comp: Comparison):
             for rng in to_remove:
                 del pair.mem_diff[rng]
 
-def run_and_verify(f, visualize=False, verification_condition=None):
-    (run, args) = f()
-    pre_results = run(proj_prepatch)
-    post_results = run(proj_postpatch)
-    comparison = cozy.analysis.Comparison(pre_results, post_results)
-    apply_callee_saved(comparison)
-    assert(len(comparison.verify(global_var_eq_condition)) == 0)
-    apply_global_var_eq(comparison)
-    if verification_condition is not None:
-        assert(len(comparison.verify(verification_condition)) == 0)
-    verify_equivalence(comparison)
-    if visualize:
-        cozy.execution_graph.visualize_comparison(proj_prepatch, proj_postpatch, pre_results, post_results, comparison,
-                                                  args=args, num_examples=2, open_browser=True, include_actions=True)
+def apply_afl_arena_filter(comp: Comparison):
+    for pair in comp.pairs.values():
+        to_remove = []
+        for rng in pair.mem_diff:
+            if rng.start in afl_arena_range:
+                to_remove.append(rng)
+        for rng in to_remove:
+            del pair.mem_diff[rng]
 
-def run_and_verify_underconstrained(run, visualize=False):
-    pre_results = run(proj_prepatch)
-    post_results = run(proj_postpatch, prev_underconstrained_state=pre_results.underconstrained_machine_state)
-    comparison = cozy.analysis.Comparison(pre_results, post_results)
-    apply_callee_saved(comparison)
-    assert(len(comparison.verify(global_var_eq_condition)) == 0)
-    apply_global_var_eq(comparison)
-    verify_equivalence(comparison)
-    if visualize:
-        args = post_results.underconstrained_machine_state.args
-        cozy.execution_graph.visualize_comparison(proj_prepatch, proj_postpatch, pre_results, post_results, comparison,
-                                                  args=args, num_examples=2, open_browser=True, include_actions=True)
+failures = []
 
-run_and_verify(base64_decode_alloc_ctx)
-run_and_verify(base64_decode_ctx)
-run_and_verify(base64_decode_ctx_init)
-run_and_verify(base64_encode_alloc)
-run_and_verify(base64_encode)
+def ignore_return(comparison: Comparison, return_size: int):
+    if return_size == 32:
+        # uint32_t return
+        ignore_registers(comparison, frozenset(['rax']))
+    if return_size == 16:
+        # uint16_t return
+        ignore_registers(comparison, frozenset(['rax', 'eax']))
+    if return_size == 8:
+        # uint8_t return
+        ignore_registers(comparison, frozenset(['rax', 'eax', 'ax']))
+    if return_size == 0:
+        # void return
+        ignore_registers(comparison, frozenset(['rax', 'eax', 'ax', 'al']))
 
-run_and_verify(clone_quoting_options)
-run_and_verify(close_stdout)
-run_and_verify(close_stdout_set_file_name)
-run_and_verify(close_stdout_set_ignore_EPIPE)
-run_and_verify_underconstrained(close_stream_underconstrained)
+def run_and_verify(name: str, f, return_size=64, visualize=False, verification_condition=None):
+    try:
+        (run, args) = f()
+        pre_results = run(proj_prepatch)
+        post_results = run(proj_postpatch)
+        comparison = cozy.analysis.Comparison(pre_results, post_results)
+        ignore_registers(comparison, callee_saved)
+        ignore_return(comparison, return_size)
+        assert(len(comparison.verify(global_var_eq_condition)) == 0)
+        apply_global_var_eq(comparison)
+        apply_afl_arena_filter(comparison)
+        if verification_condition is not None:
+            assert(len(comparison.verify(verification_condition)) == 0)
+        if visualize:
+            cozy.execution_graph.visualize_comparison(proj_prepatch, proj_postpatch, pre_results, post_results, comparison,
+                                                      args=args, num_examples=2, open_browser=True, include_actions=True)
+        else:
+            verify_equivalence(comparison)
+    except AssertionError:
+        print("FAILED: " + name)
+        failures.append(name)
+        return
+    print("PASSED: " + name)
+
+def run_and_verify_underconstrained(name: str, run, return_size=64, visualize=False):
+    try:
+        pre_results = run(proj_prepatch)
+        post_results = run(proj_postpatch, prev_underconstrained_state=pre_results.underconstrained_machine_state)
+        comparison = cozy.analysis.Comparison(pre_results, post_results)
+        ignore_registers(comparison, callee_saved)
+        ignore_return(comparison, return_size)
+        assert(len(comparison.verify(global_var_eq_condition)) == 0)
+        apply_global_var_eq(comparison)
+        apply_afl_arena_filter(comparison)
+        if visualize:
+            args = post_results.underconstrained_machine_state.args
+            cozy.execution_graph.visualize_comparison(proj_prepatch, proj_postpatch, pre_results, post_results, comparison,
+                                                      args=args, num_examples=2, open_browser=True, include_actions=False)
+        else:
+            verify_equivalence(comparison)
+    except AssertionError:
+        print("FAILED: " + name)
+        failures.append(name)
+        return
+    print("PASSED: " + name)
+
+
+run_and_verify("base64_decode_alloc_ctx", base64_decode_alloc_ctx, return_size=8)
+run_and_verify("base64_decode_ctx", base64_decode_ctx, return_size=8)
+run_and_verify("base64_decode_ctx_init", base64_decode_ctx_init, return_size=0)
+run_and_verify("base64_encode_alloc", base64_encode_alloc, return_size=64)
+run_and_verify("base64_encode", base64_encode, return_size=0)
+
+run_and_verify("clone_quoting_options", clone_quoting_options, return_size=64)
+run_and_verify("close_stdout", close_stdout, return_size=0)
+run_and_verify("close_stdout_set_file_name", close_stdout_set_file_name, return_size=0)
+run_and_verify("close_stdout_set_ignore_EPIPE", close_stdout_set_ignore_EPIPE, return_size=0)
+run_and_verify_underconstrained("close_stream", close_stream_underconstrained, return_size=32)
+
+run_and_verify("decode_4", decode_4, return_size=8)
+run_and_verify("deregister_tm_clones", deregister_tm_clones, return_size=0)
+
+print("Failed tests: ", failures)

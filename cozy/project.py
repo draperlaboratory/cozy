@@ -44,6 +44,13 @@ class Project:
             obj_filter = lambda x: True
         return [range(obj.min_addr, obj.max_addr + 1) for obj in self.angr_proj.loader.all_objects if obj_filter(obj)]
 
+    def try_find_symbol_addr(self, sym_name: str) -> int | None:
+        sym = self.angr_proj.loader.find_symbol(sym_name)
+        if sym is not None:
+            return sym.rebased_addr
+        else:
+            return None
+
     def find_symbol_addr(self, sym_name: str) -> int:
         """
         Finds the rebased addressed of a symbol. Functions are the most common symbol type.
