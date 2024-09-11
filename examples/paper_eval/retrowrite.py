@@ -1,10 +1,13 @@
+import sys
+
 import angr
 import claripy
 
 import cozy
 from cozy.analysis import Comparison
 from cozy.project import Project
-from cozy.session import Session
+from cozy.session import Session, RunResult
+import time
 
 proj_prepatch = Project('test_programs/paper_eval/retrowrite/base64-gcc')
 proj_postpatch = Project('test_programs/paper_eval/retrowrite/base64-retrowrite')
@@ -458,12 +461,34 @@ def ignore_return(comparison: Comparison, return_size: int):
         # void return
         ignore_registers(comparison, frozenset(['rax', 'eax', 'ax', 'al']))
 
+def write_results(name, pre_time, post_time, comp_time, num_pre_states, num_post_states, passed):
+    with open("eval_results.csv", "a") as f:
+        f.write(f"\n{name},{pre_time},{post_time},{comp_time},{num_pre_states},{num_post_states},{passed}")
+
+def num_terminal_states(result: RunResult):
+    return len(result.deadended) + len(result.errored) + len(result.spinning) + len(result.postconditions_failed)
+
 def run_and_verify(name: str, f, return_size=64, visualize=False, verification_condition=None):
+    (run, args) = f()
+
+    pre_time_start = time.time()
+    pre_results: RunResult = run(proj_prepatch)
+    pre_time_stop = time.time()
+
+    post_time_start = time.time()
+    post_results: RunResult = run(proj_postpatch)
+    post_time_stop = time.time()
+
+    comp_time_start = time.time()
+    comparison = cozy.analysis.Comparison(pre_results, post_results)
+    comp_time_stop = time.time()
+
+    num_pre_states = num_terminal_states(pre_results)
+    num_post_states = num_terminal_states(post_results)
+
+    passed = True
+
     try:
-        (run, args) = f()
-        pre_results = run(proj_prepatch)
-        post_results = run(proj_postpatch)
-        comparison = cozy.analysis.Comparison(pre_results, post_results)
         ignore_registers(comparison, callee_saved)
         ignore_return(comparison, return_size)
         assert(len(comparison.verify(global_var_eq_condition)) == 0)
@@ -477,16 +502,36 @@ def run_and_verify(name: str, f, return_size=64, visualize=False, verification_c
         else:
             verify_equivalence(comparison)
     except AssertionError:
-        print("FAILED: " + name)
+        passed = False
         failures.append(name)
-        return
-    print("PASSED: " + name)
+
+    if passed:
+        print("PASSED: " + name)
+    else:
+        print("FAILED: " + name)
+
+    write_results(name, pre_time_stop - pre_time_start, post_time_stop - post_time_start, comp_time_stop - comp_time_start,
+                  num_pre_states, num_post_states, passed)
 
 def run_and_verify_underconstrained(name: str, run, return_size=64, visualize=False):
+    pre_time_start = time.time()
+    pre_results = run(proj_prepatch)
+    pre_time_stop = time.time()
+
+    post_time_start = time.time()
+    post_results = run(proj_postpatch, prev_underconstrained_state=pre_results.underconstrained_machine_state)
+    post_time_stop = time.time()
+
+    comp_time_start = time.time()
+    comparison = cozy.analysis.Comparison(pre_results, post_results)
+    comp_time_stop = time.time()
+
+    num_pre_states = num_terminal_states(pre_results)
+    num_post_states = num_terminal_states(post_results)
+
+    passed = True
+
     try:
-        pre_results = run(proj_prepatch)
-        post_results = run(proj_postpatch, prev_underconstrained_state=pre_results.underconstrained_machine_state)
-        comparison = cozy.analysis.Comparison(pre_results, post_results)
         ignore_registers(comparison, callee_saved)
         ignore_return(comparison, return_size)
         assert(len(comparison.verify(global_var_eq_condition)) == 0)
@@ -499,30 +544,70 @@ def run_and_verify_underconstrained(name: str, run, return_size=64, visualize=Fa
         else:
             verify_equivalence(comparison)
     except AssertionError:
-        print("FAILED: " + name)
+        passed = False
         failures.append(name)
-        return
-    print("PASSED: " + name)
 
-run_and_verify("base64_decode_alloc_ctx", base64_decode_alloc_ctx, return_size=8)
-run_and_verify("base64_decode_ctx", base64_decode_ctx, return_size=8)
-run_and_verify("base64_decode_ctx_init", base64_decode_ctx_init, return_size=0)
-run_and_verify("base64_encode_alloc", base64_encode_alloc, return_size=64)
-run_and_verify("base64_encode", base64_encode, return_size=0)
+    if passed:
+        print("PASSED: " + name)
+    else:
+        print("FAILED: " + name)
 
-run_and_verify("clone_quoting_options", clone_quoting_options, return_size=64)
-run_and_verify("close_stdout", close_stdout, return_size=0)
-run_and_verify("close_stdout_set_file_name", close_stdout_set_file_name, return_size=0)
-run_and_verify("close_stdout_set_ignore_EPIPE", close_stdout_set_ignore_EPIPE, return_size=0)
-run_and_verify_underconstrained("close_stream", close_stream_underconstrained, return_size=32)
+    write_results(name, pre_time_stop - pre_time_start, post_time_stop - post_time_start,
+                  comp_time_stop - comp_time_start,
+                  num_pre_states, num_post_states, passed)
 
-run_and_verify("decode_4", decode_4, return_size=8)
-run_and_verify("deregister_tm_clones", deregister_tm_clones, return_size=0)
+def do_test(function_name: str):
+    match function_name:
+        case "base64_decode_alloc_ctx":
+            run_and_verify("base64_decode_alloc_ctx", base64_decode_alloc_ctx, return_size=8)
+        case "base64_decode_ctx":
+            run_and_verify("base64_decode_ctx", base64_decode_ctx, return_size=8)
+        case "base64_decode_ctx_init":
+            run_and_verify("base64_decode_ctx_init", base64_decode_ctx_init, return_size=0)
+        case "base64_encode_alloc":
+            run_and_verify("base64_encode_alloc", base64_encode_alloc, return_size=64)
+        case "base64_encode":
+            run_and_verify("base64_encode", base64_encode, return_size=0)
+        case "clone_quoting_options":
+            run_and_verify("clone_quoting_options", clone_quoting_options, return_size=64)
+        case "close_stdout":
+            run_and_verify("close_stdout", close_stdout, return_size=0)
+        case "close_stdout_set_file_name":
+            run_and_verify("close_stdout_set_file_name", close_stdout_set_file_name, return_size=0)
+        case "close_stdout_set_ignore_EPIPE":
+            run_and_verify("close_stdout_set_ignore_EPIPE", close_stdout_set_ignore_EPIPE, return_size=0)
+        case "close_stream":
+            run_and_verify_underconstrained("close_stream", close_stream_underconstrained, return_size=32)
+        case "decode_4":
+            run_and_verify("decode_4", decode_4, return_size=8)
+        case "deregister_tm_clones":
+            run_and_verify("deregister_tm_clones", deregister_tm_clones, return_size=0)
+        case "fadvise":
+            run_and_verify_underconstrained('fadvise', fadvise_underconstrained, return_size=0)
+        case "get_quoting_style":
+            run_and_verify_underconstrained('get_quoting_style', get_quoting_style_underconstrained, return_size=32)
+        case "isbase64":
+            run_and_verify_underconstrained('isbase64', isbase64_underconstrained, return_size=8)
 
-run_and_verify_underconstrained('fadvise', fadvise_underconstrained, return_size=0)
+if __name__ == "__main__":
+    if len(sys.argv) >= 2:
+        function_name = sys.argv[1]
+        do_test(function_name)
+    else:
+        do_test("base64_decode_alloc_ctx")
+        do_test("base64_decode_ctx")
+        do_test("base64_decode_ctx_init")
+        do_test("base64_encode_alloc")
+        do_test("base64_encode")
+        do_test("clone_quoting_options")
+        do_test("close_stdout")
+        do_test("close_stdout_set_file_name")
+        do_test("close_stdout_set_ignore_EPIPE")
+        do_test("close_stream")
+        do_test("decode_4")
+        do_test("deregister_tm_clones")
+        do_test("fadvise")
+        do_test("get_quoting_style")
+        do_test("isbase64")
 
-run_and_verify_underconstrained('get_quoting_style', get_quoting_style_underconstrained, return_size=32)
-
-run_and_verify_underconstrained('isbase64', isbase64_underconstrained, return_size=8)
-
-print("Failed tests: ", failures)
+    print("Failed tests: ", failures)
