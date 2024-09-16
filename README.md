@@ -4,12 +4,14 @@ cozy is a symbolic execution framework built around angr to enable comparative e
 The goal of comparative evaluation is to determine the precise changes made by software
 patches, specifically micropatches. cozy is capable of reporting observable changes
 made by a micropatch, specifically to registers, memory and stdout/stderr. The framework
-has the ability to dump diff information in both a textual human-readable report and
-via a browser based rich user interface.
+has the ability to present the behavioral changes caused by a patch in both a textual 
+human-readable report and via a browser based rich user interface.
 
-![Screenshot](screenshots/cozy-viz-1.png)
 
-https://github.com/draperlaboratory/cozy/assets/53128179/0f5ab972-5d77-4723-9149-04c7427896d2
+
+https://github.com/user-attachments/assets/2e72575f-0074-44a9-8412-2b17839b7b71
+
+
 
 ## Install
 
