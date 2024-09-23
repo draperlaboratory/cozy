@@ -231,7 +231,8 @@ class StateDiff:
                    compute_reg_diff=True,
                    compute_side_effect_diff=True,
                    use_unsat_core=True,
-                   simplify=False) -> DiffResult | None:
+                   simplify=False,
+                   extra_constraints=[]) -> DiffResult | None:
         """
         Compares two states to find differences in memory. This function will return None if the two states have\
         non-intersecting inputs. Otherwise, it will return a dict of addresses and a dict of registers which are\
@@ -270,6 +271,9 @@ class StateDiff:
         joint_solver = claripy.Solver(track=use_unsat_core) # The track parameter is required to generate an unsat core
         joint_solver.add(sl.solver.constraints)
         joint_solver.add(sr.solver.constraints)
+
+        for constraint in extra_constraints:
+            joint_solver.add(constraint)
 
         try:
             is_sat = joint_solver.satisfiable()
@@ -481,7 +485,7 @@ class CompatiblePair:
         Concretizes the arguments used to put the program in these states by jointly using the constraints attached to\
         the compatible states.
 
-        :param any args: The input arguments to concretize. This argument may be a Python datastructure, the\
+        :param any args: The input arguments to concretize. This argument may be a Python datastructure, the \
         concretizer will make a deep copy with claripy symbolic variables replaced with concrete values.
         :param int num_examples: The maximum number of concrete examples to generate for this particular pair.
         :return: A list of concrete inputs that satisfy both constraints attached to the states.
@@ -574,6 +578,8 @@ class Comparison:
         total_num_pairs = len(states_pre_patched) * len(states_post_patched)
         count = 0
 
+        extra_constraints = []
+
         for (i, state_pre) in enumerate(states_pre_patched):
             for (j, state_post) in enumerate(states_post_patched):
                 count += 1
@@ -589,12 +595,14 @@ class Comparison:
                 is_deadended_comparison = isinstance(state_pre, DeadendedState) and isinstance(state_post, DeadendedState)
 
                 diff = memoized_diff.difference(
-                    state_pre.state, state_post.state, pair_ignore_addrs,
+                    state_pre.state, state_post.state,
+                    pair_ignore_addrs,
                     compute_mem_diff=compare_memory if is_deadended_comparison else False,
                     compute_reg_diff=compare_registers if is_deadended_comparison else False,
                     compute_side_effect_diff=compare_side_effects if is_deadended_comparison else False,
                     use_unsat_core=use_unsat_core,
-                    simplify=simplify
+                    simplify=simplify,
+                    extra_constraints=extra_constraints
                 )
 
                 if diff is not None:
