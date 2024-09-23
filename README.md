@@ -4,12 +4,14 @@ cozy is a symbolic execution framework built around angr to enable comparative e
 The goal of comparative evaluation is to determine the precise changes made by software
 patches, specifically micropatches. cozy is capable of reporting observable changes
 made by a micropatch, specifically to registers, memory and stdout/stderr. The framework
-has the ability to dump diff information in both a textual human-readable report and
-via a browser based rich user interface.
+has the ability to present the behavioral changes caused by a patch in both a textual 
+human-readable report and via a browser based rich user interface.
 
-![Screenshot](screenshots/cozy-viz-1.png)
 
-https://github.com/draperlaboratory/cozy/assets/53128179/0f5ab972-5d77-4723-9149-04c7427896d2
+
+https://github.com/user-attachments/assets/2e72575f-0074-44a9-8412-2b17839b7b71
+
+
 
 ## Install
 
@@ -29,13 +31,37 @@ https://draperlaboratory.github.io/cozy/
 ## Template Wizard
 
 cozy now comes with a Python script template generator to help you get started
-with using the framework. The wizard will prompt you with a series of questions
-and generate the appropriate file with starter code. To run the generator,
-install cozy, then run the following command in the console:
+with using the framework.  To run the generator, install cozy, then run the
+following command in the console:
 
 ```commandline
 python3 -m cozy
 ```
+
+The wizard will then prompt you with a series of questions and generate the
+appropriate file with starter code. You'll need to provide:
+
+1. a filename for your templated script,
+2. the paths to the pre and postpatched binaries you wish to compare,
+3. the name or address of the function where symbolic execution will begin,
+4. the signature of that function (e.g. `int main(int argc, char* argv[])`)
+5. a choice of whether to use
+   [concolic](https://draperlaboratory.github.io/cozy/concolic.html) execution,
+   and—if conconlic is used—whether or not to explore the space of program
+   states,
+6. a choice of whether to use any additional custom
+   [hooks](https://draperlaboratory.github.io/cozy/hooks.html) (choosing "yes"
+   will insert a stub for writing hooks into your cozy script but you'll want
+   to write the hooks yourself),
+7. a choice of whether to to request output in the form of a textual report or
+   by launching the visualization server, and
+8. a choice of whether to save the output in a JSON file which can be loaded
+   into the visualizer in the future.
+
+Afterwards, the cozy script will be written to the filename you supplied, for
+example `my_script.py`. The cozy analysis can then be run, perhaps after some
+modification to the script (like supplying some custom hooks), using `python
+my_script.py`.
 
 https://github.com/draperlaboratory/cozy/assets/53128179/ee1edf4d-4905-425c-9675-fe110bac7376
 
