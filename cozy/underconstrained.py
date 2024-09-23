@@ -7,6 +7,13 @@ from cozy import claripy_ext
 
 
 class SimConcretizationStrategyUnderconstrained(angr.concretization_strategies.SimConcretizationStrategyNorepeatsRange):
+    """
+    This class extends SimConcretizationStrategyNorepeatsRange, making it suitable for use with underconstrained
+    execution. The primary use case of this class is to provide concretization strategies for when memory contents
+    are underconstrained/symbolic. The main problem occurs when reading/writing symbolic addresses, which means
+    those addresses must be concretized. The strategy we employ is to allocate a fresh chunk of memory for
+    fresh symbols, giving them sufficient scratch space to store their members.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.extra_constraints = []
@@ -79,6 +86,10 @@ class Box:
         self.value = value
 
 class DefaultMemoryUnderconstrained(DefaultMemory):
+    """
+    The primary goal of this class is to provide a wrapper for memory use in underconstrained symbolic execution.
+    Here we record all the fresh symbols that are created whenever underconstrained memory is read.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Make a box so that if we change the backer in any copies, all copies get the update
@@ -91,10 +102,10 @@ class DefaultMemoryUnderconstrained(DefaultMemory):
     def set_default_backer(self, backer: DefaultMemory):
         self.default_backer.value = backer
 
-    def set_symbols(self, symbols):
+    def set_symbols(self, symbols: list[claripy.BVS]):
         self.symbols = symbols
 
-    def get_symbols(self):
+    def get_symbols(self) -> list[claripy.BVS]:
         return self.symbols
 
     def copy(self, *args, **kwargs):
