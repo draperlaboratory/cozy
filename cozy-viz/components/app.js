@@ -362,8 +362,8 @@ export default class App extends Component {
       if (view != oldState.view) {
         if (view == View.cfg) {
           // we're going from View.plain to View.cfg
-          this.cy1.cy.mergeByAddress()
-          this.cy2.cy.mergeByAddress()
+          this.cy1.cy.mergeByContents()
+          this.cy2.cy.mergeByContents()
         } else if (view == View.plain) {
           //we're going from View.cfg to View.plain
           this.cy1.cy.removeCFGData()

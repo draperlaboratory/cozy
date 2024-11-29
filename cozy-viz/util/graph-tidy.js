@@ -51,6 +51,7 @@ export const tidyMixin = {
         if (out.length == 1 && (mergeConstraints || constraintsEq(constraints1, constraints2))) {
           // we accumulate the assembly, into the child
           out[0].data().contents = candidate.data().contents + '\n' + out[0].data().contents
+
           /// we accumulate vex, if there is any, into the child
           if (candidate.data().vex) {
             out[0].data().vex = candidate.data().vex + '\n' + out[0].data().vex
@@ -104,8 +105,8 @@ export const tidyMixin = {
   },
 
 
-  //merge blocks that share an address
-  mergeByAddress() {
+  //merge blocks that share contents
+  mergeByContents() {
     const constructed = {}
     this.mergedNodes = []
     this.mergedEdges = []
@@ -113,7 +114,8 @@ export const tidyMixin = {
       this.tidyStdOut(node)
     }
     for (const node of this.nodes()) {
-      const addr = node.data().address
+      const addr = node.data().contents
+      console.log(addr.toString(16))
       if (addr in constructed) {
         // node is already represented 
         this.mergedNodes.push(node)
@@ -138,8 +140,8 @@ export const tidyMixin = {
     }
     const startingEdges = [...this.edges()]
     for (const edge of startingEdges) {
-      const sourceRepr = constructed[edge.source().data("address")]
-      const targetRepr = constructed[edge.target().data("address")]
+      const sourceRepr = constructed[edge.source().data("contents")]
+      const targetRepr = constructed[edge.target().data("contents")]
       if (edge.source() == sourceRepr && edge.target() == targetRepr) {
         if (edge.hasClass("pathHighlight")) {
           edge.data("traversals", (edge.data("traversals") || 0) + 1)
