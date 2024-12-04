@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cozy-re"
-version = "1.5.1"
+version = "1.5.2"
 authors = [
   { name="Caleb Helbling", email="chelbling@draper.com" },
   { name="Graham Leach-Krouse", email="gleach-krouse@draper.com"},
@@ -18,11 +18,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "angr >= 9.2.96",
-    "networkx >= 3.0",
-    "claripy >= 9.2.96",
-    "portion >= 2.4.1",
-    "textual >= 0.60.1",
+    "angr == 9.2.130",
+    "networkx == 3.3",
+    "claripy == 9.2.130",
+    "portion == 2.4.2",
+    "textual == 0.71.0",
 ]
 
 [project.urls]

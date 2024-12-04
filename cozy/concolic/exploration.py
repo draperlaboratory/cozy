@@ -84,7 +84,7 @@ class ConcolicSim(ExplorationTechnique):
         :rtype: bool
         :return: If the constraints are True after substitution, then True is returned. Otherwise returns False.
         """
-        expr = claripy.And(*constraints).replace_dict(self._replacement_dict)
+        expr = claripy.replace_dict(claripy.And(*constraints), self._replacement_dict)
         if len(expr.variables) == 0:
             return expr.is_true()
         else:
@@ -92,7 +92,7 @@ class ConcolicSim(ExplorationTechnique):
 
     def _set_replacement_dict(self, concrete):
         self.concrete = concrete
-        self._replacement_dict = {sym.cache_key: val for (sym, val) in concrete.items()}
+        self._replacement_dict = {sym.hash(): val for (sym, val) in concrete.items()}
 
     def set_concrete(self, simgr, concrete: dict[typing.Union[claripy.BVS, claripy.FPS], typing.Union[claripy.BVV, claripy.FPV]]):
         """

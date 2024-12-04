@@ -53,7 +53,9 @@ def start_viz_server(pre={}, post={}, open_browser=False, port=8080):
     thread.daemon = True
     thread.start()
     if open_browser:
-        webbrowser.open_new("localhost:" + str(port) + "/?pre=/pre&post=/post")
+        url = "http://localhost:" + str(port) + "/?pre=/pre&post=/post"
+        print(f"Open the browser and navigate to {url} if the browser doesn't open now")
+        webbrowser.open_new(url)
     while True:
         time.sleep(1)
     

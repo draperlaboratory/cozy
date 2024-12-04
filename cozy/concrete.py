@@ -15,16 +15,19 @@ def _concretize(solver, state_bundle, n=1):
             preorder_fold(elem.body, traverse, bundle_symbols)
         return bundle_symbols
 
+    # First, walk over the state bundle to find all symbols contained within the nested data structure
     extra_symbols = preorder_fold(state_bundle, traverse, set())
 
+    # Generate up to n models, finding the substitutions for all the symbols
+    # Each model maps each symbol found in the previous step to a concrete value
     models = claripy_ext.model(solver.constraints, extra_symbols=extra_symbols, n=n)
     ret = []
     for model in models:
-        replacement_dict = {sym.cache_key: val for (sym, val) in model.items()}
+        replacement_dict = {sym.hash(): val for (sym, val) in model.items()}
 
         def f(elem):
             if isinstance(elem, claripy.ast.Base):
-                return elem.replace_dict(replacement_dict)
+                return claripy.replace_dict(elem, replacement_dict)
             elif isinstance(elem, PerformedSideEffect):
                 return ConcretePerformedSideEffect(elem, elem.state_history, fmap(elem.body, f), concrete_post_processor=elem.concrete_post_processor, label=elem.label)
             else:

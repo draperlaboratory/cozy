@@ -11,10 +11,10 @@ connectionRead_mangled = "_ZN3ros10Connection4readEjRKN5boost8functionIFvRKNS1_1
 
 onMessageLength_prototype = "void f(void *this, void *conn, void **buffer, unsigned int size, unsigned char success)"
 
-proj_prepatched = cozy.project.Project(f"{amp_hackathon_path}/bin/libroscpp.so")
+proj_prepatched = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp.so")
 proj_prepatched.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
-proj_postpatched = cozy.project.Project(f"{amp_hackathon_path}/operator_patches/classroom_MRZR_sysinfo/repro_goodandbad_patches/withoutfailcheck.bin")
+proj_postpatched = cozy.project.Project("test_programs/amp_target3_hackathon/libroscpp_tob_no_fail_check.so")
 proj_postpatched.add_prototype(onMessageLength_mangled, onMessageLength_prototype)
 
 # size is a symbolic variable that ends up being passed to the onMessageLength function. This symbolic variable
@@ -156,6 +156,8 @@ args = {"size": size, "totalram": totalram, "freeram": freeram, "sysinfo_freeram
 comparison_results = cozy.analysis.Comparison(pre_patched_results, post_patched_results)
 print("\nComparison Results, pre-patch vs post-patch:\n")
 print(comparison_results.report(args))
+
+cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched, pre_patched_results, post_patched_results, comparison_results, open_browser=True, args=args, num_examples=2)
 
 cozy.execution_graph.dump_comparison(proj_prepatched, proj_postpatched,
                                      pre_patched_results, post_patched_results,

@@ -187,6 +187,9 @@ args = {"size": size, "totalram": totalram, "freeram": freeram, "sysinfo_freemra
 comparison_results = cozy.analysis.Comparison(pre_patched_results, tob_patched_results)
 print("\nComparison Results, pre-patch vs post-patch:\n")
 print(comparison_results.report(args))
+
+cozy.execution_graph.visualize_comparison(proj_prepatched, proj_postpatched, pre_patched_results, tob_patched_results, comparison_results)
+
 cozy.execution_graph.dump_comparison(proj_prepatched, proj_tob_patch,
                                      pre_patched_results, tob_patched_results,
                                      comparison_results,
