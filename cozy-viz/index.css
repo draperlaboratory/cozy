@@ -1,0 +1,296 @@
+body {
+  padding: 0px;
+  margin: 0px;
+  max-width: 100vw;
+  max-height: 100vh;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-weight: bold;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+#main-view {
+  display: flex;
+}
+
+/* Menu Bar */
+
+#menubar {
+  height: 2em;
+  width: 100vw;
+  border-bottom: solid black 1px;
+  display: flex;
+  align-items: center;
+}
+
+#menubar button {
+  padding: .5em;
+}
+
+#menubar .options-wrapper {
+  z-index: 5;
+  font-size: 10pt;
+  font-family: monospace;
+}
+
+#menubar .options-wrapper .option {
+  padding: .25em .5em .25em .5em;
+}
+
+#menubar .options-wrapper .option:hover {
+  color: white;
+  background: black;
+}
+
+#menubar .options-wrapper .option[data-selected="true"] {
+  font-weight: bold;
+}
+
+#menubar .options-wrapper .option[data-disabled="true"] {
+  color: #999999;
+}
+
+#menubar input[data-awaiting="true"] {
+  color: #999999;
+}
+
+/* Graph Panels */
+
+#labelLeft,
+#labelRight {
+  font-family: monospace;
+  margin: 10px;
+  font-size: 1.5em;
+  position: absolute;
+  z-index: 1;
+}
+
+#labelRight {
+  right: 0px;
+}
+
+#cy1 {
+  border-right: 1px dashed;
+}
+
+#cy1,
+#cy2 {
+  height: calc(100vh - 2em - 1px);
+  width: 50vw;
+}
+
+.dragHover {
+  background: #c1c1c1
+}
+
+#tooltip {
+  display: flex;
+  flex-direction: column-reverse;
+  width: max-content;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #222;
+  color: white;
+  font-weight: bold;
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 90%;
+}
+
+#tooltip button {
+  display: inline-block;
+  margin: .5em;
+  padding: .5em;
+  background-color: #555;
+  border-radius: 4px;
+  border: none;
+  color: white;
+  font-weight: bold;
+}
+
+#tooltip button[data-highlighted="true"] {
+  background-color: white;
+  color: black;
+}
+
+#tooltip button:disabled {
+  color: #999;
+}
+
+#tooltip-data {
+  max-height: 50vh;
+  max-width: 400px;
+  overflow: scroll;
+}
+
+#tooltip-data::-webkit-scrollbar {
+  display: none;
+}
+
+/* Diff panel */
+
+#action-diff,
+#assembly-diff,
+.side-effect-channel {
+  padding: 5px 1em 0vw 1em;
+  width: calc(100vw - 2em);
+}
+
+.side-effect-channel h3 {
+  font-family: monospace;
+}
+
+/* When a full line is added in a single hunk, we highlight to the end 
+ * Maybe this should not be restricted to just the side effect channel?
+ */
+.side-effect-channel .hunkAdded:first-child:last-child,
+.side-effect-channel .hunkRemoved:first-child:last-child {
+  display:block;
+}
+
+.search-input {
+  border: 1px solid #ccc;
+  display: inline-block;
+  padding: 5px 5px 5px 0px;
+}
+
+.search-input>input {
+  border: none;
+}
+
+.search-input>svg {
+  height: 1.2em;
+  vertical-align: middle;
+}
+
+#line-diff-data-view {
+  z-index: 2;
+}
+
+#line-diff-data-view>div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-column-gap: 5px;
+}
+
+#line-diff-data-view>div>div {
+  max-width: 49vw;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+}
+
+#diff-panel {
+  background: white;
+  position: absolute;
+  max-height: 50vh;
+  bottom: 0px;
+  overflow-y: scroll;
+  border-top: 1px solid black;
+  width: 100vw;
+  padding-bottom: .5em;
+}
+
+#diff-panel.resizing {
+  overflow: hidden;
+}
+
+#diff-drag-handle {
+  top: 0px;
+  position: sticky;
+  height: 5px;
+  cursor: grab;
+}
+
+#diff-drag-handle.grabbed {
+  background: black;
+  cursor: grabbing;
+}
+
+#diff-panel button {
+  margin: .5em;
+  padding: .5em;
+  background-color: #555;
+  border-radius: 4px;
+  border: none;
+  color: white;
+  font-weight: bold;
+}
+
+#diff-panel .subordinate-buttons button {
+  padding: .2em;
+  background-color: white;
+  color: black
+}
+
+#diff-panel .subordinate-buttons button[data-selected="true"] {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+#diff-panel button:disabled {
+  color: #999;
+}
+
+#grid-diff-data {
+  display: grid;
+  grid-template-columns: 1fr max-content 1fr;
+  grid-gap: 1em;
+  padding-bottom: 1em;
+}
+
+#grid-diff-data .no-difference {
+  grid-column: 2/3;
+  padding: 1em;
+}
+
+.grid-diff-label {
+  border: 1px solid black;
+  text-align: center;
+  font-weight: bold;
+  padding: 0 1em 0 1em;
+}
+
+.grid-diff-left {
+  text-align: right;
+}
+
+#concretion-header {
+  font-family: monospace;
+  margin-left: 1em;
+}
+
+#concretion-data {
+  display: flex;
+  justify-content: center;
+}
+
+#concretion-data>pre {
+  width: 500px;
+  padding: 1em;
+  margin: 1em;
+  border: 1px solid #999;
+}
+
+.hunkAdded {
+  background-color: #c9ffc7
+}
+
+.hunkRemoved {
+  background-color: #facdcd
+}
+
+#status-indicator {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  margin: .5em;
+  font-size: .75em;
+}

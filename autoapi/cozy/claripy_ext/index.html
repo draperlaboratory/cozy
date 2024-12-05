@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>cozy.claripy_ext &#8212; cozy 1.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <script src="../../../_static/documentation_options.js?v=56dcb7b8"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="cozy.concolic" href="../concolic/index.html" />
+    <link rel="prev" title="cozy.analysis" href="../analysis/index.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-cozy.claripy_ext">
+<span id="cozy-claripy-ext"></span><h1>cozy.claripy_ext<a class="headerlink" href="#module-cozy.claripy_ext" title="Link to this heading">¶</a></h1>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.claripy_ext.simplify_kb" title="cozy.claripy_ext.simplify_kb"><code class="xref py py-obj docutils literal notranslate"><span class="pre">simplify_kb</span></code></a>(→ claripy.ast.bits)</p></td>
+<td><p>Simplifies a claripy AST expression, given some knowledge base (kb) of information</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.claripy_ext.get_symbol_name" title="cozy.claripy_ext.get_symbol_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_symbol_name</span></code></a>(sym)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.claripy_ext.sub_asts" title="cozy.claripy_ext.sub_asts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sub_asts</span></code></a>(expr)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cozy.claripy_ext.sym_variables" title="cozy.claripy_ext.sym_variables"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sym_variables</span></code></a>(expr)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cozy.claripy_ext.model" title="cozy.claripy_ext.model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">model</span></code></a>([n])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="cozy.claripy_ext.simplify_kb">
+<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">simplify_kb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.bits</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">claripy.ast.Bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">claripy.ast.bits</span></span></span><a class="headerlink" href="#cozy.claripy_ext.simplify_kb" title="Link to this definition">¶</a></dt>
+<dd><p>Simplifies a claripy AST expression, given some knowledge base (kb) of information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>expr</strong> (<em>claripy.ast.bits</em>) – The expression to simplify</p></li>
+<li><p><strong>kb</strong> (<em>claripy.ast.Bool</em>) – The knowledge base which is used to simplify the expr. This is typically a series of equalities conjoined together.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A simplified version of the input expression, or the original expression if no simplification occurred.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>claripy.ast.bits</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cozy.claripy_ext.get_symbol_name">
+<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">get_symbol_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sym</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.claripy_ext.get_symbol_name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cozy.claripy_ext.sub_asts">
+<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">sub_asts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.claripy_ext.sub_asts" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cozy.claripy_ext.sym_variables">
+<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">sym_variables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cozy.claripy_ext.sym_variables" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cozy.claripy_ext.model">
+<span class="sig-prename descclassname"><span class="pre">cozy.claripy_ext.</span></span><span class="sig-name descname"><span class="pre">model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constraints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_symbols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">claripy.FPS</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">frozenset</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">claripy.FPS</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">frozenset()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">claripy.BVS</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">claripy.FPS</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">claripy.BVV</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">claripy.FPV</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#cozy.claripy_ext.model" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../launchingavisualization.html">Launching a Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../concolic.html">Using Concolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../hooks.html">Dealing with Hooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../sideeffects.html">Modeling I/O Side Effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../underconstrained.html">Underconstrained Execution</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">cozy</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../__main__/index.html">cozy.__main__</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../analysis/index.html">cozy.analysis</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">cozy.claripy_ext</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../concolic/index.html">cozy.concolic</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../concrete/index.html">cozy.concrete</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../constants/index.html">cozy.constants</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../directive/index.html">cozy.directive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../execution_graph/index.html">cozy.execution_graph</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../functools_ext/index.html">cozy.functools_ext</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../hooks/index.html">cozy.hooks</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../log/index.html">cozy.log</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../primitives/index.html">cozy.primitives</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../project/index.html">cozy.project</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../server/index.html">cozy.server</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../session/index.html">cozy.session</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../side_effect/index.html">cozy.side_effect</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../stubs/index.html">cozy.stubs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../terminal_state/index.html">cozy.terminal_state</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../types/index.html">cozy.types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../underconstrained/index.html">cozy.underconstrained</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">API Reference</a><ul>
+  <li><a href="../index.html">cozy</a><ul>
+      <li>Previous: <a href="../analysis/index.html" title="previous chapter">cozy.analysis</a></li>
+      <li>Next: <a href="../concolic/index.html" title="next chapter">cozy.concolic</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../../_sources/autoapi/cozy/claripy_ext/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

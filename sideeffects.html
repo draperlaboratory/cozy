@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Modeling I/O Side Effects &#8212; cozy 1.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <script src="_static/documentation_options.js?v=56dcb7b8"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Underconstrained Execution" href="underconstrained.html" />
+    <link rel="prev" title="Dealing with Hooks" href="hooks.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="modeling-i-o-side-effects">
+<h1>Modeling I/O Side Effects<a class="headerlink" href="#modeling-i-o-side-effects" title="Link to this heading">¶</a></h1>
+<p>Many programs of interest that we wish to simulate produce side effects, which we would like to be available for comparison in our analysis.
+To enable this use case, cozy has a subsystem for producing IO side effects. Common examples of IO side effects we have found in example programs
+include writing to stdout/stderr, writing to the network, or writing over a serial connection.</p>
+<p>Modeling IO side effects is typically straightforward, and can be accomplished by hooking side effect producing functions and instead redirecting
+the side effect payload to a list attached to the current state. When a child state is forked from its parent, it obtains a copy of side effects
+from its parent. cozy keeps track of IO side effects over different channels (ie, a channel for stdout, network, etc.) and attempts to
+intelligently align side effects in the visualization interface.</p>
+<p>Note that by default, angr automatically concretizes data written to stdout/stderr. cozy side effects keeps the data symbolic and avoids the concretization.
+In this way cozy’s side effects interface is superior to the angr default.</p>
+<section id="performing-a-side-effect">
+<h2>Performing a Side Effect<a class="headerlink" href="#performing-a-side-effect" title="Link to this heading">¶</a></h2>
+<p>The primary function to take a look at is <a class="reference internal" href="autoapi/cozy/side_effect/index.html#cozy.side_effect.perform" title="cozy.side_effect.perform"><code class="xref py py-func docutils literal notranslate"><span class="pre">cozy.side_effect.perform()</span></code></a>. The first argument is the <code class="xref py py-class docutils literal notranslate"><span class="pre">angr.SimState</span></code> that the side effect
+will attach to. This argument can be obtained by hooking a side effect function, whose <code class="xref py py-meth docutils literal notranslate"><span class="pre">angr.SimProcedure.run()</span></code> method takes in a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">angr.SimState</span></code> object. Alternatively you can set a breakpoint using <a class="reference internal" href="autoapi/cozy/directive/index.html#cozy.directive.Breakpoint" title="cozy.directive.Breakpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.directive.Breakpoint</span></code></a> and obtain the <code class="xref py py-class docutils literal notranslate"><span class="pre">angr.SimState</span></code>
+object in the breakpoint’s <cite>breakpoint_fun</cite> callback.</p>
+<p>Here is an example of the use of <a class="reference internal" href="autoapi/cozy/side_effect/index.html#cozy.side_effect.perform" title="cozy.side_effect.perform"><code class="xref py py-func docutils literal notranslate"><span class="pre">cozy.side_effect.perform()</span></code></a> in a custom <code class="xref py py-class docutils literal notranslate"><span class="pre">angr.SimProcedure</span></code> hook:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Here we are hooking a function called process_command,</span>
+<span class="c1"># so we need to make a class that inherits from SimProcedure</span>
+<span class="k">class</span> <span class="nc">process_command</span><span class="p">(</span><span class="n">angr</span><span class="o">.</span><span class="n">SimProcedure</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd_str</span><span class="p">):</span>
+        <span class="n">strlen</span> <span class="o">=</span> <span class="n">angr</span><span class="o">.</span><span class="n">SIM_PROCEDURES</span><span class="p">[</span><span class="s2">&quot;libc&quot;</span><span class="p">][</span><span class="s2">&quot;strlen&quot;</span><span class="p">]</span>
+        <span class="n">max_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">solver</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inline_call</span><span class="p">(</span><span class="n">strlen</span><span class="p">,</span> <span class="n">cmd_str</span><span class="p">)</span><span class="o">.</span><span class="n">ret_expr</span><span class="p">)</span>
+        <span class="c1"># Here we construct the side effect payload. Here it is a bunch of symbolic data.</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">cmd_str</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_len</span><span class="p">)]</span>
+        <span class="k">def</span> <span class="nf">concrete_post_processor</span><span class="p">(</span><span class="n">concrete_cmd</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="nb">chr</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">concrete_value</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">concrete_cmd</span><span class="p">]</span>
+        <span class="n">cozy</span><span class="o">.</span><span class="n">side_effect</span><span class="o">.</span><span class="n">perform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="s2">&quot;process_command&quot;</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">concrete_post_processor</span><span class="o">=</span><span class="n">concrete_post_processor</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The second argument is the side effect channel. Different types of side effects should be performed over different channels. For example,
+you may have a channel for networked output and a channel for stdout.</p>
+<p>The third argument is the side effect body. The body must be a mixture of string-keyed Python dictionaries, Python lists, Python tuples,
+claripy concrete values, and claripy symbolic values. This should represent the payload of the side effect.</p>
+<p>The fourth argument is an optional post processing function to apply to concretized versions of the side effect’s body if post processing is required.
+In this example we use the Python <cite>chr</cite> function to convert the integer to Python characters, which will be shown in the visualization
+user interface.</p>
+<p>The fifth argument is an optional label used to aid alignment in the user interface. For example, if you have multiple sites that produce
+side effects on the same channel, you will want to label the different sites with different labels. This aids the alignment algorithm to intelligently
+compare the produced side effects. One possible label is the code address location that the side effect is produced at.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="launchingavisualization.html">Launching a Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concolic.html">Using Concolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hooks.html">Dealing with Hooks</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Modeling I/O Side Effects</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#performing-a-side-effect">Performing a Side Effect</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="underconstrained.html">Underconstrained Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="hooks.html" title="previous chapter">Dealing with Hooks</a></li>
+      <li>Next: <a href="underconstrained.html" title="next chapter">Underconstrained Execution</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/sideeffects.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,35 @@
+cozy.hooks.strtok_r
+===================
+
+.. py:module:: cozy.hooks.strtok_r
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.hooks.strtok_r.l
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.hooks.strtok_r.strtok_r
+
+
+Module Contents
+---------------
+
+.. py:data:: l
+
+.. py:class:: strtok_r
+
+   Bases: :py:obj:`angr.SimProcedure`
+
+
+   .. py:method:: run(str_ptr, delim_ptr, save_ptr, str_strlen=None, delim_strlen=None)
+
+

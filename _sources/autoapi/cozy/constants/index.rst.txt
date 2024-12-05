@@ -1,0 +1,26 @@
+cozy.constants
+==============
+
+.. py:module:: cozy.constants
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.constants.NULL_PTR
+   cozy.constants.INT_SIZE
+
+
+Module Contents
+---------------
+
+.. py:data:: NULL_PTR
+   :value: 0
+
+
+.. py:data:: INT_SIZE
+   :value: 4
+
+

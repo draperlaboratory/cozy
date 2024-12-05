@@ -1,0 +1,68 @@
+cozy.log
+========
+
+.. py:module:: cozy.log
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.log.logger
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.log.disable
+   cozy.log.set_level
+   cozy.log.info
+   cozy.log.warning
+   cozy.log.error
+   cozy.log.debug
+   cozy.log.critical
+
+
+Module Contents
+---------------
+
+.. py:data:: logger
+
+.. py:function:: disable()
+
+   Disable cozy logging
+
+
+.. py:function:: set_level(level)
+
+   Set the level of logging
+
+
+.. py:function:: info(*args, **kwargs)
+
+   Log at the info level
+
+
+.. py:function:: warning(*args, **kwargs)
+
+   Log at the warning level
+
+
+.. py:function:: error(*args, **kwargs)
+
+   Log at the error level
+
+
+.. py:function:: debug(*args, **kwargs)
+
+   Log at the debug level
+
+
+.. py:function:: critical(*args, **kwargs)
+
+   Log at the critical level
+
+
