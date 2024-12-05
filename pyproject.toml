@@ -22,7 +22,7 @@ dependencies = [
     "networkx == 3.3",
     "claripy == 9.2.130",
     "portion == 2.4.2",
-    "textual == 0.71.0",
+    "textual == 0.86.1",
 ]
 
 [project.urls]

@@ -3,15 +3,26 @@
 
   outputs = { self, nixpkgs }:
   let 
-    pkgs = nixpkgs.legacyPackages.x86_64-linux;
+    pkgs = nixpkgs.legacyPackages.x86_64-linux.extend (self: super: {
+      unicorn = super.unicorn.overrideAttrs {
+        version = "2.0.1"; #the nix package seems to have the version locked incorrectly to BELOW the exact unicorn version needed.
+        src = self.fetchFromGitHub {
+          owner = "unicorn-engine";
+          repo = "unicorn";
+          rev = "refs/tags/2.0.1.post1"; # XXX angr pins THIS version - cheating a bit
+          sha256 = "sha256-Jz5C35rwnDz0CXcfcvWjkwScGNQO1uijF7JrtZhM7mI=";
+        };
+      };
+    });
+
     pyPkgs = pkgs.python311.pkgs;
 
     portion = pyPkgs.buildPythonPackage rec {
       pname = "portion";
-      version = "2.4.1";
+      version = "2.4.2";
       src = pyPkgs.fetchPypi {
         inherit pname version;
-        sha256 = "sha256-ncvxgIiY9ECu0wSl6fB0KihZ7KOwrH8fWOUFAoUqjvk=";
+        sha256 = "sha256-Uom0DZiVmxaz9pJ3gWeJNdPfG3wUlH9dd3jl4E3ZoGU=";
       };
       doCheck = false;
     };
@@ -42,15 +53,8 @@
       ];
     };
 
-    latestTextual = pyPkgs.textual.overridePythonAttrs {
-      version = "0.60.1";
-      src = pkgs.fetchFromGitHub {
-        owner = "Textualize";
-        repo = "textual";
-        rev = "refs/tags/v0.60.1";
-        hash = "sha256-TyyI+Q61t2h0KLWc73pKcZXKVYNB+8mgoFqjAxM7TiE=";
-      };
-    };
+    # have had to override this in the past
+    latestTextual = pyPkgs.textual;
 
     makeTests = conf : pkgs.stdenv.mkDerivation {
       name = "cozy-test-artifacts";

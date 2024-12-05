@@ -14,7 +14,6 @@
       buildInputs = [ 
         pkgs.python311
         cozyPkg
-        pkgs.gum
       ];
     };
   };
