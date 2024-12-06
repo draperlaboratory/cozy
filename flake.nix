@@ -13,6 +13,7 @@
           sha256 = "sha256-Jz5C35rwnDz0CXcfcvWjkwScGNQO1uijF7JrtZhM7mI=";
         };
       };
+      z3 = super.z3_4_12; # we use a more up-to-date z3. 4.8.17 threw exceptions on some tests.
     });
 
     pyPkgs = pkgs.python311.pkgs;
