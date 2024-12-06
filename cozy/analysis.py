@@ -183,7 +183,7 @@ def compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff:
         def is_sat():
             try:
                 return joint_solver.satisfiable(extra_constraints=[left_se != right_se])
-            except claripy.ClaripyZ3Error as err:
+            except claripy.errors.ClaripyZ3Error as err:
                 cozy.log.error("Unable to solve SMT formula when comparing side effects. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}", str(err))
                 return True
             except claripy.ClaripySolverInterruptError as err:
@@ -277,7 +277,7 @@ class StateDiff:
 
         try:
             is_sat = joint_solver.satisfiable()
-        except claripy.ClaripyZ3Error as err:
+        except claripy.errors.ClaripyZ3Error as err:
             cozy.log.error("Unable to determine if two states are compatible. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these two states compatible in our report. Note that there is unlikely to be any concrete examples generated for this pair.\nThe exception thrown was:\n{}", str(err))
             is_sat = True
         except claripy.ClaripySolverInterruptError as err:
@@ -324,7 +324,7 @@ class StateDiff:
 
                     try:
                         is_sat = joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right])
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to determine if memory contents at {} .. {} are equal or not. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", hex(addr_range.start), hex(addr_range.start + len(addr_range) - 1), str(err))
                         is_sat = True
                     except claripy.ClaripySolverInterruptError as err:
@@ -357,7 +357,7 @@ class StateDiff:
                 if reg_left is not reg_right:
                     try:
                         is_sat = joint_solver.satisfiable(extra_constraints=[reg_left != reg_right])
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to determine if register {} is equal or not. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", reg_name, str(err))
                         is_sat = True
                     except claripy.ClaripySolverInterruptError as err:
@@ -690,7 +690,7 @@ class Comparison:
 
                 try:
                     is_sat = joint_solver.satisfiable(extra_constraints=(~assertion,))
-                except claripy.ClaripyZ3Error as err:
+                except claripy.errors.ClaripyZ3Error as err:
                     cozy.log.error("Unable to solve SMT formula when checking verification condition. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to falsify the verification condition.\nThe exception thrown was:\n{}", str(err))
                     is_sat = True
                 except claripy.ClaripySolverInterruptError as err:

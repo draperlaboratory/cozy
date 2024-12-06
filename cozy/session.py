@@ -387,7 +387,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                     try:
                         is_sat = false_branch.satisfiable()
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                         is_sat = True
                     except claripy.ClaripySolverInterruptError as err:
@@ -412,7 +412,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                     try:
                         is_sat = true_branch.satisfiable()
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                         is_sat = False
                     except claripy.ClaripySolverInterruptError as err:
@@ -470,7 +470,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                             try:
                                 is_sat = found_state.satisfiable()
-                            except claripy.ClaripyZ3Error as err:
+                            except claripy.errors.ClaripyZ3Error as err:
                                 cozy.log.error("Unable to solve SMT state constraints after attaching assume. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the Assume condition to be satisfiable.\nThe information string attached to the Assume is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                                 is_sat = True
                             except claripy.ClaripySolverInterruptError as err:
@@ -500,7 +500,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                                 try:
                                     is_sat = false_branch.satisfiable()
-                                except claripy.ClaripyZ3Error as err:
+                                except claripy.errors.ClaripyZ3Error as err:
                                     cozy.log.error("Unable to solve SMT formula when checking assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the assertion to fail.\nThe information string attached to the assertion is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                                     is_sat = True
                                 except claripy.ClaripySolverInterruptError as err:
@@ -525,7 +525,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                                 try:
                                     is_sat = true_branch.satisfiable()
-                                except claripy.ClaripyZ3Error as err:
+                                except claripy.errors.ClaripyZ3Error as err:
                                     cozy.log.error("Unable to solve SMT formula when checking existential assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the assertion to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                                     is_sat = False
                                 except claripy.ClaripySolverInterruptError as err:

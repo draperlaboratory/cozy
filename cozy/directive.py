@@ -76,8 +76,8 @@ class Assert(Directive):
         Factory for an Assert object set at a certain offset from a function start.
 
         :param cozy.project.Project project: The project which this assert is attached to. The project is used to compute the address of the assert.
-        :param fun_name str: The name of the function in which this assert will be located.
-        :param offset int: The offset into the function in which this assert will be located.
+        :param str fun_name: The name of the function in which this assert will be located.
+        :param int offset: The offset into the function in which this assert will be located.
         :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the\
         SimState will be passed to this function, and an assertion condition should be returned. This is then used\
         internally by the SAT solver, along with the state's accumulated constraints.
@@ -113,8 +113,8 @@ class Assume(Directive):
         Factory for an Assume object set at a certain offset from a function start.
 
         :param cozy.project.Project project: The project this assume is attached to.
-        :param fun_name str: The name of the function in which this assume will be located.
-        :param offset int: The offset into the function in which this assume will be located.
+        :param str fun_name: The name of the function in which this assume will be located.
+        :param int offset: The offset into the function in which this assume will be located.
         :param Callable[[SimState], claripy.ast.bool] condition_fun: When the program reaches the desired address, the SimState will be passed to this function, and an assumption should be returned. This assumption is attached to the state's constraints for future execution.
         :param str | None info_str: Human readable label for this assume.
         :return: A new Assume object at the desired function offset.
@@ -196,7 +196,7 @@ class ErrorDirective(Directive):
     If the program execution reaches the desired address, the state will be considered to be in an errored state and will be moved to the errored cache. This state will have no further execution.
 
     :ivar int addr: The program address this error directive is attached to.
-    :ivar str: Human readable information for this error directive.
+    :ivar str info_str: Human readable information for this error directive.
     """
     def __init__(self, addr: int, info_str: str | None=None):
         """

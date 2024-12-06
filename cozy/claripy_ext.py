@@ -58,7 +58,7 @@ def model(constraints,
     while len(generated_models) < n:
         try:
             is_sat = solver.satisfiable(**kwargs)
-        except claripy.ClaripyZ3Error as err:
+        except claripy.errors.ClaripyZ3Error as err:
             cozy.log.error("Unable to generate model for SMT formula. The SMT solver returned unknown instead of SAT or UNSAT.\nThe exception thrown was:\n{}", str(err))
             return generated_models
         except claripy.ClaripySolverInterruptError as err:

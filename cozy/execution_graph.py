@@ -98,8 +98,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
         corresponding VEX IR and include the result in the JSON. Default False.
     :param bool, optional include_simprocs: whether to, for each SimState, flag any
         SimProcedure locations occurring in the corrsponding basic block. Default False.
-    :param bool, optional include_simprocs: whether to include a listing of
-        SimProcedures called in each basic block. Default False.
+    :param bool flag_syscalls: whether to flag syscalls that occur in a bsic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
     :param bool, optional include_debug: whether to include debugging information
@@ -171,6 +170,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
         recovered from DWARF metadata. Default False.
     :param bool, optional include_side_effects: whether to include cozy side effects,
         like virtual prints, if present. Default True.
+    :param bool flag_syscalls: whether to flag syscalls that occur in a bsic block. Default False.
     :param any, optional args: The input arguments to concretize. This argument
         may be a Python datastructure, the concretizer will make a deep copy with
         claripy symbolic variables replaced with concrete values. See
@@ -222,6 +222,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
         corresponding VEX IR and include the result in the JSON. Default False.
     :param bool, optional include_simprocs: whether to include a listing of
         SimProcedures called in each basic block. Default False.
+    :param bool flag_syscalls: whether to flag syscalls that occur in a bsic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
     :param bool, optional include_debug: whether to include debugging information

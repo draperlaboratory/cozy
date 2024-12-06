@@ -21,7 +21,6 @@ def register_types(type_definition: str) -> SimType:
     Parses a series of type definition given in the input string. Registers this type with angr.
 
     :param str type_definition: The type definition, given in C-style format.
-    :param Arch arch: The architecture this type should be used with.
     :return: The parsed typed.
     :rtype: SimType
     """
