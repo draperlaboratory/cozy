@@ -1,5 +1,5 @@
 {
-  description = "The Cozy Comparitive Symbolic Evaluation Engine";
+  description = "The Cozy Comparative Symbolic Evaluation Engine";
 
   outputs = { self, nixpkgs }:
   let 
@@ -129,7 +129,7 @@
              .::::     .::    .::::::::   .::   
                                         .::     
 
-      # The Cozy Compariative Symbolic Evaluator
+      # The Cozy Comparative Symbolic Evaluator
 
       This is a cozy project template. 
 
