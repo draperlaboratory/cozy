@@ -7,6 +7,8 @@ import portion as P
 import angr, claripy
 from angr import SimStateError, SimState
 from angr.sim_manager import ErrorRecord, SimulationManager
+from angr.sim_type import SimStruct, SimStructValue, SimTypePointer
+from angr.state_plugins import SimMemView
 
 from . import log, side_effect, claripy_ext
 from .underconstrained import SimConcretizationStrategyUnderconstrained
@@ -54,12 +56,17 @@ class RunResult:
     :ivar list[SpinningState] spinning: States that were stashed due to a loop bound being breached.
     :ivar UnderconstrainedMachineState | None underconstrained_machine_state: The inferred memory layout of the input\
     machine state. This field is not None only if underconstrained_execution is enabled for the session.
+    :ivar list[tuple[list[str | int], SimMemView]] annotations: A list of paths to memory locations containing\
+    the input arguments. cozy will use this information to help provide a human readable dump of how the\
+    program being executed mutated its input arguments. This allows for comparison of the input arguments memory\
+    in situations where the memory location or memory layout of the input argument differs between the programs.
     """
     def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
                  asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
                  postconditions_failed: list[PostconditionFailedState],
                  spinning: list[SpinningState],
-                 underconstrained_machine_state: UnderconstrainedMachineState | None):
+                 underconstrained_machine_state: UnderconstrainedMachineState | None,
+                 annotations: dict[tuple[str | int, ...], SimMemView]):
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
@@ -67,6 +74,7 @@ class RunResult:
         self.postconditions_failed = postconditions_failed
         self.spinning = spinning
         self.underconstrained_machine_state = underconstrained_machine_state
+        self.annotations = annotations
 
     @property
     def assertion_triggered(self) -> bool:
@@ -668,6 +676,8 @@ class Session:
         self.directives = []
         self.has_run = False
 
+        self.annotations: dict[tuple[str | int, ...], SimMemView] = dict()
+
     def _initialize_regs(self, state: angr.SimState):
         # Make sure any unconstrained registers are initialized by poking them with a getattr request
         top_level_regs = set(state.arch.register_names.values())
@@ -837,7 +847,41 @@ class Session:
             underconstrained_machine_state = None
 
         return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed,
-                         spinning, underconstrained_machine_state)
+                         spinning, underconstrained_machine_state, self.annotations)
+
+    def annotate_memory(self, path: tuple[str | int, ...], mem: SimMemView):
+        """
+        Annotates some memory location(s) with a unique path to be used for comparison purposes. You may use this\
+        method to annotate input arguments, even if the memory locations and memory layout differ between the two\
+        programs under comparison. For example, suppose that function A is passed two arguments: an array of integers\
+        and an integer giving the array size. Function B is passed a single argument: a pointer to a struct which\
+        contains two fields: a pointer to an array and a size. We can go and annotate the first element of the array\
+        as the path ["array", 0] for both sessions, allowing for an apples-to-apples comparison, even if the underlying\
+        memory location for the first element is different. This also improves readability of the report since we have\
+        information that is richer than a simple memory location. This feature was primarily designed for C vs Rust\
+        comparisons where input argument memory layout differences are more common. It may be useful in the micropatch\
+        use case as well.
+
+        :param tuple[str | int, ...] path: The root annotation path of the input memory view.\
+        Note that if the memory view is a struct, we will recurse through its fields, performing a separate annotation\
+        for each member of the struct. You can use any combination of strings/integers you'd like, however in general\
+        it's best to try to use strings as field names and integers for array indices or argument numbers.
+        :param SimMemView mem: A memory view of the data to annotate. Once the session run is completed, we will use\
+        the view's :py:meth:`angr.state_plugins.view.SimMemView.set_state` method to determine how the program mutated\
+        its input arguments. Note that if this memview's type is a composite data structure, we will recursively\
+        walk through the members. If the memview is a pointer, we will dereference the pointer, and so forth.
+        """
+        typ = mem._type
+        if isinstance(typ, SimStruct):
+            for field_name in typ.fields.keys():
+                refined_path = path + [field_name]
+                self.annotate_memory(refined_path, getattr(mem, field_name))
+        elif isinstance(typ, SimTypePointer):
+            self.annotate_memory(path, mem.deref)
+        elif isinstance(mem.resolved, claripy.ast.bv.BV):
+            self.annotations[path] = mem
+        else:
+            raise NotImplementedError("Annotation for this particular type is not implemented")
 
     def run(self, args: list[claripy.ast.bits] | None=None, cache_intermediate_info: bool=True, ret_addr: int | None=None,
             loop_bound: int | None=None) -> RunResult:

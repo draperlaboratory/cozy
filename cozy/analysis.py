@@ -1,19 +1,33 @@
 from collections.abc import Iterator
 
 import claripy
-import z3.z3types
 from angr import SimState
 
 import portion as P
+from angr.state_plugins import SimMemView
 
 import cozy.log
 from . import claripy_ext, log, side_effect
 from .functools_ext import *
 import collections.abc
+
+from .log import error
 from .session import RunResult
 from .concrete import _concretize, CompatiblePairInput
 from .side_effect import PerformedSideEffect, ConcretePerformedSideEffect
 from .terminal_state import TerminalState, DeadendedState
+
+def _insert_path(d: dict, path: tuple[str | int, ...], value):
+    if len(path) == 0:
+        raise ValueError("Inserting a path of length 0")
+    else:
+        key = path[0]
+        if len(path) == 1:
+            d[key] = value
+        else:
+            if key not in d:
+                d[key] = dict()
+            _insert_path(d[key], path[1:], value)
 
 # Given a state, returns a range of addresses that were used as part of the stack but are no longer
 # valid stack locations. This will happen if the stack grows, then shrinks.
@@ -210,10 +224,12 @@ class DiffResult:
     def __init__(self,
                  mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]],
                  reg_diff: dict[str, tuple[claripy.ast.bits, claripy.ast.bits]],
-                 side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]]):
+                 side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
+                 annotated_diff: dict):
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
+        self.annotated_diff = annotated_diff
 
 class StateDiff:
     """
@@ -230,6 +246,9 @@ class StateDiff:
                    compute_mem_diff=True,
                    compute_reg_diff=True,
                    compute_side_effect_diff=True,
+                   compute_annotated_diff=True,
+                   annotations_left: dict[tuple[str | int, ...], SimMemView] | None = None,
+                   annotations_right: dict[tuple[str | int, ...], SimMemView] | None = None,
                    use_unsat_core=True,
                    simplify=False,
                    extra_constraints=[]) -> DiffResult | None:
@@ -249,8 +268,14 @@ class StateDiff:
         first element of the return tuple will be None.
         :param bool compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the\
         second element of the return tuple will be None.
+        :param bool compute_annotated_diff: If this flag is True, then we will diff memory that has been annotated\
+        by using the :py:meth:`cozy.session.Session.annotate_memory`
         :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
         comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
+        :param annotations_left: A dictionary mapping paths (annotations) to their associated memory views for the\
+        first state.
+        :param annotations_right: A dictionary mapping paths (annotations) to their associated memory views for the\
+        second state. This dictionary must have the same keys as annotations_left.
         :return: None if the two states are not compatible, otherwise returns an object containing the memory,\
         register differences, and side effect differences.
         :rtype: DiffResult | None
@@ -395,7 +420,43 @@ class StateDiff:
 
                 ret_side_effect_diff[channel] = diff
 
-        return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff)
+        ret_annotated_diff = dict()
+
+        # Compute annotated memory difference
+        if compute_annotated_diff:
+            if annotations_left is None or annotations_right is None:
+                raise ValueError("compute_annotated_diff is True, however no information about the annotations was provided")
+
+            for path in annotations_left.keys():
+                memview_left = annotations_left[path]
+                memview_right = annotations_right[path]
+
+                memview_left.set_state(sl)
+                memview_right.set_state(sr)
+
+                bytes_left = memview_left.resolved
+                bytes_right = memview_right.resolved
+
+                if bytes_left is not bytes_right:
+                    try:
+                        is_sat = joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right])
+                    except claripy.ClaripyZ3Error as err:
+                        cozy.log.error(f"Unable to determine if memory contents at annotated path {path} are equal or not. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{err}")
+                        is_sat = True
+                    except claripy.ClaripySolverInterruptError as err:
+                        cozy.log.error(f"Unable to determine if memory contents at {path} are equal or not. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{err}")
+                        is_sat = True
+
+                    if is_sat:
+                        # It is possible that there is a symbolic value stored in memory.
+                        # Here we want to simplify this with respect to the joint constraints
+                        if simplify:
+                            bytes_left = claripy_ext.simplify_kb(bytes_left, joint_solver.constraints)
+                            bytes_right = claripy_ext.simplify_kb(bytes_right, joint_solver.constraints)
+
+                        _insert_path(ret_annotated_diff, path, (bytes_left, bytes_right))
+
+        return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff, ret_annotated_diff)
 
 def hexify(val0):
     """
@@ -429,6 +490,9 @@ class CompatiblePair:
     Maps side effect channels to a list of 3 element tuples, where the first element is the performed side effect\
     from the left binary, the second element is the performed side effect from the right binary, and the third element\
     is the diff between the body of the side effects.
+    :ivar dict annotated_diff: A nested dictionary structure containing diff information about memory annotated with\
+    :py:meth:`cozy.session.Session.annotate_memory`. The keys of the nested dictionary will correspond to paths where\
+    executing the program caused the annotated memory to be different.
     :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses\
     to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the\
     frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
@@ -444,6 +508,7 @@ class CompatiblePair:
                  # TODO: Expose the subregister structure somewhere
                  reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
+                 annotated_diff: dict,
                  mem_diff_ip: dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
                  compare_std_out: bool,
                  compare_std_err: bool):
@@ -452,6 +517,7 @@ class CompatiblePair:
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
+        self.annotated_diff = annotated_diff
         self.mem_diff_ip = mem_diff_ip
         self.compare_std_out = compare_std_out
         self.compare_std_err = compare_std_err
@@ -524,7 +590,8 @@ class Comparison:
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
                  ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_side_effects=True,
-                 compare_std_out=False, compare_std_err=False, use_unsat_core=True, simplify=False):
+                 compare_std_out=False, compare_std_err=False, compare_annotated_memory=True,
+                 use_unsat_core=True, simplify=False):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
 
@@ -580,6 +647,24 @@ class Comparison:
 
         extra_constraints = []
 
+        if compare_annotated_memory:
+            pre_ann_paths = set(pre_patched.annotations.keys())
+            post_ann_paths = set(post_patched.annotations.keys())
+
+            ann_diff = pre_ann_paths - post_ann_paths
+            if len(ann_diff) > 0:
+                cozy.log.warning(f"The following memory annotation paths were found in the first run result but not the second: {ann_diff}. These paths will not be compared.")
+            ann_diff = post_ann_paths - pre_ann_paths
+            if len(ann_diff) > 0:
+                cozy.log.warning(f"The following memory annotation paths were found in the second run result but not the first: {ann_diff}. These paths will not be compared.")
+
+            valid_paths = pre_ann_paths & post_ann_paths
+            pre_ann = {path: pre_patched.annotations[path] for path in valid_paths}
+            post_ann = {path: post_patched.annotations[path] for path in valid_paths}
+        else:
+            pre_ann = dict()
+            post_ann = dict()
+
         for (i, state_pre) in enumerate(states_pre_patched):
             for (j, state_post) in enumerate(states_post_patched):
                 count += 1
@@ -600,6 +685,9 @@ class Comparison:
                     compute_mem_diff=compare_memory if is_deadended_comparison else False,
                     compute_reg_diff=compare_registers if is_deadended_comparison else False,
                     compute_side_effect_diff=compare_side_effects if is_deadended_comparison else False,
+                    compute_annotated_diff=compare_annotated_memory if is_deadended_comparison else False,
+                    annotations_left=pre_ann,
+                    annotations_right=post_ann,
                     use_unsat_core=use_unsat_core,
                     simplify=simplify,
                     extra_constraints=extra_constraints
@@ -613,6 +701,7 @@ class Comparison:
                     mem_diff = diff.mem_diff
                     reg_diff = diff.reg_diff
                     side_effect_diff = diff.side_effect_diff
+                    annotated_diff = diff.annotated_diff
 
                     def get_ip_set(interval_dict, r: range):
                         # Query the interval dictionary for all entries in the desired range, then union
