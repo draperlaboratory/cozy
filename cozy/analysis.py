@@ -493,9 +493,9 @@ class CompatiblePair:
     :ivar dict annotated_diff: A nested dictionary structure containing diff information about memory annotated with\
     :py:meth:`cozy.session.Session.annotate_memory`. The keys of the nested dictionary will correspond to paths where\
     executing the program caused the annotated memory to be different.
-    :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses\
-    to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the\
-    frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
+    :ivar dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory
+    addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases
+    the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
     determined the write address.
     :ivar bool compare_std_out: If True then we should consider stdout when checking if the two input states are equal.
     :ivar bool compare_std_err: If True then we should consider stderr when checking if the two input states are equal.
@@ -509,7 +509,7 @@ class CompatiblePair:
                  reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
                  annotated_diff: dict,
-                 mem_diff_ip: dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
+                 mem_diff_ip: dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
                  compare_std_out: bool,
                  compare_std_err: bool):
         self.state_left = state_left
@@ -539,7 +539,7 @@ class CompatiblePair:
         """
 
         if isinstance(self.state_left, DeadendedState) and isinstance(self.state_right, DeadendedState):
-            return (len(self.mem_diff) == 0 and len(self.reg_diff) == 0 and
+            return (len(self.mem_diff) == 0 and len(self.reg_diff) == 0 and len(self.annotated_diff) == 0 and
                     ((not self.compare_std_out) or (self.state_left.std_out == self.state_right.std_out)) and
                     ((not self.compare_std_err) or (self.state_left.std_err == self.state_right.std_err)) and
                     self.equal_side_effects())
@@ -715,7 +715,7 @@ class Comparison:
                     }
 
                     comparison = CompatiblePair(state_pre, state_post, mem_diff, reg_diff, side_effect_diff,
-                                                mem_diff_ip, compare_std_out, compare_std_err)
+                                                annotated_diff, mem_diff_ip, compare_std_out, compare_std_err)
                     self.pairs[(state_pre.state, state_post.state)] = comparison
 
     def get_pair(self, state_left: SimState, state_right: SimState) -> CompatiblePair:
@@ -812,7 +812,7 @@ class Comparison:
             # Check if the registers, memory, stdio are the same for these two states
             is_observationally_equal = p.equal()
             if not is_observationally_equal:
-                output += "STATE PAIR ({}, {}), ({}, {}) are different\n".format(i, p.state_left.state_type_str, j, p.state_right.state_type_str)
+                output += f"STATE PAIR ({i}, {p.state_left.state_type_str}), ({j}, {p.state_right.state_type_str}) are different\n"
 
                 if type(p.state_left) is type(p.state_right):
                     # Memory diff
@@ -829,9 +829,19 @@ class Comparison:
                     if len(p.reg_diff) == 0:
                         output += "The registers were equal for this state pair\n"
                     else:
-                        output += "Register difference detected for {},{}:\n".format(i, j)
+                        output += f"Register difference detected for {i},{j}:\n"
                         output += str(p.reg_diff)
                         output += "\n"
+
+                    output += "\n"
+
+                    # Annotated memory diff
+                    if len(p.annotated_diff) == 0:
+                        output += "The annotated memory was equal for this state pair\n\n"
+                    else:
+                        output += f"Annotated memory difference detected for {i},{j}:\n"
+                        output += str(p.annotated_diff)
+                        output += "\n\n"
                 else:
                     output += "Skipped memory and register differencing since the type of these two states are different.\n"
 
