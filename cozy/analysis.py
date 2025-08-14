@@ -614,6 +614,13 @@ class Comparison:
         where they are not easily understandable. This is why in most scenarios the flag should be left as False.
         """
 
+        self.compare_memory = compare_memory
+        self.compare_registers = compare_registers
+        self.compare_side_effects = compare_side_effects
+        self.compare_std_out = compare_std_out
+        self.compare_std_err = compare_std_err
+        self.compare_annotated_memory = compare_annotated_memory
+
         if ignore_addrs is None:
             ignore_addrs = []
 
@@ -806,42 +813,53 @@ class Comparison:
         """
 
         output = ""
+        all_equal = True
         for p in self.pairs.values():
             i = p.state_left.state_id
             j = p.state_right.state_id
             # Check if the registers, memory, stdio are the same for these two states
             is_observationally_equal = p.equal()
             if not is_observationally_equal:
+                all_equal = False
                 output += f"STATE PAIR ({i}, {p.state_left.state_type_str}), ({j}, {p.state_right.state_type_str}) are different\n"
 
                 if type(p.state_left) is type(p.state_right):
-                    # Memory diff
-                    if len(p.mem_diff) == 0:
-                        output += "The memory was equal for this state pair\n"
+                    if self.compare_memory:
+                        # Memory diff
+                        if len(p.mem_diff) == 0:
+                            output += "The memory was equal for this state pair\n"
+                        else:
+                            output += "Memory difference detected for {},{}:\n".format(i, j)
+                            output += str(hexify(p.mem_diff))
+                            output += "\nInstruction pointers for these memory writes:\n"
+                            output += str(hexify(p.mem_diff_ip))
+                            output += "\n"
                     else:
-                        output += "Memory difference detected for {},{}:\n".format(i, j)
-                        output += str(hexify(p.mem_diff))
-                        output += "\nInstruction pointers for these memory writes:\n"
-                        output += str(hexify(p.mem_diff_ip))
-                        output += "\n"
+                        output += "Memory comparison skipped as this option was disabled in the configuration\n"
 
                     # Reg diff
-                    if len(p.reg_diff) == 0:
-                        output += "The registers were equal for this state pair\n"
+                    if self.compare_registers:
+                        if len(p.reg_diff) == 0:
+                            output += "The registers were equal for this state pair\n"
+                        else:
+                            output += f"Register difference detected for {i},{j}:\n"
+                            output += str(p.reg_diff)
+                            output += "\n"
                     else:
-                        output += f"Register difference detected for {i},{j}:\n"
-                        output += str(p.reg_diff)
-                        output += "\n"
+                        output += "Register comparison skipped as this option was disabled in the configuration\n"
 
                     output += "\n"
 
-                    # Annotated memory diff
-                    if len(p.annotated_diff) == 0:
-                        output += "The annotated memory was equal for this state pair\n\n"
+                    if self.compare_annotated_memory:
+                        # Annotated memory diff
+                        if len(p.annotated_diff) == 0:
+                            output += "The annotated memory was equal for this state pair\n\n"
+                        else:
+                            output += f"Annotated memory difference detected for {i},{j}:\n"
+                            output += str(p.annotated_diff)
+                            output += "\n\n"
                     else:
-                        output += f"Annotated memory difference detected for {i},{j}:\n"
-                        output += str(p.annotated_diff)
-                        output += "\n\n"
+                        output += "Annotated memory comparison skipped as this option was disabled in the configuration\n"
                 else:
                     output += "Skipped memory and register differencing since the type of these two states are different.\n"
 
@@ -889,6 +907,9 @@ class Comparison:
                             print_side_effects(concrete_input.right_side_effects)
 
                 output += "\n"
+
+        if all_equal:
+            output += "All states under comparison were determined to be observationally equivalent.\n\n"
 
         def report_orphan_state(orphan: TerminalState):
             nonlocal output
