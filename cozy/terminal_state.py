@@ -106,14 +106,16 @@ class DeadendedState(TerminalState):
     """
     This class is used to indicate that execution terminated normally in the contained state.
     """
-    def __init__(self, state: SimState, state_id: int):
+    def __init__(self, state: SimState, state_id: int, return_val):
         """
         Constructor for DeadendedState
 
         :ivar SimState state: The state that terminated normally.
         :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
+        :ivar return_val: What the function returned, as determined by the function's prototype. This value may be None if the return type is void.
         """
         super().__init__(state, state_id, "DEADENDED_STATE")
+        self.return_val = return_val
 
 class SpinningState(TerminalState):
     """

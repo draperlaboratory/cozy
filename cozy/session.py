@@ -676,6 +676,11 @@ class Session:
         self.directives = []
         self.has_run = False
 
+        self.prototype = None
+
+        self._internal_return_val = None
+        self._constructed_return_val = False
+
         self.annotations: dict[tuple[str | int, ...], SimMemView] = dict()
 
     def _initialize_regs(self, state: angr.SimState):
@@ -806,6 +811,12 @@ class Session:
                 args = []
                 fun_prototype = None
 
+            if fun_prototype is not None:
+                rich_proto = angr.calling_conventions.SimCC.guess_prototype(args, fun_prototype).with_arch(
+                    self.proj.arch
+                )
+                self.prototype = rich_proto
+
             state: SimState = self.proj.angr_proj.factory.call_state(
                 fun_addr, *args, base_state=self.state, prototype=fun_prototype, **kwargs
             )
@@ -823,8 +834,31 @@ class Session:
         else:
             return _SessionBasicExploration(self, cache_intermediate_info=cache_intermediate_info)
 
+    @property
+    def _return_val(self):
+        # This method is used to cache the return value accessor so we don't have to reconstruct
+        # the calling convention and so forth every time we call _get_return_value
+        if not self._constructed_return_val:
+            self._constructed_return_val = True
+            return_ty = self.prototype.returnty
+            if isinstance(return_ty, angr.sim_type.SimTypeBottom):
+                self._internal_return_val = None
+            else:
+                cc_class = angr.calling_conventions.default_cc(self.proj.arch.name, self.proj.angr_proj.simos.name)
+                cc = cc_class(self.proj.arch)
+                self._internal_return_val = cc.return_val(return_ty)
+        return self._internal_return_val
+
+    def _get_return_value(self, state):
+        # This method will give the return value of the function after it has been completely executed
+        if self.prototype is not None:
+            ret_val = self._return_val
+            if ret_val is not None:
+                return ret_val.get_value(state)
+        return None
+
     def _run_result(self, simgr: SimulationManager, sess_exploration: _SessionExploration) -> RunResult:
-        deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
+        deadended = [DeadendedState(state, i, self._get_return_value(state)) for (i, state) in enumerate(simgr.deadended)]
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
         asserts_failed = [assert_failed for assert_failed in sess_exploration.asserts_failed
                           if assert_failed.assertion not in sess_exploration.asserts_to_scrub]
