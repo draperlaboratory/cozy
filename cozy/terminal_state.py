@@ -111,7 +111,7 @@ class DeadendedState(TerminalState):
         Constructor for DeadendedState
 
         :ivar SimState state: The state that terminated normally.
-        :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
+        :ivar int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
         :ivar return_val: What the function returned, as determined by the function's prototype. This value may be None if the return type is void.
         """
         super().__init__(state, state_id, "DEADENDED_STATE")
@@ -127,7 +127,7 @@ class SpinningState(TerminalState):
         Constructor for SpinningState
 
         :ivar SimState state: The state that was spinning
-        :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.spinning`
+        :ivar int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.spinning`
         """
         super().__init__(state, state_id, "SPINNING_STATE")
 

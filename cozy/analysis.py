@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 
+import angr.sim_type
 import claripy
 from angr import SimState
 
@@ -140,6 +141,52 @@ class NotEqFieldDiff(FieldDiff):
         # of FieldDiff objects.
         self.body_diff = body_diff
 
+def compare_return_value(joint_solver, left_return, right_return) -> FieldDiff:
+    if isinstance(left_return, claripy.ast.Bits) and isinstance(right_return, claripy.ast.Bits):
+        def is_sat():
+            try:
+                return joint_solver.satisfiable(extra_constraints=[left_return != right_return])
+            except claripy.ClaripyZ3Error as err:
+                cozy.log.error(
+                    "Unable to solve SMT formula when comparing side effects. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}",
+                    str(err))
+                return True
+            except claripy.ClaripySolverInterruptError as err:
+                cozy.log.error(
+                    "Unable to solve SMT formula when comparing side effects. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}",
+                    str(err))
+                return True
+
+        if left_return is not right_return and is_sat():
+            # Base case: leaf elements are not equal
+            return NotEqLeaf(left_return, right_return)
+        else:
+            return EqFieldDiff(left_return, right_return)
+    elif isinstance(left_return, angr.sim_type.SimStructValue) and isinstance(right_return, angr.sim_type.SimStructValue):
+        subfields_equal = True
+        all_fields = set()
+        all_fields.update(left_return.struct.fields.keys())
+        all_fields.update(right_return.struct.fields.keys())
+        diff = dict()
+        for field in all_fields:
+            try:
+                left_val = left_return[field]
+            except KeyError:
+                left_val = None
+            try:
+                right_val = right_return[field]
+            except KeyError:
+                right_val = None
+            rec_result = compare_return_value(joint_solver, left_val, right_val)
+            if not isinstance(rec_result, EqFieldDiff):
+                subfields_equal = False
+            diff[field] = rec_result
+        if subfields_equal:
+            return EqFieldDiff(left_return, right_return)
+        else:
+            return NotEqFieldDiff(diff)
+
+
 def compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff:
     both_lists = isinstance(left_se, list) and isinstance(right_se, list)
     both_tuples = isinstance(left_se, tuple) and isinstance(right_se, tuple)
@@ -225,11 +272,13 @@ class DiffResult:
                  mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]],
                  reg_diff: dict[str, tuple[claripy.ast.bits, claripy.ast.bits]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
-                 annotated_diff: dict):
+                 annotated_diff: dict,
+                 return_diff: None | FieldDiff):
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
         self.annotated_diff = annotated_diff
+        self.return_diff = return_diff
 
 class StateDiff:
     """
@@ -590,7 +639,7 @@ class Comparison:
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
                  ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_side_effects=True,
-                 compare_std_out=False, compare_std_err=False, compare_annotated_memory=True,
+                 compare_std_out=False, compare_std_err=False, compare_annotated_memory=True, compare_return_values=False,
                  use_unsat_core=True, simplify=False):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
@@ -608,6 +657,12 @@ class Comparison:
         :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
         :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
         comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
+        :param bool compare_annotated_memory: If this flag is True, then memory that was explicitly annotated will\
+        be compared and reported on separately. This is usually used to check if the program mutated some part\
+        of the input arguments
+        :param bool compare_return_values: If this flag is True, then the return value of the function will be\
+        compared. This is only useful if the return type annotation of the function is accurate, and angr is\
+        capable of using this type information to extract the return value of the function.
         :param bool simplify: If this flag is True, then symbolic memory and register differences will be simplified\
         as much as possible. This flag is typically only necessary if you want to do some deep inspection of symbolic\
         contents. simplify can speed things down a lot, and symbolic expressions are usually very complex to the point\
