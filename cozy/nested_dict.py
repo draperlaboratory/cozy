@@ -54,7 +54,7 @@ class NestedDict(Generic[A]):
             if isinstance(d, dict):
                 ret = dict()
                 for (k, v) in d.items():
-                    rec_val = walk(v, p + [k])
+                    rec_val = walk(v, p + (k,))
                     if rec_val is not None:
                         ret[k] = rec_val
                 if len(ret) > 0:
@@ -66,7 +66,7 @@ class NestedDict(Generic[A]):
                     return d
                 else:
                     return None
-        ret = walk(self.data, [])
+        ret = walk(self.data, tuple())
         if ret is None:
             ret = dict()
         return NestedDict(ret)
