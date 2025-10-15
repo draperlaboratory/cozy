@@ -12,6 +12,8 @@ from angr.sim_type import SimStructValue
 
 import cozy.log
 from . import claripy_ext, log, side_effect
+from .annotation import AnnotationDiff
+from .field_diff import FieldDiff, EqFieldDiff, NotEqLeaf, NotEqFieldDiff
 from .nested_dict import NestedDict
 from .functools_ext import *
 import collections.abc
@@ -106,79 +108,6 @@ def to_plain_python(value):
         return {field_name: value[field_name] for field_name in value.struct.fields}
     else:
         return value
-
-class FieldDiff:
-    def _rec_diff_str(self):
-        raise NotImplementedError()
-
-    def diff_str(self) -> str:
-        return str(self._rec_diff_str())
-
-class EqFieldDiff(FieldDiff):
-    """
-    For a field to be equal, all subcomponents of the body must be equal. In this case, left_body and right_body
-    should not hold any further FieldDiffs within themselves. Rather left_body and right_body should be the entire
-    fields for which differencing was checked (and it was determined that all subfields are equal).
-    """
-    def __init__(self, left_body, right_body):
-        self.left_body = left_body
-        self.right_body = right_body
-
-    def _rec_diff_str(self):
-        return None
-
-    def __str__(self):
-        return f"EqFieldDiff({self.left_body, self.right_body})"
-
-    def __repr__(self):
-        return self.__str__()
-
-class NotEqLeaf(FieldDiff):
-    """
-    A not equal leaf is a field that cannot be further unpacked/traversed.
-    """
-    def __init__(self, left_leaf, right_leaf):
-        self.left_leaf = left_leaf
-        self.right_leaf = right_leaf
-
-    def _rec_diff_str(self):
-        return (self.left_leaf, self.right_leaf)
-
-    def __str__(self):
-        return f"NotEqLeaf({self.left_leaf, self.right_leaf})"
-
-    def __repr__(self):
-        return self.__str__()
-
-class NotEqFieldDiff(FieldDiff):
-    """
-    For a field to be not equal, there must be at least one subcomponent of the body that was not equal. In this case,
-    body_diff will hold further FieldDiffs within itself. Equal subfields of the bodies will be
-    represented by EqFieldDiff, whereas unequal subfields will be represented by further nested NotEqFieldDiff.
-    """
-    def __init__(self, body_diff: list[FieldDiff] | tuple[FieldDiff, ...] | dict[str | int, FieldDiff]):
-        # body_diff is a zipped data structure. For example, if body_diff is a list, it will be a list of FieldDiff
-        # objects, one for each zipped element. If body_diff is a dict, it will be a dict with string keys, and values
-        # of FieldDiff objects.
-        self.body_diff = body_diff
-
-    def _rec_diff_str(self):
-        if isinstance(self.body_diff, list):
-            return [elem.diff_str() for elem in self.body_diff]
-        elif isinstance(self.body_diff, tuple):
-            return tuple(elem.diff_str() for elem in self.body_diff)
-        elif isinstance(self.body_diff, dict):
-            ret = dict()
-            for (k, v) in self.body_diff.items():
-                if not isinstance(v, EqFieldDiff):
-                    ret[k] = v._rec_diff_str()
-            return ret
-
-    def __str__(self):
-        return f"NotEqFieldDiff({self.body_diff})"
-
-    def __repr__(self):
-        return self.__str__()
 
 def compare_structured_values_OLD(joint_solver, left_val, right_val) -> FieldDiff:
     if isinstance(left_val, claripy.ast.Bits) and isinstance(right_val, claripy.ast.Bits):
@@ -317,8 +246,8 @@ class DiffResult:
                  mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]],
                  reg_diff: dict[str, tuple[claripy.ast.bits, claripy.ast.bits]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
-                 annotation_diff: FieldDiff | None,
-                 ret_annotation_diff: FieldDiff | None):
+                 annotation_diff: AnnotationDiff | None,
+                 ret_annotation_diff: AnnotationDiff | None):
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
@@ -497,7 +426,7 @@ class StateDiff:
         if compute_side_effect_diff:
             left_effects = side_effect.get_effects(sl)
             right_effects = side_effect.get_effects(sr)
-            all_channels = set(left_effects.keys())
+            all_channels: set[str] = set(left_effects.keys())
             all_channels.update(right_effects.keys())
             for channel in all_channels:
                 left_channel = left_effects.get(channel, [])
@@ -517,7 +446,7 @@ class StateDiff:
 
                 ret_side_effect_diff[channel] = diff
 
-        ret_annotated_diff: FieldDiff | None = None
+        ret_annotated_diff: AnnotationDiff | None = None
         # Compute annotated memory difference
         if compute_annotated_diff:
             if annotations_left is None or annotations_right is None:
@@ -531,13 +460,15 @@ class StateDiff:
             resolved_annotation_left: NestedDict[claripy.ast.Bits] = annotations_left.map(functools.partial(f, sl))
             resolved_annotation_right: NestedDict[claripy.ast.Bits] = annotations_right.map(functools.partial(f, sr))
 
-            ret_annotated_diff = compare_structured_values(joint_solver, resolved_annotation_left, resolved_annotation_right)
+            mem_diff: FieldDiff = compare_structured_values(joint_solver, resolved_annotation_left, resolved_annotation_right)
+            ret_annotated_diff = AnnotationDiff(mem_diff, resolved_annotation_left, resolved_annotation_right)
 
         # Compute return value difference
-        ret_return_diff: FieldDiff | None = None
+        ret_return_diff: AnnotationDiff | None = None
         if compute_ret_annotation_diff:
             if ret_annotations_left is not None and ret_annotations_right is not None:
-                ret_return_diff = compare_structured_values(joint_solver, ret_annotations_left, ret_annotations_right)
+                ret_diff: FieldDiff = compare_structured_values(joint_solver, ret_annotations_left, ret_annotations_right)
+                ret_return_diff = AnnotationDiff(ret_diff, ret_annotations_left, ret_annotations_right)
 
         return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff, ret_annotated_diff, ret_return_diff)
 
@@ -592,7 +523,8 @@ class CompatiblePair:
                  # TODO: Expose the subregister structure somewhere
                  reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
-                 annotation_diff: FieldDiff | None,
+                 annotation_diff: AnnotationDiff | None,
+                 ret_annotation_diff: AnnotationDiff | None,
                  mem_diff_ip: dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
                  compare_std_out: bool,
                  compare_std_err: bool):
@@ -601,6 +533,7 @@ class CompatiblePair:
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
+        self.ret_annotation_diff = ret_annotation_diff
         self.annotation_diff = annotation_diff
         self.mem_diff_ip = mem_diff_ip
         self.compare_std_out = compare_std_out
@@ -614,7 +547,7 @@ class CompatiblePair:
         return True
 
     def equal_annotations(self) -> bool:
-        return self.annotation_diff is None or isinstance(self.annotation_diff, EqFieldDiff)
+        return self.annotation_diff is None or self.annotation_diff.is_equal
 
     def equal(self) -> bool:
         """
@@ -651,14 +584,15 @@ class CompatiblePair:
         joint_solver.add(sr.solver.constraints)
 
         rangeless_mem_diff = {(rng.start, rng.stop): val for (rng, val) in self.mem_diff.items()}
-        state_bundle = (args, rangeless_mem_diff, self.reg_diff, self.state_left.side_effects, self.state_right.side_effects)
+        state_bundle = (args, rangeless_mem_diff, self.reg_diff, self.state_left.side_effects, self.state_right.side_effects, self.annotation_diff.left, self.annotation_diff.right)
         concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
 
         ret = []
-        for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right) in concrete_results:
+        for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right, annotation_left, annotation_right) in concrete_results:
             range_conc_mem_diff = {range(start, stop): val for ((start, stop), val) in conc_mem_diff.items()}
             ret.append(CompatiblePairInput(conc_args, range_conc_mem_diff, conc_reg_diff,
-                                           conc_side_effects_left, conc_side_effects_right))
+                                           conc_side_effects_left, conc_side_effects_right,
+                                           annotation_left, annotation_right))
 
         return ret
 
@@ -846,6 +780,7 @@ class Comparison:
                     reg_diff = diff.reg_diff
                     side_effect_diff = diff.side_effect_diff
                     annotation_diff = diff.annotation_diff
+                    ret_annotation_diff = diff.ret_annotation_diff
 
                     def get_ip_set(interval_dict, r: range):
                         # Query the interval dictionary for all entries in the desired range, then union
@@ -859,7 +794,8 @@ class Comparison:
                     }
 
                     comparison = CompatiblePair(state_pre, state_post, mem_diff, reg_diff, side_effect_diff,
-                                                annotation_diff, mem_diff_ip, self.compare_std_out, self.compare_std_err)
+                                                annotation_diff, ret_annotation_diff, mem_diff_ip,
+                                                self.compare_std_out, self.compare_std_err)
                     self.pairs[(state_pre.state, state_post.state)] = comparison
 
     def get_pair(self, state_left: SimState, state_right: SimState) -> CompatiblePair:
@@ -989,11 +925,11 @@ class Comparison:
 
                     if self.compare_annotated_memory:
                         # Annotated memory diff
-                        if p.annotation_diff is None or isinstance(p.annotation_diff, EqFieldDiff):
+                        if p.annotation_diff is None or p.annotation_diff.is_equal:
                             output += "The annotated memory was equal for this state pair\n\n"
                         else:
                             output += f"Annotated memory difference detected for {i},{j}:\n"
-                            output += p.annotation_diff.diff_str()
+                            output += p.annotation_diff.diff.diff_str()
                             output += "\n\n"
                     else:
                         output += "Annotated memory comparison skipped as this option was disabled in the configuration\n"

@@ -112,7 +112,6 @@ class DeadendedState(TerminalState):
 
         :ivar SimState state: The state that terminated normally.
         :ivar int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
-        :ivar return_val: What the function returned, as determined by the function's prototype. This value may be None if the return type is void.
         """
         super().__init__(state, state_id, "DEADENDED_STATE")
 

@@ -13,6 +13,7 @@ from collections.abc import Callable
 from angr.state_plugins import SimStateHistory
 
 import cozy.analysis
+import cozy.field_diff
 from .functools_ext import fmap
 from .project import Project
 from .session import RunResult
@@ -53,11 +54,11 @@ def _serialize_diff(diff, nice_name_a: Callable[[int], str | None] | None = None
     return {convert_key(k): (convert_val(v1), convert_val(v2)) for (k, (v1, v2)) in diff.items()}
 
 def _serialized_field_diff(diff : any): 
-    if isinstance(diff, analysis.EqFieldDiff):
+    if isinstance(diff, cozy.field_diff.EqFieldDiff):
         return {"tag": "fieldEq", "left": str(diff.left_body), "right": str(diff.right_body)}
-    elif isinstance(diff, analysis.NotEqLeaf):
+    elif isinstance(diff, cozy.field_diff.NotEqLeaf):
         return {"tag": "leafNeq", "left": str(diff.left_leaf), "right": str(diff.right_leaf)}
-    elif isinstance(diff, analysis.NotEqFieldDiff):
+    elif isinstance(diff, cozy.field_diff.NotEqFieldDiff):
         return fmap(diff.body_diff, _serialized_field_diff)
     else:
         # fmap into dict labels, so we need this default case too

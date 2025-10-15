@@ -24,6 +24,12 @@ class NestedDict(Generic[A]):
     def __init__(self, data: dict):
         self.data = data
 
+    def __str__(self):
+        return f"NestedDict({self.data})"
+
+    def __repr__(self):
+        return self.__str__()
+
     @staticmethod
     def empty() -> 'NestedDict':
         return NestedDict(dict())

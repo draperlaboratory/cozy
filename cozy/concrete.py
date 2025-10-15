@@ -1,6 +1,7 @@
 import claripy
 from . import directive, claripy_ext
 from .functools_ext import *
+from .nested_dict import NestedDict
 from .side_effect import PerformedSideEffect, ConcretePerformedSideEffect
 
 
@@ -13,6 +14,8 @@ def _concretize(solver, state_bundle, n=1):
                         bundle_symbols.add(leaf)
         elif isinstance(elem, PerformedSideEffect):
             preorder_fold(elem.body, traverse, bundle_symbols)
+        elif isinstance(elem, NestedDict):
+            preorder_fold(elem.data, traverse, bundle_symbols)
         return bundle_symbols
 
     # First, walk over the state bundle to find all symbols contained within the nested data structure
@@ -30,6 +33,8 @@ def _concretize(solver, state_bundle, n=1):
                 return claripy.replace_dict(elem, replacement_dict)
             elif isinstance(elem, PerformedSideEffect):
                 return ConcretePerformedSideEffect(elem, elem.state_history, fmap(elem.body, f), concrete_post_processor=elem.concrete_post_processor, label=elem.label)
+            elif isinstance(elem, NestedDict):
+                return elem.map(f)
             else:
                 return elem
 
@@ -49,12 +54,17 @@ class CompatiblePairInput:
     """
 
     def __init__(self, args, mem_diff: dict[range, tuple[int, int]], reg_diff: dict[str, tuple[int, int]],
-                 left_side_effects: dict[str, list[ConcretePerformedSideEffect]], right_side_effects: dict[str, list[ConcretePerformedSideEffect]]):
+                 left_side_effects: dict[str, list[ConcretePerformedSideEffect]],
+                 right_side_effects: dict[str, list[ConcretePerformedSideEffect]],
+                 left_annotation: NestedDict[claripy.ast.Bits],
+                 right_annotation: NestedDict[claripy.ast.Bits]):
         self.args = args
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.left_side_effects = left_side_effects
         self.right_side_effects = right_side_effects
+        self.left_annotation = left_annotation
+        self.right_annotation = right_annotation
 
 class TerminalStateInput:
     """
