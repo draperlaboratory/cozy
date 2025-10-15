@@ -1,20 +1,37 @@
 import sys
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 import portion as P
 
 import angr, claripy
-from angr import SimStateError, SimState
+from angr import SimStateError, SimState, PointerWrapper
+from angr.calling_conventions import SimFunctionArgument
 from angr.sim_manager import ErrorRecord, SimulationManager
-from angr.sim_type import SimStruct, SimStructValue, SimTypePointer
+from angr.sim_type import SimStruct, SimStructValue, SimTypePointer, SimType
 from angr.state_plugins import SimMemView
 
 from . import log, side_effect, claripy_ext
+from .nested_dict import NestedDict
 from .underconstrained import SimConcretizationStrategyUnderconstrained
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
 import cozy
+
+def follow_pointers(state: SimState, value, ty: SimType):
+    if isinstance(ty, SimTypePointer):
+        addr = state.solver.eval(value)
+        return PointerWrapper(ty.pts_to.extract(state, addr))
+    elif isinstance(ty, SimStruct):
+        assert(isinstance(value, SimStructValue))
+        ret_val = value.copy()
+        for (field_name, field_type) in value.struct.fields.items():
+            field_val = ret_val[field_name]
+            ret_val[field_name] = follow_pointers(state, field_val, field_type)
+        return ret_val
+    else:
+        return value
 
 # This size is used to malloc nonaliasing memory contents in underconstrained symbolic execution
 UNDERCONSTRAINED_CHUNK_SIZE = 20 * 1_000_000 # 20 megabytes
@@ -56,17 +73,20 @@ class RunResult:
     :ivar list[SpinningState] spinning: States that were stashed due to a loop bound being breached.
     :ivar UnderconstrainedMachineState | None underconstrained_machine_state: The inferred memory layout of the input\
     machine state. This field is not None only if underconstrained_execution is enabled for the session.
-    :ivar list[tuple[list[str | int], SimMemView]] annotations: A list of paths to memory locations containing\
+    :ivar dict annotations: A list of paths to memory locations containing\
     the input arguments. cozy will use this information to help provide a human readable dump of how the\
     program being executed mutated its input arguments. This allows for comparison of the input arguments memory\
     in situations where the memory location or memory layout of the input argument differs between the programs.
+    :ivar dict[DeadendedState, NestedDict[claripy.ast.bits]] return_annotations: If the\
+    :py:meth:`RunResult.annotate_return` was called, then this dictionary will be populated with the annotated\
+    return information of the run. If the method was not called, this dictionary will remain empty.
     """
-    def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
+    def __init__(self, sess: 'Session', deadended: list[DeadendedState], errored: list[ErrorState],
                  asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
                  postconditions_failed: list[PostconditionFailedState],
                  spinning: list[SpinningState],
-                 underconstrained_machine_state: UnderconstrainedMachineState | None,
-                 annotations: dict[tuple[str | int, ...], SimMemView]):
+                 underconstrained_machine_state: UnderconstrainedMachineState | None):
+        self.session = sess
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
@@ -74,7 +94,31 @@ class RunResult:
         self.postconditions_failed = postconditions_failed
         self.spinning = spinning
         self.underconstrained_machine_state = underconstrained_machine_state
-        self.annotations = annotations
+        self.annotations: NestedDict[SimMemView] = sess.annotations
+        self._return_annotations: dict[DeadendedState, NestedDict[claripy.ast.Bits]] = dict()
+
+    def annotate_return(self, annotator: Callable[[SimState, Any, SimType], NestedDict[claripy.ast.Bits]]):
+        """
+        Adds a return result annotation to every deadended state in this return result. This is accomplished\
+        by providint an annotator callback. This annotator will be passed three values: the angr\
+        :py:class:`~angr.sim_state.SimState`, the return value of the function and the type of the return result.\
+        The Python type of the return value will depend on the return type of the function under analysis.\
+        It may be a claripy AST bitvector if the return value is an integer for instance, or it may be\
+        something like an angr SimStructValue if the return result is a struct. Note that if the return result\
+        is a pointer, the address of the pointer is passed, not the contents of the memory that is being pointed to.
+        """
+        for dstate in self.deadended:
+            state = dstate.state
+            ret_val = self.session.get_return_value(state)
+            typ = self.session.return_type
+            ann = annotator(state, ret_val, typ)
+            self._return_annotations[dstate] = ann
+
+    def get_return_annotation(self, state: DeadendedState) -> NestedDict[claripy.ast.Bits] | None:
+        if state in self._return_annotations:
+            return self._return_annotations[state]
+        else:
+            return None
 
     @property
     def assertion_triggered(self) -> bool:
@@ -678,10 +722,10 @@ class Session:
 
         self.prototype = None
 
-        self._internal_return_val = None
+        self._internal_return_val: SimFunctionArgument | None = None
         self._constructed_return_val = False
 
-        self.annotations: dict[tuple[str | int, ...], SimMemView] = dict()
+        self.annotations: NestedDict[SimMemView] = NestedDict.empty()
 
     def _initialize_regs(self, state: angr.SimState):
         # Make sure any unconstrained registers are initialized by poking them with a getattr request
@@ -835,12 +879,16 @@ class Session:
             return _SessionBasicExploration(self, cache_intermediate_info=cache_intermediate_info)
 
     @property
-    def _return_val(self):
+    def return_type(self):
+        return self.prototype.returnty
+
+    @property
+    def _return_val(self) -> SimFunctionArgument | None:
         # This method is used to cache the return value accessor so we don't have to reconstruct
         # the calling convention and so forth every time we call _get_return_value
         if not self._constructed_return_val:
             self._constructed_return_val = True
-            return_ty = self.prototype.returnty
+            return_ty = self.return_type
             if isinstance(return_ty, angr.sim_type.SimTypeBottom):
                 self._internal_return_val = None
             else:
@@ -849,7 +897,7 @@ class Session:
                 self._internal_return_val = cc.return_val(return_ty)
         return self._internal_return_val
 
-    def _get_return_value(self, state):
+    def get_return_value(self, state):
         # This method will give the return value of the function after it has been completely executed
         if self.prototype is not None:
             ret_val = self._return_val
@@ -858,7 +906,7 @@ class Session:
         return None
 
     def _run_result(self, simgr: SimulationManager, sess_exploration: _SessionExploration) -> RunResult:
-        deadended = [DeadendedState(state, i, self._get_return_value(state)) for (i, state) in enumerate(simgr.deadended)]
+        deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
         errored = [ErrorState(error_record, i) for (i, error_record) in enumerate(simgr.errored)]
         asserts_failed = [assert_failed for assert_failed in sess_exploration.asserts_failed
                           if assert_failed.assertion not in sess_exploration.asserts_to_scrub]
@@ -880,8 +928,8 @@ class Session:
         else:
             underconstrained_machine_state = None
 
-        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed,
-                         spinning, underconstrained_machine_state, self.annotations)
+        return RunResult(self, deadended, errored, asserts_failed, sess_exploration.assume_warnings,
+                         postconditions_failed, spinning, underconstrained_machine_state)
 
     def annotate_memory(self, path: tuple[str | int, ...], mem: SimMemView):
         """

@@ -8,7 +8,7 @@ from angr.sim_manager import ErrorRecord
 from . import side_effect
 from .concrete import _concretize, TerminalStateInput
 import claripy
-from .directive import Assert, VirtualPrint, Postcondition
+from .directive import Assert, Postcondition
 from .side_effect import PerformedSideEffect
 
 
@@ -106,7 +106,7 @@ class DeadendedState(TerminalState):
     """
     This class is used to indicate that execution terminated normally in the contained state.
     """
-    def __init__(self, state: SimState, state_id: int, return_val):
+    def __init__(self, state: SimState, state_id: int):
         """
         Constructor for DeadendedState
 
@@ -115,7 +115,6 @@ class DeadendedState(TerminalState):
         :ivar return_val: What the function returned, as determined by the function's prototype. This value may be None if the return type is void.
         """
         super().__init__(state, state_id, "DEADENDED_STATE")
-        self.return_val = return_val
 
 class SpinningState(TerminalState):
     """
