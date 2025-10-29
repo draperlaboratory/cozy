@@ -51,10 +51,10 @@ class CompatiblePairInput:
     :ivar dict[str, tuple[claripy.ast.Bits, claripy.ast.Bits]] reg_diff: Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.
     :ivar dict[str, list[ConcretePerformedSideEffect]] left_side_effects: Concretized versions of side effects made by the prepatched state.
     :ivar dict[str, list[ConcretePerformedSideEffect]] right_side_effects: Concretized versions of side_effects made by the postpatched state.
-    :ivar NestedDict[claripy.ast.Base] | None left_annotation: Concretized version of the memory annotated with :py:meth:`cozy.session.Session.annotate_memory` for the first program.
-    :ivar NestedDict[claripy.ast.Base] | None right_annotation: Concretized version of the memory annotated with :py:meth:`cozy.session.Session.annotate_memory` for the second program.
-    :ivar NestedDict[claripy.ast.Base] | None left_ret_annotation: Concretized version of the annotated return results for the first program. These annotations were created via :py:meth:`cozy.session.Session.annotate_return`.
-    :ivar NestedDict[claripy.ast.Base] | None right_ret_annotation: Concretized version of the annotated return results for the second program. These annotations were created via :py:meth:`cozy.session.Session.annotate_return`
+    :ivar NestedDict[claripy.ast.Base] left_annotation: Concretized version of the memory annotated with :py:meth:`cozy.session.Session.annotate_memory` for the first program.
+    :ivar NestedDict[claripy.ast.Base] right_annotation: Concretized version of the memory annotated with :py:meth:`cozy.session.Session.annotate_memory` for the second program.
+    :ivar NestedDict[claripy.ast.Base] left_ret_annotation: Concretized version of the annotated return results for the first program. These annotations were created via :py:meth:`cozy.session.RunResult.annotate_return`.
+    :ivar NestedDict[claripy.ast.Base] right_ret_annotation: Concretized version of the annotated return results for the second program. These annotations were created via :py:meth:`cozy.session.RunResult.annotate_return`
     """
     def __init__(self,
                  args,

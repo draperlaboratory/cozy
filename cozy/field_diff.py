@@ -123,7 +123,7 @@ class NotEqFieldDiff(FieldDiff):
             ret = dict()
             for (k, v) in self.body_diff.items():
                 if not isinstance(v, EqFieldDiff):
-                    ret[k] = self._rec_compute_neq(left)
+                    ret[k] = v._rec_compute_neq(left)
             return ret
 
     @property

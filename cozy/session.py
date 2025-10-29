@@ -107,7 +107,8 @@ class RunResult:
         The Python type of the return value will depend on the return type of the function under analysis.\
         It may be a claripy AST bitvector if the return value is an integer for instance, or it may be\
         something like an angr SimStructValue if the return result is a struct. Note that if the return result\
-        is a pointer, the address of the pointer is passed, not the contents of the memory that is being pointed to.
+        is a pointer, the address of the pointer is passed to the annotator, not the contents of the memory that\
+        is being pointed to.
         """
         for dstate in self.deadended:
             state = dstate.state
@@ -116,11 +117,11 @@ class RunResult:
             ann = annotator(state, ret_val, typ)
             self._return_annotations[dstate] = ann
 
-    def get_return_annotation(self, state: DeadendedState) -> NestedDict[claripy.ast.Bits] | None:
+    def get_return_annotation(self, state: DeadendedState) -> NestedDict[claripy.ast.Bits]:
         if state in self._return_annotations:
             return self._return_annotations[state]
         else:
-            return None
+            return NestedDict.empty()
 
     @property
     def assertion_triggered(self) -> bool:

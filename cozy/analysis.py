@@ -246,8 +246,8 @@ class DiffResult:
                  mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]],
                  reg_diff: dict[str, tuple[claripy.ast.bits, claripy.ast.bits]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
-                 annotation_diff: AnnotationDiff | None,
-                 ret_annotation_diff: AnnotationDiff | None):
+                 annotation_diff: FieldDiff | None,
+                 ret_annotation_diff: FieldDiff | None):
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
@@ -271,10 +271,10 @@ class StateDiff:
                    compute_side_effect_diff=True,
                    compute_annotated_diff=True,
                    compute_ret_annotation_diff=False,
-                   annotations_left: NestedDict[SimMemView] | None = None,
-                   annotations_right: NestedDict[SimMemView] | None = None,
-                   ret_annotations_left: NestedDict[claripy.ast.bits] | None=None,
-                   ret_annotations_right: NestedDict[claripy.ast.bits] | None=None,
+                   annotations_left: NestedDict[SimMemView] = None,
+                   annotations_right: NestedDict[SimMemView] = None,
+                   ret_annotations_left: NestedDict[claripy.ast.bits] = None,
+                   ret_annotations_right: NestedDict[claripy.ast.bits] = None,
                    use_unsat_core=True,
                    simplify=False,
                    extra_constraints=[]) -> DiffResult | None:
@@ -298,10 +298,10 @@ class StateDiff:
         by using the :py:meth:`cozy.session.Session.annotate_memory`
         :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
         comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
-        :param annotations_left: A dictionary mapping paths (annotations) to their associated memory views for the\
-        first state.
-        :param annotations_right: A dictionary mapping paths (annotations) to their associated memory views for the\
-        second state. This dictionary must have the same keys as annotations_left.
+        :param annotations_left: The memory annotations attached to the left state
+        :param annotations_right: The memory annotations attached to the right state
+        :param ret_annotations_left: Return value annotations for the left state
+        :param ret_annotations_right: Return value annotations for the right state
         :return: None if the two states are not compatible, otherwise returns an object containing the memory,\
         register differences, and side effect differences.
         :rtype: DiffResult | None
@@ -446,7 +446,7 @@ class StateDiff:
 
                 ret_side_effect_diff[channel] = diff
 
-        ret_annotated_diff: AnnotationDiff | None = None
+        ret_annotated_diff: FieldDiff | None = None
         # Compute annotated memory difference
         if compute_annotated_diff:
             if annotations_left is None or annotations_right is None:
@@ -461,14 +461,13 @@ class StateDiff:
             resolved_annotation_right: NestedDict[claripy.ast.Bits] = annotations_right.map(functools.partial(f, sr))
 
             mem_diff: FieldDiff = compare_structured_values(joint_solver, resolved_annotation_left, resolved_annotation_right)
-            ret_annotated_diff = AnnotationDiff(mem_diff, resolved_annotation_left, resolved_annotation_right)
+            ret_annotated_diff = mem_diff
 
         # Compute return value difference
-        ret_return_diff: AnnotationDiff | None = None
+        ret_return_diff: FieldDiff | None = None
         if compute_ret_annotation_diff:
             if ret_annotations_left is not None and ret_annotations_right is not None:
-                ret_diff: FieldDiff = compare_structured_values(joint_solver, ret_annotations_left, ret_annotations_right)
-                ret_return_diff = AnnotationDiff(ret_diff, ret_annotations_left, ret_annotations_right)
+                ret_return_diff = compare_structured_values(joint_solver, ret_annotations_left, ret_annotations_right)
 
         return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff, ret_annotated_diff, ret_return_diff)
 
@@ -505,10 +504,10 @@ class CompatiblePair:
     from the left binary, the second element is the performed side effect from the right binary, and the third element\
     is the diff between the body of the side effects. Note that the performed side effect may be None in the case\
     where there was no corresponding side effect in the other state as determined by the alignment algorithm.
-    :ivar AnnotationDiff | None annotation_diff: An object containing diff information about memory annotated with\
+    :ivar FieldDiff annotation_diff: An object containing diff information about memory annotated with\
     :py:meth:`cozy.session.Session.annotate_memory`.
-    :ivar AnnotationDiff | None ret_annnotation_diff: An object containing diff information about memory annotated with\
-    :py:meth:`cozy.session.Session.annotate_return`.
+    :ivar FieldDiff ret_annnotation_diff: An object containing diff information about memory annotated with\
+    :py:meth:`cozy.session.RunResult.annotate_return`.
     :ivar dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory
     addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases
     the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
@@ -524,8 +523,8 @@ class CompatiblePair:
                  # TODO: Expose the subregister structure somewhere
                  reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
-                 annotation_diff: AnnotationDiff | None,
-                 ret_annotation_diff: AnnotationDiff | None,
+                 annotation_diff: FieldDiff | None,
+                 ret_annotation_diff: FieldDiff | None,
                  mem_diff_ip: dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
                  compare_std_out: bool,
                  compare_std_err: bool):
@@ -588,10 +587,10 @@ class CompatiblePair:
 
         state_bundle = (args, rangeless_mem_diff, self.reg_diff,
                         self.state_left.side_effects, self.state_right.side_effects,
-                        self.annotation_diff.left if self.annotation_diff is not None else None,
-                        self.annotation_diff.right if self.annotation_diff is not None else None,
-                        self.ret_annotation_diff.left if self.ret_annotation_diff is not None else None,
-                        self.ret_annotation_diff.right if self.ret_annotation_diff is not None else None)
+                        self.annotation_diff.left_neq() if self.annotation_diff is not None else NestedDict.empty(),
+                        self.annotation_diff.right_neq() if self.annotation_diff is not None else NestedDict.empty(),
+                        self.ret_annotation_diff.left_neq() if self.ret_annotation_diff is not None else NestedDict.empty(),
+                        self.ret_annotation_diff.right_neq() if self.ret_annotation_diff is not None else NestedDict.empty())
 
         concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
 
@@ -760,8 +759,8 @@ class Comparison:
                     ret_annotations_pre = pre_patched.get_return_annotation(state_pre)
                     ret_annotations_post = post_patched.get_return_annotation(state_post)
                 else:
-                    ret_annotations_pre = None
-                    ret_annotations_post = None
+                    ret_annotations_pre = NestedDict.empty()
+                    ret_annotations_post = NestedDict.empty()
 
                 diff = memoized_diff.difference(
                     state_pre.state, state_post.state,
@@ -938,7 +937,7 @@ class Comparison:
                             output += "The annotated memory was equal for this state pair\n\n"
                         else:
                             output += f"Annotated memory difference detected for {i},{j}:\n"
-                            output += p.annotation_diff.diff.diff_str()
+                            output += str(p.annotation_diff)
                             output += "\n\n"
                     else:
                         output += "Annotated memory comparison skipped as this option was disabled in the configuration\n"

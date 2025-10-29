@@ -131,7 +131,7 @@ if input("Would you like to view error states for weather-patched-2? (y/n)") == 
 
 if input("Would you like to compare weather-orig and weather-patched-1? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-ORIG and WEATHER-PATCHED-1")
-    comparison_results = analysis.Comparison(weather_orig_states, weather_patched_1_states, compare_memory=True, compare_registers=True)
+    comparison_results = analysis.Comparison(weather_orig_states, weather_patched_1_states)
     print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))
 
     if dump_execution_graphs:
