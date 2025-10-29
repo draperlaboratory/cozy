@@ -9,7 +9,7 @@ import angr, claripy
 from angr import SimStateError, SimState, PointerWrapper
 from angr.calling_conventions import SimFunctionArgument
 from angr.sim_manager import ErrorRecord, SimulationManager
-from angr.sim_type import SimStruct, SimStructValue, SimTypePointer, SimType
+from angr.sim_type import SimStruct, SimStructValue, SimTypePointer, SimType, SimUnionValue
 from angr.state_plugins import SimMemView
 
 from . import log, side_effect, claripy_ext
@@ -97,7 +97,9 @@ class RunResult:
         self.annotations: NestedDict[SimMemView] = sess.annotations
         self._return_annotations: dict[DeadendedState, NestedDict[claripy.ast.Bits]] = dict()
 
-    def annotate_return(self, annotator: Callable[[SimState, Any, SimType], NestedDict[claripy.ast.Bits]]):
+    def annotate_return(self,
+                        annotator: Callable[[SimState, claripy.ast.Bits | SimStructValue | SimUnionValue, SimType],
+                        NestedDict[claripy.ast.Bits]]):
         """
         Adds a return result annotation to every deadended state in this return result. This is accomplished\
         by providint an annotator callback. This annotator will be passed three values: the angr\
@@ -956,7 +958,7 @@ class Session:
         typ = mem._type
         if isinstance(typ, SimStruct):
             for field_name in typ.fields.keys():
-                refined_path = path + [field_name]
+                refined_path = path + (field_name,)
                 self.annotate_memory(refined_path, getattr(mem, field_name))
         elif isinstance(typ, SimTypePointer):
             self.annotate_memory(path, mem.deref)

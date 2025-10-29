@@ -1,3 +1,6 @@
+from cozy.nested_dict import NestedDict
+
+
 class FieldDiff:
     def _rec_diff_str(self):
         raise NotImplementedError()
@@ -5,6 +8,26 @@ class FieldDiff:
     def diff_str(self) -> str:
         return str(self._rec_diff_str())
 
+    def _rec_compute_neq(self, left: bool):
+        raise NotImplementedError()
+
+    def _compute_neq(self, left: bool):
+        if isinstance(self, EqFieldDiff):
+            return NestedDict.empty()
+        elif isinstance(self, NotEqLeaf):
+            return NestedDict({"value": self._rec_compute_neq(left)})
+        else:
+            return NestedDict(self._rec_compute_neq(left))
+
+    def left_neq(self) -> NestedDict:
+        return self._compute_neq(True)
+
+    def right_neq(self) -> NestedDict:
+        return self._compute_neq(False)
+
+    @property
+    def is_equal(self):
+        raise NotImplementedError()
 
 class EqFieldDiff(FieldDiff):
     """
@@ -25,6 +48,12 @@ class EqFieldDiff(FieldDiff):
     def __repr__(self):
         return self.__str__()
 
+    def _rec_compute_neq(self, left: bool):
+        return dict()
+
+    @property
+    def is_equal(self):
+        return True
 
 class NotEqLeaf(FieldDiff):
     """
@@ -43,6 +72,15 @@ class NotEqLeaf(FieldDiff):
     def __repr__(self):
         return self.__str__()
 
+    def _rec_compute_neq(self, left: bool):
+        if left:
+            return self.left_leaf
+        else:
+            return self.right_leaf
+
+    @property
+    def is_equal(self):
+        return False
 
 class NotEqFieldDiff(FieldDiff):
     """
@@ -73,3 +111,21 @@ class NotEqFieldDiff(FieldDiff):
 
     def __repr__(self):
         return self.__str__()
+
+    def _rec_compute_neq(self, left: bool):
+        if isinstance(self.body_diff, list) or isinstance(self.body_diff, tuple):
+            ret = dict()
+            for (i, elem) in enumerate(self.body_diff):
+                if not isinstance(elem, EqFieldDiff):
+                    ret[i] = elem._rec_compute_neq(left)
+            return ret
+        elif isinstance(self.body_diff, dict):
+            ret = dict()
+            for (k, v) in self.body_diff.items():
+                if not isinstance(v, EqFieldDiff):
+                    ret[k] = self._rec_compute_neq(left)
+            return ret
+
+    @property
+    def is_equal(self):
+        return False

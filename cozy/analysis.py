@@ -505,9 +505,10 @@ class CompatiblePair:
     from the left binary, the second element is the performed side effect from the right binary, and the third element\
     is the diff between the body of the side effects. Note that the performed side effect may be None in the case\
     where there was no corresponding side effect in the other state as determined by the alignment algorithm.
-    :ivar dict annotated_diff: A nested dictionary structure containing diff information about memory annotated with\
-    :py:meth:`cozy.session.Session.annotate_memory`. The keys of the nested dictionary will correspond to paths where\
-    executing the program caused the annotated memory to be different.
+    :ivar AnnotationDiff | None annotation_diff: An object containing diff information about memory annotated with\
+    :py:meth:`cozy.session.Session.annotate_memory`.
+    :ivar AnnotationDiff | None ret_annnotation_diff: An object containing diff information about memory annotated with\
+    :py:meth:`cozy.session.Session.annotate_return`.
     :ivar dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory
     addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases
     the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
@@ -584,15 +585,23 @@ class CompatiblePair:
         joint_solver.add(sr.solver.constraints)
 
         rangeless_mem_diff = {(rng.start, rng.stop): val for (rng, val) in self.mem_diff.items()}
-        state_bundle = (args, rangeless_mem_diff, self.reg_diff, self.state_left.side_effects, self.state_right.side_effects, self.annotation_diff.left, self.annotation_diff.right)
+
+        state_bundle = (args, rangeless_mem_diff, self.reg_diff,
+                        self.state_left.side_effects, self.state_right.side_effects,
+                        self.annotation_diff.left if self.annotation_diff is not None else None,
+                        self.annotation_diff.right if self.annotation_diff is not None else None,
+                        self.ret_annotation_diff.left if self.ret_annotation_diff is not None else None,
+                        self.ret_annotation_diff.right if self.ret_annotation_diff is not None else None)
+
         concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
 
         ret = []
-        for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right, annotation_left, annotation_right) in concrete_results:
+        for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right, annotation_left, annotation_right, ret_annotation_left, ret_annotation_right) in concrete_results:
+
             range_conc_mem_diff = {range(start, stop): val for ((start, stop), val) in conc_mem_diff.items()}
             ret.append(CompatiblePairInput(conc_args, range_conc_mem_diff, conc_reg_diff,
                                            conc_side_effects_left, conc_side_effects_right,
-                                           annotation_left, annotation_right))
+                                           annotation_left, annotation_right, ret_annotation_left, ret_annotation_right))
 
         return ret
 
