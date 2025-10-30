@@ -99,7 +99,7 @@ class RunResult:
 
     def annotate_return(self,
                         annotator: Callable[[SimState, claripy.ast.Bits | SimStructValue | SimUnionValue, SimType],
-                        NestedDict[claripy.ast.Bits] | dict]):
+                        NestedDict[claripy.ast.Bits] | dict[str | int, claripy.ast.Bits | dict]]):
         """
         Adds a return result annotation to every deadended state in this return result. This is accomplished\
         by providint an annotator callback. This annotator will be passed three values: the angr\
