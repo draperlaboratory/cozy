@@ -21,7 +21,7 @@ class NestedDict(Generic[A]):
     must be str or int values. Note that NestedDict objects should not contain NestedDict objects within their\
     data dictionary. In other words, NestedDict is a wrapper for a dict, and does not nest inside itself.
     """
-    def __init__(self, data: dict):
+    def __init__(self, data: dict[str | int, A | dict]):
         self.data = data
 
     def __str__(self):

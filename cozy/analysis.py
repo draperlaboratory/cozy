@@ -941,6 +941,15 @@ class Comparison:
                             output += "\n\n"
                     else:
                         output += "Annotated memory comparison skipped as this option was disabled in the configuration\n"
+
+                    if self.compare_return_annotation:
+                        # Annotated return diff
+                        if p.ret_annotation_diff is None or p.ret_annotation_diff.is_equal:
+                            output += "The annotated return value was equal for this state pair\n\n"
+                        else:
+                            output += f"Annotated return value detected for {i},{j}:\n"
+                            output += str(p.ret_annotation_diff)
+                            output += "\n\n"
                 else:
                     output += "Skipped memory and register differencing since the type of these two states are different.\n"
 
