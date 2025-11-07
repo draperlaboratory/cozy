@@ -59,10 +59,10 @@ def _serialize_field_diff(diff : Any):
         return {"tag": "leafNeq", "left": str(diff.left_leaf), "right": str(diff.right_leaf)}
     elif isinstance(diff, NotEqFieldDiff):
         return fmap(diff.body_diff, _serialize_field_diff)
-    elif isinstance(diff, dict):
+    elif isinstance(diff, dict) or isinstance(diff, list) or isinstance(diff, tuple):
         return diff #result of fmapping a body_diff
     else:
-        # fmap into dict labels, so we need this default case too
+        # fmap goes into dict labels, so we need this default case too
         return str(diff)
 
 def dump_comparison(proj_a: Project, proj_b: Project,
