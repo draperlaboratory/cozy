@@ -14,7 +14,6 @@ export function annotationToLeaves(annotation, path = "root") {
   if (isLeaf(annotation)) {
     return [{...annotation, path}]
   }
-  return Object.entries(annotation).flatMap(([k,v]) => {
-    annotationToLeaves(v,`${path}.${k}`)
-  });
+  return Object.entries(annotation)
+    .flatMap(([k,v]) => annotationToLeaves(v,`${path}.${k}`));
 }

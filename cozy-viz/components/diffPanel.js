@@ -5,6 +5,7 @@ import ActionDifference from './actionDifference.js'
 import AssemblyDifference from './assemblyDifference.js'
 import RegisterDifference from './registerDifference.js'
 import MemoryDifference from './memoryDifference.js'
+import ResultDifference from './resultDifference.js'
 import SideEffectDifference from './sideEffectDifference.js'
 
 export default class DiffPanel extends Component {
@@ -55,6 +56,8 @@ export default class DiffPanel extends Component {
       props.leftFocus?.top.outgoers("edge")[0]?.data('actions')?.length > 0
     const sideEffectsAvailable = props.leftFocus && props.rightFocus &&
       props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.conc_sediff
+    const resultAnnotationsAvailable = props.leftFocus && props.rightFocus &&
+      props.leftFocus.bot.data().compatibilities?.[props.rightFocus.bot.id()]?.ret_annotation_diff
     return html`<div id="diff-panel" onMouseEnter=${props.onMouseEnter} ref=${this.diffPanel}>
       <div id="diff-drag-handle"
         onPointerDown=${e => this.startResize(e)} 
@@ -88,6 +91,10 @@ export default class DiffPanel extends Component {
           onClick=${() => this.toggleMode("side-effects")}>
           Side Effects
         </button>
+        <button disabled=${!resultAnnotationsAvailable}
+          onClick=${() => this.toggleMode("result-annotations")}>
+          Results
+        </button>
       </div>
       ${state.mode == "assembly" && assemblyAvailable && html`
         <${AssemblyDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
@@ -106,6 +113,9 @@ export default class DiffPanel extends Component {
       }
       ${state.mode == "side-effects" && sideEffectsAvailable && html`
         <${SideEffectDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
+      }
+      ${state.mode == "result-annotations" && resultAnnotationsAvailable && html`
+        <${ResultDifference} rightFocus=${props.rightFocus} leftFocus=${props.leftFocus}/>`
       }
       </div>`
   }
