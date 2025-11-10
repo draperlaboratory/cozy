@@ -65,6 +65,14 @@ def _serialize_field_diff(diff : Any):
         # fmap goes into dict labels, so we need this default case too
         return str(diff)
 
+def _serialize_conc_annotation(diff : Any): 
+    def skip_containers(c):
+        if isinstance(c, dict) or isinstance(c, list) or isinstance(c, tuple):
+            return c 
+        else:
+            return str(c)
+    return fmap(diff, skip_containers)
+
 def dump_comparison(proj_a: Project, proj_b: Project,
                     rslt_a: RunResult, rslt_b: RunResult,
                     comparison_results: analysis.Comparison,
@@ -297,6 +305,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 concrete_args = fmap(concrete_args, f)
 
                 conc_sediff = []
+                conc_annotation_diff = []
+                conc_ret_annotation_diff = []
 
                 def serialize_conc_effect(effect, graph):
                     try:
@@ -313,6 +323,14 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                             "right": list(map(lambda x: serialize_conc_effect(x, g_b), c.right_side_effects[channel]))
                         }
                     conc_sediff.append(channels)
+                    conc_annotation_diff.append({
+                        "left" : c.left_annotation.data,
+                        "right" : c.right_annotation.data
+                    })
+                    conc_ret_annotation_diff.append({
+                        "left" : c.left_ret_annotation.data,
+                        "right" : c.right_ret_annotation.data
+                    })
 
                 simplified_side_effect_diff = {}
 
@@ -336,7 +354,9 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 }
                 if include_annotations:
                     info["annotation_diff"] = _serialize_field_diff(comp.annotation_diff)
+                    info["conc_annotation_diff"] = _serialize_conc_annotation(conc_annotation_diff)
                     info["ret_annotation_diff"] = _serialize_field_diff(comp.ret_annotation_diff)
+                    info["conc_ret_annotation_diff"] = _serialize_conc_annotation(conc_ret_annotation_diff)
                 g_a.nodes[na]["compatibilities"][nb] = info
                 g_b.nodes[nb]["compatibilities"][na] = info
 
