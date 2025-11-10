@@ -1,7 +1,7 @@
 import { html } from 'https://unpkg.com/htm/preact/index.module.js?module'
 import { Component } from 'https://unpkg.com/preact@latest?module'
 import ConcretionSelector from './concretionSelector.js'
-import { annotationToLeaves } from '../util/annotationToLeaves.js'
+import { symAnnotationToLeaves, concAnnotationToLeaves } from '../util/annotationToLeaves.js'
 
 export default class MemoryDifference extends Component {
   constructor() {
@@ -11,28 +11,33 @@ export default class MemoryDifference extends Component {
 
   render(props, state) {
     const rightId = props.rightFocus.bot.id()
-    const rslt_annotation_rows = []
+    const annotation_rows = []
     const annotations = props.leftFocus.bot.data().compatibilities[rightId]?.ret_annotation_diff
-    console.log(annotations)
-    const annotation_leaves = annotationToLeaves(annotations)
+    const conc_annotations = props.leftFocus.bot.data().compatibilities[rightId]?.conc_ret_annotation_diff
+    const anno_diffs = state.view === "symbolic"
+      ? symAnnotationToLeaves(annotations)
+      : concAnnotationToLeaves(conc_annotations[state.view])
 
-    if (state.view == "symbolic") for (const annotation of annotation_leaves) {
-      if (annotation.tag === "leafNeq") rslt_annotation_rows.push(html`
-        <span class="grid-diff-left">${annotation.left}</span>
-        <span class="grid-diff-label">${annotation.path}</span>
-        <span class="grid-diff-right">${annotation.right}</span>`)
-      if (annotation.tag === "fieldEq") rslt_annotation_rows.push(html`
-        <span class="grid-diff-left">${annotation.left}</span>
-        <span class="grid-diff-label">${annotation.path}</span>
-        <span class="grid-diff-right">${"Annotations logically Equivalent ✓"}</span>`)
+    for (const annotation of anno_diffs) {
+      if (annotation.tag === "fieldEq") { 
+        annotation_rows.push(html`
+          <span class="grid-diff-left">${annotation.left}</span>
+          <span class="grid-diff-label">${annotation.path}</span>
+          <span class="grid-diff-right">${"Annotations logically Equivalent ✓"}</span>`)
+      } else {
+        annotation_rows.push(html`
+          <span class="grid-diff-left">${annotation.left}</span>
+          <span class="grid-diff-label">${annotation.path}</span>
+          <span class="grid-diff-right">${annotation.right}</span>`)
+      }
     }
 
     return html`<div>
       <${ConcretionSelector} 
         view=${state.view} 
         setView=${view => this.setState({ view })} 
-        concretionCount=${0}/>
-      ${annotations && html`<div id="grid-diff-data"> ${rslt_annotation_rows}</div>`}
+        concretionCount=${conc_annotations.length}/>
+      ${annotations && html`<div id="grid-diff-data"> ${annotation_rows}</div>`}
       </div>`
   }
 }
