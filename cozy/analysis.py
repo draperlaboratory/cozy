@@ -12,7 +12,6 @@ from angr.sim_type import SimStructValue
 
 import cozy.log
 from . import claripy_ext, log, side_effect
-from .annotation import AnnotationDiff
 from .field_diff import FieldDiff, EqFieldDiff, NotEqLeaf, NotEqFieldDiff
 from .nested_dict import NestedDict
 from .functools_ext import *
@@ -222,10 +221,10 @@ class StateDiff:
                    compute_side_effect_diff=True,
                    compute_annotated_diff=True,
                    compute_ret_annotation_diff=False,
-                   annotations_left: NestedDict[SimMemView] = None,
-                   annotations_right: NestedDict[SimMemView] = None,
-                   ret_annotations_left: NestedDict[claripy.ast.bits] = None,
-                   ret_annotations_right: NestedDict[claripy.ast.bits] = None,
+                   annotations_left: NestedDict[SimMemView] | None = None,
+                   annotations_right: NestedDict[SimMemView] | None = None,
+                   ret_annotations_left: NestedDict[claripy.ast.bits] | None = None,
+                   ret_annotations_right: NestedDict[claripy.ast.bits] | None = None,
                    use_unsat_core=True,
                    simplify=False,
                    extra_constraints=[]) -> DiffResult | None:

@@ -61,8 +61,9 @@ print(results_b.report(program_args))
 print("\nComparison Results:\n")
 print(comparison_results.report(program_args))
 
-cozy.execution_graph.visualize_comparison(proj_a, proj_b,
+cozy.execution_graph.dump_comparison(proj_a, proj_b,
                                           results_a, results_b,
                                           comparison_results,
                                           args=program_args,
-                                          num_examples=2, open_browser=True)
+                                          include_annotations=True,
+                                          num_examples=2)
