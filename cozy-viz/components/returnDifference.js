@@ -19,15 +19,16 @@ export default class ReturnDifference extends Component {
       : concAnnotationToLeaves(conc_annotations[state.view])
 
     for (const annotation of anno_diffs) {
+      const path = /root\.(.*)/.exec(annotation.path)[1] ?? annotation.path
       if (annotation.tag === "fieldEq") { 
         annotation_rows.push(html`
           <span class="grid-diff-left">${annotation.left}</span>
-          <span class="grid-diff-label">${annotation.path}</span>
-          <span class="grid-diff-right">${"Annotations logically Equivalent ✓"}</span>`)
+          <span class="grid-diff-label">${path}</span>
+          <span class="grid-diff-right">${annotation.right} <strong>(equivalent)</strong></span>`)
       } else {
         annotation_rows.push(html`
           <span class="grid-diff-left">${annotation.left}</span>
-          <span class="grid-diff-label">${annotation.path}</span>
+          <span class="grid-diff-label">${path}</span>
           <span class="grid-diff-right">${annotation.right}</span>`)
       }
     }
