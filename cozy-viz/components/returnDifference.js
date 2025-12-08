@@ -3,7 +3,7 @@ import { Component } from 'https://unpkg.com/preact@latest?module'
 import ConcretionSelector from './concretionSelector.js'
 import { symAnnotationToLeaves, concAnnotationToLeaves } from '../util/annotationToLeaves.js'
 
-export default class MemoryDifference extends Component {
+export default class ReturnDifference extends Component {
   constructor() {
     super();
     this.state = { view: "symbolic" }
