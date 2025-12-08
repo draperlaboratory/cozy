@@ -109,55 +109,6 @@ def to_plain_python(value):
     else:
         return value
 
-def compare_structured_values_OLD(joint_solver, left_val, right_val) -> FieldDiff:
-    if isinstance(left_val, claripy.ast.Bits) and isinstance(right_val, claripy.ast.Bits):
-        def is_sat():
-            try:
-                return joint_solver.satisfiable(extra_constraints=[left_val != right_val])
-            except claripy.ClaripyZ3Error as err:
-                cozy.log.error(
-                    "Unable to solve SMT formula when comparing side effects. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}",
-                    str(err))
-                return True
-            except claripy.ClaripySolverInterruptError as err:
-                cozy.log.error(
-                    "Unable to solve SMT formula when comparing side effects. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}",
-                    str(err))
-                return True
-
-        if left_val is not right_val and is_sat():
-            # Base case: leaf elements are not equal
-            return NotEqLeaf(left_val, right_val)
-        else:
-            return EqFieldDiff(left_val, right_val)
-    elif isinstance(left_val, PointerWrapper) and isinstance(right_val, PointerWrapper):
-        return compare_structured_values_OLD(joint_solver, left_val.value, right_val.value)
-    elif isinstance(left_val, SimStructValue) and isinstance(right_val, SimStructValue):
-        subfields_equal = True
-        all_fields = set()
-        all_fields.update(left_val.struct.fields.keys())
-        all_fields.update(right_val.struct.fields.keys())
-        diff = dict()
-        for field in all_fields:
-            try:
-                left_val = left_val[field]
-            except KeyError:
-                left_val = None
-            try:
-                right_val = right_val[field]
-            except KeyError:
-                right_val = None
-            rec_result = compare_structured_values_OLD(joint_solver, left_val, right_val)
-            if not isinstance(rec_result, EqFieldDiff):
-                subfields_equal = False
-            diff[field] = rec_result
-        if subfields_equal:
-            return EqFieldDiff(left_val, right_val)
-        else:
-            return NotEqFieldDiff(diff)
-    else:
-        return NotEqLeaf(left_val, right_val)
-
 def compare_structured_values(joint_solver, left, right) -> FieldDiff:
     both_lists = isinstance(left, list) and isinstance(right, list)
     both_tuples = isinstance(left, tuple) and isinstance(right, tuple)
@@ -328,7 +279,7 @@ class StateDiff:
 
         try:
             is_sat = joint_solver.satisfiable()
-        except claripy.ClaripyZ3Error as err:
+        except claripy.errors.ClaripyZ3Error as err:
             cozy.log.error("Unable to determine if two states are compatible. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these two states compatible in our report. Note that there is unlikely to be any concrete examples generated for this pair.\nThe exception thrown was:\n{}", str(err))
             is_sat = True
         except claripy.ClaripySolverInterruptError as err:

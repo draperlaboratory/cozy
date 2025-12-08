@@ -1,3 +1,4 @@
+import functools
 import sys
 import uuid
 from collections.abc import Callable
@@ -825,6 +826,20 @@ class Session:
         """
         self.state.add_constraints(*constraints)
 
+    def precondition(self, *conditions: claripy.ast.bool, info_str: str | None = None):
+        # Note that the following 1-liner will not work because the c variable gets mutated in the list
+        # comprehension :(
+        # Python is not great at this part of functional programming
+        # self.add_directives(*[Assume(self.start_fun_addr, lambda state: c, info_str=info_str) for c in conditions])
+
+        # Do this instead
+        def ret_const(val, state):
+            return val
+
+        for cond in conditions:
+            f = functools.partial(ret_const, cond)
+            self.add_directives(Assume(self.start_fun_addr, f, info_str=info_str))
+
     @property
     def start_fun_addr(self):
         # Determine the address of the desired function
@@ -848,26 +863,32 @@ class Session:
 
         if fun_addr is not None:
             if self.start_fun in self.proj.fun_prototypes:
-                fun_prototype = self.proj.fun_prototypes[self.start_fun]
+                fun_proto_str: str | None = self.proj.fun_prototypes[self.start_fun]
             elif fun_addr in self.proj.fun_prototypes:
-                fun_prototype = self.proj.fun_prototypes[fun_addr]
+                fun_proto_str = self.proj.fun_prototypes[fun_addr]
             else:
-                fun_prototype = None
+                fun_proto_str = None
 
             kwargs = dict() if ret_addr is None else {"ret_addr": ret_addr}
 
             if args is None:
                 args = []
-                fun_prototype = None
+                fun_proto_str = None
 
-            if fun_prototype is not None:
-                rich_proto = angr.calling_conventions.SimCC.guess_prototype(args, fun_prototype).with_arch(
+            fun_kb = self.proj.angr_proj.kb.functions
+            if fun_addr in fun_kb:
+                self.prototype = self.proj.angr_proj.kb.functions[fun_addr].prototype
+                # No need to pass the prototype to the call_state function. angr already
+                # has the prototype stored internally in the kb and will use it
+                fun_proto_str = None
+            else:
+                rich_proto = angr.calling_conventions.SimCC.guess_prototype(args, fun_proto_str).with_arch(
                     self.proj.arch
                 )
                 self.prototype = rich_proto
 
             state: SimState = self.proj.angr_proj.factory.call_state(
-                fun_addr, *args, base_state=self.state, prototype=fun_prototype, **kwargs
+                fun_addr, *args, base_state=self.state, prototype=fun_proto_str, **kwargs
             )
         else:
             state: SimState = self.state
