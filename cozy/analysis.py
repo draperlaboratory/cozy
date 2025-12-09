@@ -564,41 +564,50 @@ class ComparisonOptions(enum.Flag):
     :py:class:`cozy.analysis.Comparison` class. Since this is a flag enum, multiple values of this enum can be combined.
     """
 
+    COMPARE_MEMORY = enum.auto()
     """
     Compare locations in program memory
     """
-    COMPARE_MEMORY = enum.auto()
+
+    COMPARE_REGISTERS = enum.auto()
     """
     Compare registers used by the program
     """
-    COMPARE_REGISTERS = enum.auto()
+
+    COMPARE_SIDE_EFFECTS = enum.auto()
     """
     Compare side effects outputted by the program
     """
-    COMPARE_SIDE_EFFECTS = enum.auto()
+
+    COMPARE_STD_OUT = enum.auto()
     """
     Compare stdout written by the program and save in the results. Note that angr currently concretizes values written\
     to stdout, so these values will be saved as binary strings.
     """
-    COMPARE_STD_OUT = enum.auto()
+
+    COMPARE_STD_ERR = enum.auto()
     """
     Compare stderr written by the program and save in the results. Note that angr currently concretizes values written\
     to stdout, so these values will be saved as binary strings.
     """
-    COMPARE_STD_ERR = enum.auto()
+
+    COMPARE_ANNOTATED_MEMORY = enum.auto()
     """
     Memory that was explicitly annotated with :py:meth:`cozy.session.annotate_memory` will be compared and reported\
     on separately from COMPARE_MEMORY. This is usually used to check if the program mutated some part of the input\
     arguments or global variables.
     """
-    COMPARE_ANNOTATED_MEMORY = enum.auto()
+
+    COMPARE_ANNOTATED_RETURN = enum.auto()
     """
     Bitvector values that were explicitly annotated with :py:meth:`cozy.session.RunResult.annotate_return` will be\
     compared and reported on. This is usually used to make a human readable comparison of the return value of the\
     function under analysis.
     """
-    COMPARE_ANNOTATED_RETURN = enum.auto()
 
+"""
+Perform all the comparison cozy makes available
+"""
 COMPARE_ALL  = (ComparisonOptions.COMPARE_MEMORY | ComparisonOptions.COMPARE_REGISTERS |
                 ComparisonOptions.COMPARE_SIDE_EFFECTS | ComparisonOptions.COMPARE_STD_OUT |
                 ComparisonOptions.COMPARE_STD_ERR | ComparisonOptions.COMPARE_ANNOTATED_MEMORY |
