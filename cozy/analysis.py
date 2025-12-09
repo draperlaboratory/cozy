@@ -499,6 +499,9 @@ class CompatiblePair:
     def equal_annotations(self) -> bool:
         return self.annotation_diff is None or self.annotation_diff.is_equal
 
+    def equal_ret_annotations(self) -> bool:
+        return self.ret_annotation_diff is None or self.ret_annotation_diff.is_equal
+
     def equal(self) -> bool:
         """
         Determines if the two compatible states are observationally equal. That is, they contain the same memory\
@@ -509,7 +512,8 @@ class CompatiblePair:
         """
 
         if isinstance(self.state_left, DeadendedState) and isinstance(self.state_right, DeadendedState):
-            return (len(self.mem_diff) == 0 and len(self.reg_diff) == 0 and self.equal_annotations() and
+            return (len(self.mem_diff) == 0 and len(self.reg_diff) == 0 and
+                    self.equal_annotations() and self.equal_ret_annotations() and
                     ((not self.compare_std_out) or (self.state_left.std_out == self.state_right.std_out)) and
                     ((not self.compare_std_err) or (self.state_left.std_err == self.state_right.std_err)) and
                     self.equal_side_effects())
@@ -593,12 +597,12 @@ class ComparisonOptions(enum.Flag):
     compared and reported on. This is usually used to make a human readable comparison of the return value of the\
     function under analysis.
     """
-    COMPARE_RETURN_ANNOTATED_MEMORY = enum.auto()
+    COMPARE_ANNOTATED_RETURN = enum.auto()
 
 COMPARE_ALL  = (ComparisonOptions.COMPARE_MEMORY | ComparisonOptions.COMPARE_REGISTERS |
                 ComparisonOptions.COMPARE_SIDE_EFFECTS | ComparisonOptions.COMPARE_STD_OUT |
                 ComparisonOptions.COMPARE_STD_ERR | ComparisonOptions.COMPARE_ANNOTATED_MEMORY |
-                ComparisonOptions.COMPARE_RETURN_ANNOTATED_MEMORY)
+                ComparisonOptions.COMPARE_ANNOTATED_RETURN)
 
 class Comparison:
     """
@@ -638,7 +642,7 @@ class Comparison:
         self.compare_std_out = ComparisonOptions.COMPARE_STD_OUT in comparisons
         self.compare_std_err = ComparisonOptions.COMPARE_STD_ERR in comparisons
         self.compare_annotated_memory = ComparisonOptions.COMPARE_ANNOTATED_MEMORY in comparisons
-        self.compare_return_annotation = ComparisonOptions.COMPARE_RETURN_ANNOTATED_MEMORY in comparisons
+        self.compare_return_annotation = ComparisonOptions.COMPARE_ANNOTATED_RETURN in comparisons
 
         if ignore_addrs is None:
             ignore_addrs = []
