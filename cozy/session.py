@@ -827,6 +827,16 @@ class Session:
         self.state.add_constraints(*constraints)
 
     def precondition(self, *conditions: claripy.ast.bool, info_str: str | None = None):
+        """
+        Adds a precondition to the session by creating an :py:class:`cozy.directive.Assume` object and attaching it\
+        to the beginning of the starting function.
+
+        :param claripy.ast.bool conditions: The preconditions to add to the start of the starting function
+        :param str | None info_str: Human readable label for this precondition
+        :return: None
+        :rtype: None
+        """
+
         # Note that the following 1-liner will not work because the c variable gets mutated in the list
         # comprehension :(
         # Python is not great at this part of functional programming
@@ -839,6 +849,19 @@ class Session:
         for cond in conditions:
             f = functools.partial(ret_const, cond)
             self.add_directives(Assume(self.start_fun_addr, f, info_str=info_str))
+
+    def postcondition(self, *condition_funs: Callable[[SimState], claripy.ast.bool], info_str: str | None=None):
+        """
+        Adds postconditions to the session by creating :py:class:`cozy.directive.Postcondition` objects and attaching\
+        them to the session.
+
+        :param Callable[[SimState], claripy.ast.bool] condition_funs: When the program reaches a terminal state, the\
+        SimState will be passed to this function, and an assertion condition should be returned. This is then used\
+        internally by the SAT solver, along with the state's accumulated constraints.
+        :param str | None info_str: Human readable label for this postcondition assertion, printed to the user if the\
+        assert is triggered.
+        """
+        self.add_directives(*[Postcondition(f, info_str=info_str) for f in condition_funs])
 
     @property
     def start_fun_addr(self):
