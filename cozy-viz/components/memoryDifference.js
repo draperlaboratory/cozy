@@ -39,7 +39,7 @@ export default class MemoryDifference extends Component {
         annotation_rows.push(html`
           <span class="grid-diff-left">${annotation.left}</span>
           <span class="grid-diff-label">${annotation.path}</span>
-          <span class="grid-diff-right">${annotation.right} <strong>(equivalent)</span>`)
+          <span class="grid-diff-right">${annotation.right} <strong>(equivalent)</strong></span>`)
       } else {
         annotation_rows.push(html`
           <span class="grid-diff-left">${annotation.left}</span>
@@ -57,7 +57,7 @@ export default class MemoryDifference extends Component {
         ? address_rows
         : html`<span class="no-difference">no memory differences detected ✓</span>`
       }</div>
-      ${annotations && html`<hr/><div id="grid-diff-data"> ${annotation_rows}</div>`}
+      ${anno_diffs.length && html`<hr/><div id="grid-diff-data"> ${annotation_rows}</div>`}
       </div>`
   }
 }
