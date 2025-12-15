@@ -15,8 +15,8 @@ export default class ReturnDifference extends Component {
     const annotations = props.leftFocus.bot.data().compatibilities[rightId]?.ret_annotation_diff
     const conc_annotations = props.leftFocus.bot.data().compatibilities[rightId]?.conc_ret_annotation_diff
     const anno_diffs = state.view === "symbolic"
-      ? symAnnotationToLeaves(annotations)
-      : concAnnotationToLeaves(conc_annotations[state.view])
+      ? annotations ? symAnnotationToLeaves(annotations) : []
+      : conc_annotations?.[state.view] ? concAnnotationToLeaves(conc_annotations[state.view]) : []
 
     for (const annotation of anno_diffs) {
       const path = /root\.(.*)/.exec(annotation.path)[1] ?? annotation.path
@@ -38,7 +38,10 @@ export default class ReturnDifference extends Component {
         view=${state.view} 
         setView=${view => this.setState({ view })} 
         concretionCount=${conc_annotations.length}/>
-      ${annotations && html`<div id="grid-diff-data"> ${annotation_rows}</div>`}
+      ${anno_diffs.length > 0 
+          ? html`<div id="grid-diff-data"> ${annotation_rows}</div>`
+          : ""
+      }
       </div>`
   }
 }

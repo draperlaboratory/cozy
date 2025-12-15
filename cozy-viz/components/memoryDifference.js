@@ -20,8 +20,8 @@ export default class MemoryDifference extends Component {
       ? props.leftFocus.bot.data().compatibilities[rightId].memdiff
       : conc_memdiffs[state.view]
     const anno_diffs = state.view === "symbolic"
-      ? symAnnotationToLeaves(annotations)
-      : concAnnotationToLeaves(conc_annotations[state.view])
+      ? annotations ? symAnnotationToLeaves(annotations) : []
+      : conc_annotations?.[state.view] ? concAnnotationToLeaves(conc_annotations[state.view]) : []
 
     for (const addr in memdiffs) {
       const addrparts = addr
@@ -57,7 +57,9 @@ export default class MemoryDifference extends Component {
         ? address_rows
         : html`<span class="no-difference">no memory differences detected ✓</span>`
       }</div>
-      ${anno_diffs.length && html`<hr/><div id="grid-diff-data"> ${annotation_rows}</div>`}
-      </div>`
+      ${anno_diffs.length 
+          ? html`<hr/><div id="grid-diff-data"> ${annotation_rows}</div>`
+          : ""
+      } </div>`
   }
 }
