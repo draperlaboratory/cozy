@@ -1,4 +1,5 @@
 import functools
+import itertools
 import sys
 import uuid
 from collections.abc import Callable
@@ -733,6 +734,8 @@ class Session:
 
         self.annotations: NestedDict[SimMemView] = NestedDict.empty()
 
+        self.case_splits: list[list[claripy.ast.Bool]] = []
+
     def _initialize_regs(self, state: angr.SimState):
         # Make sure any unconstrained registers are initialized by poking them with a getattr request
         top_level_regs = set(state.arch.register_names.values())
@@ -814,41 +817,37 @@ class Session:
         :return: None
         :rtype: None
         """
+
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add preconditions before the run.")
+
         self.directives.extend(directives)
 
     def add_constraints(self, *constraints: claripy.ast.bool) -> None:
         """
-        Adds multiple constraints to the session's state.
+        Adds multiple constraints to the session's starting state. This can be used as a precondition.
 
         :param claripy.ast.bool constraints: The constraints to add
         :return: None
         :rtype: None
         """
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add constraints before the run.")
+
         self.state.add_constraints(*constraints)
 
-    def precondition(self, *conditions: claripy.ast.bool, info_str: str | None = None):
+    def precondition(self, *conditions: claripy.ast.bool):
         """
-        Adds a precondition to the session by creating an :py:class:`cozy.directive.Assume` object and attaching it\
-        to the beginning of the starting function.
+        Adds a precondition to the session. This is an alias for the :py:meth:`~cozy.session.Session.add_constraints`\
+        method.
 
-        :param claripy.ast.bool conditions: The preconditions to add to the start of the starting function
-        :param str | None info_str: Human readable label for this precondition
-        :return: None
-        :rtype: None
+        :param claripy.ast.bool conditions: The preconditions to add to the session's starting state.
         """
 
-        # Note that the following 1-liner will not work because the c variable gets mutated in the list
-        # comprehension :(
-        # Python is not great at this part of functional programming
-        # self.add_directives(*[Assume(self.start_fun_addr, lambda state: c, info_str=info_str) for c in conditions])
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add preconditions before the run.")
 
-        # Do this instead
-        def ret_const(val, state):
-            return val
-
-        for cond in conditions:
-            f = functools.partial(ret_const, cond)
-            self.add_directives(Assume(self.start_fun_addr, f, info_str=info_str))
+        self.add_constraints(*conditions)
 
     def postcondition(self, *condition_funs: Callable[[SimState], claripy.ast.bool], info_str: str | None=None):
         """
@@ -861,7 +860,26 @@ class Session:
         :param str | None info_str: Human readable label for this postcondition assertion, printed to the user if the\
         assert is triggered.
         """
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add postconditions before the run.")
+
         self.add_directives(*[Postcondition(f, info_str=info_str) for f in condition_funs])
+
+    def cases(self, *conditions: claripy.ast.Bool):
+        """
+        This method adds a case split along a single dimension to the simulation state before the session is run.\
+        When the session is run, the starting state is immediately split, and constraints from the n-ary\
+        Cartesian product are added (where n is the number of times cases has been called). This method is useful\
+        in situations in lieu of adding a precondition that contains a disjunction. The motivation here is that\
+        splitting the state may be more palatable for the SMT solver than using a :py:class:`claripy.Or` as a \
+        precondition.
+
+        :param conditions: The conditions upon which we will split the starting state.
+        """
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add case splits before the run.")
+
+        self.case_splits.append(list(conditions))
 
     @property
     def start_fun_addr(self):
@@ -1014,6 +1032,18 @@ class Session:
         else:
             raise NotImplementedError("Annotation for this particular type is not implemented")
 
+    def _split_cases(self, simgr: angr.SimulationManager):
+        if len(self.case_splits) > 0:
+            starting_state = simgr.active[0]
+            children = []
+            for constraints in itertools.product(*self.case_splits):
+                child_state: SimState = starting_state.copy()
+                child_state.add_constraints(*constraints)
+                children.append(child_state)
+            simgr.active.clear()
+            for c in children:
+                simgr.active.append(c)
+
     def run(self, args: list[claripy.ast.bits] | None=None, cache_intermediate_info: bool=True, ret_addr: int | None=None,
             loop_bound: int | None=None) -> RunResult:
         """
@@ -1036,6 +1066,8 @@ class Session:
             raise ValueError("The args passed to run can only be None if underconstrained_execution has been enabled.")
 
         simgr = self._call(args, cache_intermediate_info=cache_intermediate_info, ret_addr=ret_addr)
+
+        self._split_cases(simgr)
 
         if isinstance(loop_bound, int):
             simgr.use_technique(angr.exploration_techniques.LocalLoopSeer(bound=loop_bound))
