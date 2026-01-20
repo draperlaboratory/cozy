@@ -45,6 +45,20 @@ from the BAR website or on arXiv:
 - https://www.ndss-symposium.org/ndss-paper/auto-draft-633/
 - https://arxiv.org/abs/2504.00151
 
+### Cite
+
+```
+@inproceedings{Helbling2025-cozy,
+  title     = "cozy: Comparative Symbolic Execution for Binary Programs",
+  author    = "Helbling, Caleb and Leach-Krouse, Graham and Lasser, Sam and Sullivan, Greg",
+  booktitle = "Proceedings of the 2025 Workshop on Binary Analysis Research",
+  doi       = "https://doi.org/10.14722/bar.2025.23004",
+  publisher = "Internet Society",
+  address   = "Reston, VA",
+  year      =  2025
+}
+```
+
 ## Template Wizard
 
 cozy now comes with a Python script template generator to help you get started
