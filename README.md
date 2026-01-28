@@ -52,10 +52,12 @@ from the BAR website or on arXiv:
   title     = "cozy: Comparative Symbolic Execution for Binary Programs",
   author    = "Helbling, Caleb and Leach-Krouse, Graham and Lasser, Sam and Sullivan, Greg",
   booktitle = "Proceedings of the 2025 Workshop on Binary Analysis Research",
-  doi       = "https://doi.org/10.14722/bar.2025.23004",
+  doi       = "10.14722/bar.2025.23004",
+  url       = "https://doi.org/10.14722/bar.2025.23004",
   publisher = "Internet Society",
   address   = "Reston, VA",
-  year      =  2025
+  month     = {feb},
+  year      = 2025
 }
 ```
 
