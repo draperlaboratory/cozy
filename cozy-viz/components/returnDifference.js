@@ -15,7 +15,7 @@ export default class ReturnDifference extends Component {
     const annotations = props.leftFocus.bot.data().compatibilities[rightId]?.ret_annotation_diff
     const conc_annotations = props.leftFocus.bot.data().compatibilities[rightId]?.conc_ret_annotation_diff
     const anno_diffs = state.view === "symbolic"
-      ? annotations ? symAnnotationToLeaves(annotations) : []
+      ? annotations && typeof annotations !== "string" ? symAnnotationToLeaves(annotations) : []
       : conc_annotations?.[state.view] ? concAnnotationToLeaves(conc_annotations[state.view]) : []
 
     for (const annotation of anno_diffs) {
