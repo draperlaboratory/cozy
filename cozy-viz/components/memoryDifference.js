@@ -53,12 +53,16 @@ export default class MemoryDifference extends Component {
         view=${state.view} 
         setView=${view => this.setState({ view })} 
         concretionCount=${conc_memdiffs.length}/>
-      <div id="grid-diff-data"> ${address_rows.length > 0
-        ? address_rows
-        : html`<span class="no-difference">no memory differences detected ✓</span>`
-      }</div>
-      ${anno_diffs.length 
+       ${address_rows.length > 0
+        ? html`<div id="grid-diff-data">${address_rows}</div>`
+        : anno_diffs.length === 0
+        ? html`<div id="grid-diff-data"><span class="no-difference">no memory differences detected ✓</span></div>`
+        : ""
+      }
+      ${anno_diffs.length && address_rows.length > 0
           ? html`<hr/><div id="grid-diff-data"> ${annotation_rows}</div>`
+          : anno_diffs.length
+          ? html`<div id="grid-diff-data"> ${annotation_rows}</div>`
           : ""
       } </div>`
   }
