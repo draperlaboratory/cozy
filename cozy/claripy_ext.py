@@ -2,9 +2,6 @@ import typing
 import cozy
 import claripy
 
-from . import primitives
-
-
 # Functions that should be included in claripy, but aren't
 
 def simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bits:

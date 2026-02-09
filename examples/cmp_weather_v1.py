@@ -1,6 +1,5 @@
 import cozy
 import cozy.analysis as analysis
-import cozy.claripy_ext as claripy_ext
 from cozy.analysis import ComparisonOptions
 from cozy.project import Project
 from cozy.constants import *

@@ -1,7 +1,6 @@
 import archinfo
 
 import cozy.analysis as analysis
-import cozy.claripy_ext as claripy_ext
 import cozy.execution_graph as execution_graph
 import cozy.types
 from cozy.directive import ErrorDirective

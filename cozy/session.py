@@ -104,7 +104,7 @@ class RunResult:
                         NestedDict[claripy.ast.Bits] | dict[str | int, claripy.ast.Bits | dict]]):
         """
         Adds a return result annotation to every deadended state in this return result. This is accomplished\
-        by providint an annotator callback. This annotator will be passed three values: the angr\
+        by providing an annotator callback. This annotator will be passed three values: the angr\
         :py:class:`~angr.sim_state.SimState`, the return value of the function and the type of the return result.\
         The Python type of the return value will depend on the return type of the function under analysis.\
         It may be a claripy AST bitvector if the return value is an integer for instance, or it may be\

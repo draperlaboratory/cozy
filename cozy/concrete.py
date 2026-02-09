@@ -4,8 +4,19 @@ from .functools_ext import *
 from .nested_dict import NestedDict
 from .side_effect import PerformedSideEffect, ConcretePerformedSideEffect
 
+def concretize(solver: claripy.Solver,
+               symbolic_bundle: claripy.ast.Bits | list | tuple | dict | set | PerformedSideEffect | NestedDict[claripy.ast.Bits],
+               n: int=1) -> list:
+    """
+    This function concretizes a bundle of symbolic data by generating up to n models for the symbols\
+    with respect to the constraints given in the passed solver
 
-def _concretize(solver, state_bundle, n=1):
+    :param solver: The solver which contains the constraints over the symbols in the state bundle
+    :param symbolic_bundle: A bundle of symbolic or concrete mixed data, stored in arbitrarily nested Python data structures
+    :param n: The number of examples that we should attempt to generate
+    :return: A list of concretized examples generated for this specific symbolic_bundle. Note that the nesting of the\
+    data structures in the return list will be the same as the input bundle.
+    """
     def traverse(elem, bundle_symbols):
         if isinstance(elem, claripy.ast.Bits):
             if elem.symbolic:
@@ -19,11 +30,13 @@ def _concretize(solver, state_bundle, n=1):
         return bundle_symbols
 
     # First, walk over the state bundle to find all symbols contained within the nested data structure
-    extra_symbols = preorder_fold(state_bundle, traverse, set())
+    extra_symbols = preorder_fold(symbolic_bundle, traverse, set())
 
     # Generate up to n models, finding the substitutions for all the symbols
     # Each model maps each symbol found in the previous step to a concrete value
     models = claripy_ext.model(solver.constraints, extra_symbols=extra_symbols, n=n)
+
+    # Apply the mapping to the state bundle for each generated model
     ret = []
     for model in models:
         replacement_dict = {sym.hash(): val for (sym, val) in model.items()}
@@ -38,7 +51,7 @@ def _concretize(solver, state_bundle, n=1):
             else:
                 return elem
 
-        ret.append(fmap(state_bundle, f))
+        ret.append(fmap(symbolic_bundle, f))
 
     return ret
 

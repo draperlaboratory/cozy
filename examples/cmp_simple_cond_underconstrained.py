@@ -1,9 +1,6 @@
-# coding: utf-8
 from cozy.project import Project
 from cozy.analysis import Comparison
 import cozy.execution_graph as execution_graph
-
-import claripy
 
 proj_pre = Project('test_programs/simple_branch/simpleBranch-pre')
 proj_post = Project('test_programs/simple_branch/simpleBranch-post')

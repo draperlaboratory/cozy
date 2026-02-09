@@ -1,10 +1,5 @@
-import claripy
 import cozy.analysis as analysis
-import cozy.claripy_ext as claripy_ext
-from cozy.directive import Assume
 from cozy.project import Project
-from cozy.constants import *
-import cozy.primitives as primitives
 
 pre_proj = Project('test_programs/buff_overflow/buff_overflow')
 pre_sess = pre_proj.session('patch_fun', underconstrained_execution=True)

@@ -6,7 +6,7 @@ import portion as P
 from angr.sim_manager import ErrorRecord
 
 from . import side_effect
-from .concrete import _concretize, TerminalStateInput
+from .concrete import concretize, TerminalStateInput
 import claripy
 from .directive import Assert, Postcondition
 from .side_effect import PerformedSideEffect

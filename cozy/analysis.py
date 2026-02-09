@@ -18,7 +18,7 @@ from .functools_ext import *
 import collections.abc
 
 from .session import RunResult
-from .concrete import _concretize, CompatiblePairInput
+from .concrete import concretize, CompatiblePairInput
 from .side_effect import PerformedSideEffect, ConcretePerformedSideEffect
 from .terminal_state import TerminalState, DeadendedState
 
@@ -458,8 +458,8 @@ class CompatiblePair:
     :py:meth:`cozy.session.Session.annotate_memory`.
     :ivar FieldDiff ret_annnotation_diff: An object containing diff information about memory annotated with\
     :py:meth:`cozy.session.RunResult.annotate_return`.
-    :ivar dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory
-    addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases
+    :ivar dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory\
+    addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases\
     the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
     determined the write address.
     :ivar bool compare_std_out: If True then we should consider stdout when checking if the two input states are equal.
@@ -546,7 +546,7 @@ class CompatiblePair:
                         self.ret_annotation_diff.left_neq() if self.ret_annotation_diff is not None else NestedDict.empty(),
                         self.ret_annotation_diff.right_neq() if self.ret_annotation_diff is not None else NestedDict.empty())
 
-        concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
+        concrete_results = concretize(joint_solver, state_bundle, n=num_examples)
 
         ret = []
         for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right, annotation_left, annotation_right, ret_annotation_left, ret_annotation_right) in concrete_results:
@@ -605,13 +605,13 @@ class ComparisonOptions(enum.Flag):
     function under analysis.
     """
 
-"""
-Perform all the comparison cozy makes available
-"""
 COMPARE_ALL  = (ComparisonOptions.COMPARE_MEMORY | ComparisonOptions.COMPARE_REGISTERS |
                 ComparisonOptions.COMPARE_SIDE_EFFECTS | ComparisonOptions.COMPARE_STD_OUT |
                 ComparisonOptions.COMPARE_STD_ERR | ComparisonOptions.COMPARE_ANNOTATED_MEMORY |
                 ComparisonOptions.COMPARE_ANNOTATED_RETURN)
+"""
+Perform all the comparison cozy makes available
+"""
 
 class Comparison:
     """
@@ -639,6 +639,8 @@ class Comparison:
         occupied by the stack are ignored.
         :param ComparisonOptions comparisons: What comparisons we should make. By default we do all the possible\
         comparisons.
+        :param bool use_unsat_core: If this flag is True, then the unsat core optimization will be used to quickly\
+        discard incompatible states. You probably want to leave this on unless you know what you're doing.
         :param bool simplify: If this flag is True, then symbolic memory and register differences will be simplified\
         as much as possible. This flag is typically only necessary if you want to do some deep inspection of symbolic\
         contents. simplify can slow things down a lot, and symbolic expressions are usually very complex to the point\

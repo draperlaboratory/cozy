@@ -61,6 +61,8 @@ print(results_b.report(program_args))
 print("\nComparison Results:\n")
 print(comparison_results.report(program_args))
 
+# Currently Z3 does not seem to support the fpNE operation, which causes an error to be thrown
+# Can we try to use a different backend at some point in the future?
 cozy.execution_graph.visualize_comparison(proj_a, proj_b,
                                           results_a, results_b,
                                           comparison_results,
