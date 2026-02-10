@@ -1,0 +1,83 @@
+cozy.functools_ext
+==================
+
+.. py:module:: cozy.functools_ext
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.functools_ext.T
+   cozy.functools_ext.U
+   cozy.functools_ext.V
+   cozy.functools_ext.B
+   cozy.functools_ext.C
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.functools_ext.preorder_mapfold
+   cozy.functools_ext.preorder_fold
+   cozy.functools_ext.fmap
+   cozy.functools_ext.compose
+
+
+Module Contents
+---------------
+
+.. py:data:: T
+
+.. py:data:: U
+
+.. py:data:: V
+
+.. py:data:: B
+
+.. py:data:: C
+
+.. py:function:: preorder_mapfold(val0: any, f: collections.abc.Callable[[any, T], tuple[any, T]], accum0: T, sort=True) -> tuple[any, T]
+
+   Simultaneously maps and folds over a nested Python datastructure in preorder traversal order. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.
+
+   :param any val0: The datastructure to traverse.
+   :param Callable[[any, T], tuple[any, T]] f: This function takes as input a value inside the datastructure, the accumulated value and should return a mapped value and newly accumulated value.
+   :param T accum0: Initial accumulation parameter.
+   :return: The mapped datastructure and final accumulated value.
+   :rtype: tuple[any, T]
+
+
+.. py:function:: preorder_fold(val0: any, f: collections.abc.Callable[[any, U], U], accum0: U) -> U
+
+   Folds over a Python datastructure in preorder traversal. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets. Note that for dictionaries, both keys and values will be traversed.
+
+   :param any val0: The datastructure to traverse.
+   :param Callable[[any, U], U] f: This function takes as input the value inside the datastructure, the accumulated value and should return a new accumulated value.
+   :param U accum0: Initial accumulation parameter.
+   :return: The final accumulated value.
+   :rtype: U
+
+
+.. py:function:: fmap(val0: any, f: collections.abc.Callable[[any], any]) -> any
+
+   Maps a Python datastructure. The datastructure may consist of arbitrarily nested lists, tuples, dictionaries and sets.
+
+   :param any val0: The datastructure to map. Note that for dictionaries, both keys and values will be mapped.
+   :return: The mapped datastructure.
+   :rtype: any
+
+
+.. py:function:: compose(f: collections.abc.Callable[[B], C], g: collections.abc.Callable[[Ellipsis], B]) -> collections.abc.Callable[[Ellipsis], C]
+
+   Composes two functions, `f` and `g`, to create a new function h(\*a, \*\*kw) = f(g(\*a, \*\*kw))
+
+   :param Callable[[B], C] f: The first function to compose.
+   :param Callable[[...], B] g: The second function to compose.
+   :return: A newly composed function which takes in an arbitrary number of arguments and keyword arguments, and returns a C.
+   :rtype: Callable[[...], C]
+
+

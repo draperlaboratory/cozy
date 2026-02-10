@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title></title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="./index.css">
+        <script>
+          // We dynamically import the bundled dependencies if present, and
+          // otherwise fall back on the development entry point.
+          import("./bundle.js").catch(e => import("./cozy-viz.js"))
+        </script>
+    </head>
+    <body>
+        <div id="tooltip"></div>
+        <div id="main-view">
+          <div id="cy1">
+              <span id="labelLeft">prepatch</span>
+          </div>
+          <div id="cy2">
+              <span id="labelRight">postpatch</span>
+          </div>
+        </div>
+        <div id="diff-panel"></div>
+    </body>
+</html>

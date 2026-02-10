@@ -1,0 +1,112 @@
+cozy.underconstrained
+=====================
+
+.. py:module:: cozy.underconstrained
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.underconstrained.underconstrained_preset
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.underconstrained.SimConcretizationStrategyUnderconstrained
+   cozy.underconstrained.Box
+   cozy.underconstrained.DefaultMemoryUnderconstrained
+
+
+Module Contents
+---------------
+
+.. py:class:: SimConcretizationStrategyUnderconstrained(*args, **kwargs)
+
+   Bases: :py:obj:`angr.concretization_strategies.SimConcretizationStrategyNorepeatsRange`
+
+
+   This class extends SimConcretizationStrategyNorepeatsRange, making it suitable for use with underconstrained
+   execution. The primary use case of this class is to provide concretization strategies for when memory contents
+   are underconstrained/symbolic. The main problem occurs when reading/writing symbolic addresses, which means
+   those addresses must be concretized. The strategy we employ is to allocate a fresh chunk of memory for
+   fresh symbols, giving them sufficient scratch space to store their members.
+
+
+   .. py:attribute:: extra_constraints
+      :value: []
+
+
+
+   .. py:attribute:: multi_extra_constraints
+      :value: []
+
+
+
+   .. py:attribute:: single
+
+
+   .. py:attribute:: multiple
+
+
+   .. py:attribute:: extra_constraints_symbols
+
+
+   .. py:method:: constrain_addr(memory, addr)
+
+
+   .. py:method:: multi_concretize(memory, addr)
+
+
+   .. py:method:: _concretize(memory, addr, **kwargs)
+
+
+   .. py:method:: _any(*args, **kwargs)
+
+
+.. py:class:: Box(value)
+
+   .. py:attribute:: value
+
+
+.. py:class:: DefaultMemoryUnderconstrained(*args, **kwargs)
+
+   Bases: :py:obj:`angr.storage.memory_mixins.DefaultMemory`
+
+
+   The primary goal of this class is to provide a wrapper for memory use in underconstrained symbolic execution.
+   Here we record all the fresh symbols that are created whenever underconstrained memory is read.
+
+
+   .. py:attribute:: default_backer
+
+
+   .. py:attribute:: symbols
+      :value: []
+
+
+
+   .. py:method:: get_default_backer()
+
+
+   .. py:method:: set_default_backer(backer: angr.storage.memory_mixins.DefaultMemory)
+
+
+   .. py:method:: set_symbols(symbols: list[claripy.BVS])
+
+
+   .. py:method:: get_symbols() -> list[claripy.BVS]
+
+
+   .. py:method:: copy(*args, **kwargs)
+
+
+   .. py:method:: _default_value(addr, size, **kwargs)
+
+
+.. py:data:: underconstrained_preset
+

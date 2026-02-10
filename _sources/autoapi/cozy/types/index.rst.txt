@@ -1,0 +1,38 @@
+cozy.types
+==========
+
+.. py:module:: cozy.types
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.types.register_type
+   cozy.types.register_types
+
+
+Module Contents
+---------------
+
+.. py:function:: register_type(type_definition: str, arch: archinfo.Arch) -> angr.sim_type.SimType
+
+   Parses a C-style type definition given in the input string, assuming the given architecture. Registers this type    with angr.
+
+   :param str type_definition: The type definition, given in C-style format.
+   :param Arch arch: The architecture this type should be used with.
+   :return: The parsed typed.
+   :rtype: SimType
+
+
+.. py:function:: register_types(type_definition: str) -> angr.sim_type.SimType
+
+   Parses a series of type definition given in the input string. Registers this type with angr.
+
+   :param str type_definition: The type definition, given in C-style format.
+   :param Arch arch: The architecture this type should be used with.
+   :return: The parsed typed.
+   :rtype: SimType
+
+

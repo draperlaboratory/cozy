@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Annotations &#8212; cozy 1.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <script src="_static/documentation_options.js?v=56dcb7b8"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Underconstrained Execution" href="underconstrained.html" />
+    <link rel="prev" title="Modeling I/O Side Effects" href="sideeffects.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="annotations">
+<h1>Annotations<a class="headerlink" href="#annotations" title="Link to this heading">¶</a></h1>
+<p>Annotations are a new feature in cozy that allows for apples-to-apples comparisons of
+memory and return results in scenarios where memory addresses do not match or
+the structure of return values differ. This feature was developed primarily with
+the use case of comparing C and Rust programs in mind. When comparing C and Rust
+programs, the compilers are free to change the location and memory layout of data structures.
+Annotations enable most simple comparisons for this use case.</p>
+<p>We will first discuss memory annotations. These types of annotations are used to give
+a <em>path</em> to a specific location in memory. A path is a sequence of strings or integers,
+and are used to give a name to that particular memory location. When cozy computes
+a diff between two terminal states, a piece of memory from the first program is compared
+with a piece of memory from the second program based on the path name.</p>
+<p>Let’s take a look at a simple example of how to use memory annotations. This snippet
+is taken from the cross_language_sort.py example, which demonstrates cozy’s
+capability of comparing with both a difference in language (C vs Rust) and algorithm
+implementation (bubble sort vs insertion sort):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set up the session before we run it</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_num_count</span><span class="p">):</span>
+    <span class="c1"># Put the symbols into the program&#39;s memory</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">mem</span><span class="p">[</span><span class="n">arr</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">int</span> <span class="o">=</span> <span class="n">array_numbers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="c1"># Annotate the memory for each array element. In this case the</span>
+    <span class="c1"># memory will be annotated with the path (&quot;input_arr&quot;, i) for</span>
+    <span class="c1"># each element.</span>
+    <span class="c1"># Note here that the second parameter is an angr memory view</span>
+    <span class="n">sess</span><span class="o">.</span><span class="n">annotate_memory</span><span class="p">((</span><span class="s2">&quot;input_arr&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">),</span> <span class="n">sess</span><span class="o">.</span><span class="n">mem</span><span class="p">[</span><span class="n">arr</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Return annotations are the second type of memory annotations. As this name suggests,
+these annotations can be used to annotate the return value of some particular function.
+Here we will take an example from the int_ret_struct.py example, which makes a comparison
+between a correct vs incorrect implementation of a 3D vector integer cross product:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cozy</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">register_type</span><span class="p">(</span><span class="s1">&#39;struct Vector3 { int x; int y; int z; }&#39;</span><span class="p">,</span> <span class="n">proj_a</span><span class="o">.</span><span class="n">arch</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">annotator</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">typ</span><span class="p">):</span>
+    <span class="c1"># The value passed to this annotator will be a SimStructValue that was</span>
+    <span class="c1"># extracted by angr from the return of the function</span>
+    <span class="c1"># Here we provide a simple annotation of the return value, splitting the</span>
+    <span class="c1"># SimStructValue into its component fields</span>
+    <span class="c1"># Our annotation paths are given by the paths in the return</span>
+    <span class="c1"># dictionary</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="n">value</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">value</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="n">value</span><span class="o">.</span><span class="n">z</span> <span class="p">}</span>
+<span class="c1"># Call this method to run the project once</span>
+<span class="k">def</span> <span class="nf">run_a</span><span class="p">(</span><span class="n">proj</span><span class="p">:</span> <span class="n">cozy</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">Project</span><span class="p">):</span>
+    <span class="n">proj</span><span class="o">.</span><span class="n">add_prototype</span><span class="p">(</span><span class="s1">&#39;crossProduct&#39;</span><span class="p">,</span> <span class="s1">&#39;struct Vector3 crossProduct(struct Vector3 a, struct Vector3 b)&#39;</span><span class="p">)</span>
+    <span class="n">sess</span> <span class="o">=</span> <span class="n">proj</span><span class="o">.</span><span class="n">session</span><span class="p">(</span><span class="s1">&#39;crossProduct&#39;</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">program_args</span><span class="p">)</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">annotate_return</span><span class="p">(</span><span class="n">annotator</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span>
+</pre></div>
+</div>
+<p>In this case angr understands that the return value is a struct, and our annotator
+will be passed a <code class="xref py py-class docutils literal notranslate"><span class="pre">angr.sim_type.SimStructValue</span></code>. This value is the return
+value from the crossProduct function. Our annotator function will be called
+multiple times, once for each terminal state that provides a return value. The return
+value from our annotator should be a nested dictionary where the keys are strings
+or integers. The path through this nested dictionary is the path for this particular
+return annotated value.</p>
+<p>Note that annotations are treated as a separate comparison from registers and memory.
+You can choose what type of comparisons you’d like to make by passing the appropriate
+enum flag to the constructor of <a class="reference internal" href="autoapi/cozy/analysis/index.html#cozy.analysis.Comparison" title="cozy.analysis.Comparison"><code class="xref py py-class docutils literal notranslate"><span class="pre">cozy.analysis.Comparison</span></code></a>. If you’d like
+to compare only memory and return annotations and skip all other comparisons, you can
+pass in this flag:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">ComparisonOptions</span><span class="o">.</span><span class="n">COMPARE_ANNOTATED_MEMORY</span> <span class="o">|</span> <span class="n">cozy</span><span class="o">.</span><span class="n">analysis</span><span class="o">.</span><span class="n">ComparisonOptions</span><span class="o">.</span><span class="n">COMPARE_ANNOTATED_RETURN</span>
+</pre></div>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">cozy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="gettingstarted.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="launchingavisualization.html">Launching a Visualization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concolic.html">Using Concolic Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hooks.html">Dealing with Hooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sideeffects.html">Modeling I/O Side Effects</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Annotations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="underconstrained.html">Underconstrained Execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="sideeffects.html" title="previous chapter">Modeling I/O Side Effects</a></li>
+      <li>Next: <a href="underconstrained.html" title="next chapter">Underconstrained Execution</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, The Charles Stark Draper Laboratory.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/annotations.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

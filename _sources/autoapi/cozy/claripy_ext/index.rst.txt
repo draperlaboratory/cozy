@@ -1,0 +1,39 @@
+cozy.claripy_ext
+================
+
+.. py:module:: cozy.claripy_ext
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.claripy_ext.simplify_kb
+   cozy.claripy_ext.get_symbol_name
+   cozy.claripy_ext.sub_asts
+   cozy.claripy_ext.sym_variables
+   cozy.claripy_ext.model
+
+
+Module Contents
+---------------
+
+.. py:function:: simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bits
+
+   Simplifies a claripy AST expression, given some knowledge base (kb) of information
+
+   :param claripy.ast.bits expr: The expression to simplify
+   :param claripy.ast.Bool kb: The knowledge base which is used to simplify the expr. This is typically a series of equalities conjoined together.
+   :return: A simplified version of the input expression, or the original expression if no simplification occurred.
+   :rtype: claripy.ast.bits
+
+
+.. py:function:: get_symbol_name(sym)
+
+.. py:function:: sub_asts(expr)
+
+.. py:function:: sym_variables(expr)
+
+.. py:function:: model(constraints, extra_symbols: set[Union[claripy.BVS, claripy.FPS]] | frozenset[Union[claripy.BVS, claripy.FPS]] = frozenset(), n=1, **kwargs) -> list[dict[Union[claripy.BVS, claripy.FPS], Union[claripy.BVV, claripy.FPV]]]
+

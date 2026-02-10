@@ -1,0 +1,80 @@
+cozy.nested_dict
+================
+
+.. py:module:: cozy.nested_dict
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.nested_dict.A
+   cozy.nested_dict.B
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.nested_dict.NestedDict
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.nested_dict._insert_path
+
+
+Module Contents
+---------------
+
+.. py:data:: A
+
+.. py:data:: B
+
+.. py:function:: _insert_path(d: dict, path: tuple[str | int, Ellipsis], value)
+
+.. py:class:: NestedDict(data: dict[str | int, A | dict])
+
+   Bases: :py:obj:`Generic`\ [\ :py:obj:`A`\ ]
+
+
+   A nested dict is an arbitrarily nested Python dict holding values on the leaves. The keys of the dictionaries    must be str or int values. Note that NestedDict objects should not contain NestedDict objects within their    data dictionary. In other words, NestedDict is a wrapper for a dict, and does not nest inside itself.
+
+
+   .. py:attribute:: data
+
+
+   .. py:method:: __str__()
+
+
+   .. py:method:: __repr__()
+
+
+   .. py:method:: empty() -> NestedDict
+      :staticmethod:
+
+
+
+   .. py:method:: __setitem__(key: tuple[str | int, Ellipsis], value)
+
+
+   .. py:method:: paths() -> set[tuple[str | int, Ellipsis]]
+
+      Computes the set of all possible paths through the annotation
+
+
+
+   .. py:method:: filter(paths: set[tuple[str | int, Ellipsis]]) -> NestedDict[A]
+
+      Returns a copy of the current dict, filtered so that only leaves that contain a path in the paths        set are returned.
+
+
+
+   .. py:method:: map(f: Callable[[A], B]) -> NestedDict[B]
+
+

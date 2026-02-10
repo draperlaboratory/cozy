@@ -1,0 +1,486 @@
+cozy.session
+============
+
+.. py:module:: cozy.session
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.session.UNDERCONSTRAINED_CHUNK_SIZE
+   cozy.session.UNDERCONSTRAINED_GRANULARITY
+   cozy.session._mem_write_ctr
+   cozy.session._malloc_name_ctr
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.session.UnderconstrainedMachineState
+   cozy.session.RunResult
+   cozy.session._SessionExploration
+   cozy.session._SessionDirectiveExploration
+   cozy.session._SessionBasicExploration
+   cozy.session.Session
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.session.follow_pointers
+   cozy.session._on_mem_write
+   cozy.session._on_simprocedure
+   cozy.session._save_states
+
+
+Module Contents
+---------------
+
+.. py:function:: follow_pointers(state: angr.SimState, value, ty: angr.sim_type.SimType)
+
+.. py:data:: UNDERCONSTRAINED_CHUNK_SIZE
+   :value: 20000000
+
+
+.. py:data:: UNDERCONSTRAINED_GRANULARITY
+   :value: 5000
+
+
+.. py:class:: UnderconstrainedMachineState(initial_registers: dict[str, claripy.ast.Bits], default_backer: angr.storage.DefaultMemory, concretization_strategy: cozy.underconstrained.SimConcretizationStrategyUnderconstrained, underconstrained_memory_symbols)
+
+   .. py:attribute:: initial_registers
+
+
+   .. py:attribute:: default_backer
+
+
+   .. py:attribute:: concretization_strategy
+
+
+   .. py:attribute:: memory_symbols
+
+
+   .. py:property:: args
+
+
+.. py:class:: RunResult(sess: Session, deadended: list[cozy.terminal_state.DeadendedState], errored: list[cozy.terminal_state.ErrorState], asserts_failed: list[cozy.terminal_state.AssertFailedState], assume_warnings: list[tuple[cozy.directive.Assume, angr.SimState]], postconditions_failed: list[cozy.terminal_state.PostconditionFailedState], spinning: list[cozy.terminal_state.SpinningState], underconstrained_machine_state: UnderconstrainedMachineState | None)
+
+   This class is used for storing the results of running a session.
+
+   :ivar list[DeadendedState] deadended: States that reached normal termination.
+   :ivar list[ErrorState] errored: States that reached an error state. This may be triggered for example by program    errors such as division by 0, or by reaching a :py:class:`cozy.directive.ErrorDirective`.
+   :ivar list[AssertFailed] asserts_failed: States where an assertion was able to be falsified.
+   :ivar list[tuple[Assume, SimState]] assume_warnings: An assume warning occurs when a    :py:class:`~cozy.directive.Assume` is reached, and the added assumption contradicts the constraints for that state.    This means that due to the assumption, the new constraints are not satisfiable.
+   :ivar list[PostconditionFailedState] postconditions_failed: States where the function returned, and the assertion    as part of the postcondition could be falsified.
+   :ivar list[SpinningState] spinning: States that were stashed due to a loop bound being breached.
+   :ivar UnderconstrainedMachineState | None underconstrained_machine_state: The inferred memory layout of the input    machine state. This field is not None only if underconstrained_execution is enabled for the session.
+   :ivar dict annotations: A list of paths to memory locations containing    the input arguments. cozy will use this information to help provide a human readable dump of how the    program being executed mutated its input arguments. This allows for comparison of the input arguments memory    in situations where the memory location or memory layout of the input argument differs between the programs.
+   :ivar dict[DeadendedState, NestedDict[claripy.ast.bits]] return_annotations: If the    :py:meth:`RunResult.annotate_return` was called, then this dictionary will be populated with the annotated    return information of the run. If the method was not called, this dictionary will remain empty.
+
+
+   .. py:attribute:: session
+
+
+   .. py:attribute:: deadended
+
+
+   .. py:attribute:: errored
+
+
+   .. py:attribute:: asserts_failed
+
+
+   .. py:attribute:: assume_warnings
+
+
+   .. py:attribute:: postconditions_failed
+
+
+   .. py:attribute:: spinning
+
+
+   .. py:attribute:: underconstrained_machine_state
+
+
+   .. py:attribute:: annotations
+      :type:  cozy.nested_dict.NestedDict[angr.state_plugins.SimMemView]
+
+
+   .. py:attribute:: _return_annotations
+      :type:  dict[cozy.terminal_state.DeadendedState, cozy.nested_dict.NestedDict[claripy.ast.Bits]]
+
+
+   .. py:method:: annotate_return(annotator: collections.abc.Callable[[angr.SimState, claripy.ast.Bits | angr.sim_type.SimStructValue | angr.sim_type.SimUnionValue, angr.sim_type.SimType], cozy.nested_dict.NestedDict[claripy.ast.Bits] | dict[str | int, claripy.ast.Bits | dict]])
+
+      Adds a return result annotation to every deadended state in this return result. This is accomplished        by providing an annotator callback. This annotator will be passed three values: the angr        :py:class:`~angr.sim_state.SimState`, the return value of the function and the type of the return result.        The Python type of the return value will depend on the return type of the function under analysis.        It may be a claripy AST bitvector if the return value is an integer for instance, or it may be        something like an angr SimStructValue if the return result is a struct. Note that if the return result        is a pointer, the address of the pointer is passed to the annotator, not the contents of the memory that        is being pointed to.
+
+
+
+   .. py:method:: get_return_annotation(state: cozy.terminal_state.DeadendedState) -> cozy.nested_dict.NestedDict[claripy.ast.Bits]
+
+
+   .. py:property:: assertion_triggered
+      :type: bool
+
+
+      Returns True if there were any assertions triggered during this run.
+
+      :return: True if there were assertions triggered.
+      :rtype: bool
+
+
+
+   .. py:property:: postcondition_triggered
+      :type: bool
+
+
+      Returns True if there were any postcondition assertions triggered during this run.
+
+      :return: True if there were postcondition assertions triggered.
+      :rtype: bool
+
+
+
+   .. py:method:: __str__()
+
+
+   .. py:method:: report(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a composite human readable report with information about errored states, asserts failed,        postconditions failed, and spinning states.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_errored(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about a list of errored states.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each errored state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_spinning(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about a list of failed postcondition assertions.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed        state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_postconditions_failed(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about the failed postcondition assertions.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed        state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+   .. py:method:: report_asserts_failed(args: any, concrete_post_processor: collections.abc.Callable[[any], any] | None = None, num_examples: int = 3) -> str
+
+      Creates a human readable report about any failed assertions.
+
+      :param any args: The arguments to concretize
+      :param Callable[[any], any] | None concrete_post_processor: This function is used to post-process concretized        versions of args before they are added to the return string. Some examples of this function include converting        an integer to a negative number due to use of two's complement, or slicing off parts of the argument based on        another part of the input arguments.
+      :param int num_examples: The maximum number of concrete examples to show the user for each assertion failed        state.
+      :return: The report as a string
+      :rtype: str
+
+
+
+.. py:data:: _mem_write_ctr
+   :value: 0
+
+
+.. py:function:: _on_mem_write(state)
+
+.. py:data:: _malloc_name_ctr
+   :value: 0
+
+
+.. py:function:: _on_simprocedure(state)
+
+.. py:function:: _save_states(states)
+
+.. py:class:: _SessionExploration(session: Session, cache_intermediate_info: bool = True)
+
+   .. py:attribute:: session
+
+
+   .. py:attribute:: assume_warnings
+      :type:  list[tuple[cozy.directive.Assume, angr.SimState]]
+      :value: []
+
+
+
+   .. py:attribute:: asserts_failed
+      :type:  list[cozy.terminal_state.AssertFailedState]
+      :value: []
+
+
+
+   .. py:attribute:: cache_intermediate_info
+      :value: True
+
+
+
+   .. py:attribute:: asserts_to_scrub
+      :type:  set[cozy.directive.Assert]
+
+
+   .. py:attribute:: postconditions_failed
+      :type:  list[cozy.terminal_state.PostconditionFailedState]
+      :value: []
+
+
+
+   .. py:attribute:: postconditions_to_scrub
+      :type:  set[cozy.directive.Postcondition]
+
+
+   .. py:method:: explore(simgr)
+      :abstractmethod:
+
+
+
+.. py:class:: _SessionDirectiveExploration(session: Session, cache_intermediate_info: bool = True)
+
+   Bases: :py:obj:`_SessionExploration`
+
+
+   .. py:method:: check_postconditions(simgr)
+
+
+   .. py:method:: explore(simgr)
+
+
+.. py:class:: _SessionBasicExploration(session: Session, cache_intermediate_info: bool = True)
+
+   Bases: :py:obj:`_SessionExploration`
+
+
+   .. py:method:: explore(simgr)
+
+
+.. py:class:: Session(proj, start_fun: str | int | None = None, underconstrained_execution: bool = False, underconstrained_initial_state: UnderconstrainedMachineState | None = None)
+
+   A session is a particular run of a project, consisting of attached directives (asserts/assumes).    You can malloc memory for storage prior to running the session.    Once you are ready to run the session, use the run method.
+   :ivar angr.SimState state: The initial state tied to this particular session. You can access this member to modify    properties of the state before a run.
+   :ivar cozy.project.Project proj: The Project tied to this session.
+   :ivar str | int | None start_fun: The starting function tied to this session. If start_fun is None, then the    session starts in an entry state.
+   :ivar list[Directive] directives: The directives added to this session.
+   :ivar bool has_run: True if the :py:meth:`cozy.project.Session.run` method has been called, otherwise False.
+
+   Constructs a session derived from a project. The :py:meth:`cozy.project.Project.session` is the preferred method for creating a session, not this constructor.
+
+
+   .. py:attribute:: proj
+
+
+   .. py:attribute:: start_fun
+      :value: None
+
+
+
+   .. py:attribute:: underconstrained_execution
+      :value: False
+
+
+
+   .. py:attribute:: directives
+      :value: []
+
+
+
+   .. py:attribute:: has_run
+      :value: False
+
+
+
+   .. py:attribute:: prototype
+      :value: None
+
+
+
+   .. py:attribute:: _internal_return_val
+      :type:  angr.calling_conventions.SimFunctionArgument | None
+      :value: None
+
+
+
+   .. py:attribute:: _constructed_return_val
+      :value: False
+
+
+
+   .. py:attribute:: annotations
+      :type:  cozy.nested_dict.NestedDict[angr.state_plugins.SimMemView]
+
+
+   .. py:attribute:: case_splits
+      :type:  list[list[claripy.ast.Bool]]
+      :value: []
+
+
+
+   .. py:method:: _initialize_regs(state: angr.SimState)
+
+
+   .. py:method:: _apply_underconstrained_machine_state(state: angr.SimState, machine_state: UnderconstrainedMachineState)
+
+
+   .. py:method:: store_fs(filename: str, simfile: angr.SimFile) -> None
+
+      Stores a file in a virtual filesystem available during execution. This method simply forwards the arguments        to state.fs.insert.
+
+      :param str filename: The filename of the new file.
+      :param angr.SimFile simfile: The file to make available to the simulated program.
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: malloc(num_bytes: int, name=None) -> int
+
+      Mallocs a fixed amount of memory using the angr heap simulation plugin. Useful for setting things up in memory        before the :py:meth:`~cozy.project.Project.run` method is called.
+
+      :param int num_bytes: The number of bytes to allocate.
+      :return: A pointer to the allocated memory block.
+      :rtype: int
+
+
+
+   .. py:method:: store(addr: int, data: claripy.ast.bits, **kwargs)
+
+      Stores data at some address. This method simply forwards the arguments to state.memory.store.
+
+      :param int addr: Address to store the data at.
+      :param claripy.ast.bits data: The data to store in memory.
+      :param kwargs: Additional keyword arguments to pass to state.memory.store
+
+
+
+   .. py:property:: memory
+
+
+   .. py:property:: mem
+
+      Access memory using a dict-like interface. This property simply forwards to state.mem
+
+
+
+   .. py:method:: add_directives(*directives: cozy.directive.Directive) -> None
+
+      Adds multiple directives to the session.
+
+      :param Directive directives: The directives to add.
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: add_constraints(*constraints: claripy.ast.bool) -> None
+
+      Adds multiple constraints to the session's starting state. This can be used as a precondition.
+
+      :param claripy.ast.bool constraints: The constraints to add
+      :return: None
+      :rtype: None
+
+
+
+   .. py:method:: precondition(*conditions: claripy.ast.bool)
+
+      Adds a precondition to the session. This is an alias for the :py:meth:`~cozy.session.Session.add_constraints`        method.
+
+      :param claripy.ast.bool conditions: The preconditions to add to the session's starting state.
+
+
+
+   .. py:method:: postcondition(*condition_funs: collections.abc.Callable[[angr.SimState], claripy.ast.bool], info_str: str | None = None)
+
+      Adds postconditions to the session by creating :py:class:`cozy.directive.Postcondition` objects and attaching        them to the session.
+
+      :param Callable[[SimState], claripy.ast.bool] condition_funs: When the program reaches a terminal state, the        SimState will be passed to this function, and an assertion condition should be returned. This is then used        internally by the SAT solver, along with the state's accumulated constraints.
+      :param str | None info_str: Human readable label for this postcondition assertion, printed to the user if the        assert is triggered.
+
+
+
+   .. py:method:: cases(*conditions: claripy.ast.Bool)
+
+      This method adds a case split along a single dimension to the simulation state before the session is run.        When the session is run, the starting state is immediately split, and constraints from the n-ary        Cartesian product are added (where n is the number of times cases has been called). This method is useful        in situations in lieu of adding a precondition that contains a disjunction. The motivation here is that        splitting the state may be more palatable for the SMT solver than using a :py:class:`claripy.Or` as a         precondition.
+
+      :param conditions: The conditions upon which we will split the starting state.
+
+
+
+   .. py:property:: start_fun_addr
+
+
+   .. py:method:: _call(args: list[claripy.ast.bits] | None, cache_intermediate_info: bool = True, ret_addr: int | None = None) -> angr.sim_manager.SimulationManager
+
+
+   .. py:method:: _session_exploration(cache_intermediate_info: bool = True) -> _SessionExploration
+
+
+   .. py:property:: return_type
+
+
+   .. py:property:: _return_val
+      :type: angr.calling_conventions.SimFunctionArgument | None
+
+
+
+   .. py:method:: get_return_value(state)
+
+
+   .. py:method:: _run_result(simgr: angr.sim_manager.SimulationManager, sess_exploration: _SessionExploration) -> RunResult
+
+
+   .. py:method:: annotate_memory(path: tuple[str | int, Ellipsis], mem: angr.state_plugins.SimMemView)
+
+      Annotates some memory location(s) with a unique path to be used for comparison purposes. You may use this        method to annotate input arguments, even if the memory locations and memory layout differ between the two        programs under comparison. For example, suppose that function A is passed two arguments: an array of integers        and an integer giving the array size. Function B is passed a single argument: a pointer to a struct which        contains two fields: a pointer to an array and a size. We can go and annotate the first element of the array        as the path ["array", 0] for both sessions, allowing for an apples-to-apples comparison, even if the underlying        memory location for the first element is different. This also improves readability of the report since we have        information that is richer than a simple memory location. This feature was primarily designed for C vs Rust        comparisons where input argument memory layout differences are more common. It may be useful in the micropatch        use case as well.
+
+      :param tuple[str | int, ...] path: The root annotation path of the input memory view.        Note that if the memory view is a struct, we will recurse through its fields, performing a separate annotation        for each member of the struct. You can use any combination of strings/integers you'd like, however in general        it's best to try to use strings as field names and integers for array indices or argument numbers.
+      :param SimMemView mem: A memory view of the data to annotate. Once the session run is completed, we will use        the view's :py:meth:`angr.state_plugins.view.SimMemView.set_state` method to determine how the program mutated        its input arguments. Note that if this memview's type is a composite data structure, we will recursively        walk through the members. If the memview is a pointer, we will dereference the pointer, and so forth.
+
+
+
+   .. py:method:: _split_cases(simgr: angr.SimulationManager)
+
+
+   .. py:method:: run(args: list[claripy.ast.bits] | None = None, cache_intermediate_info: bool = True, ret_addr: int | None = None, loop_bound: int | None = None) -> RunResult
+
+      Runs a session to completion, either starting from the start_fun used to create the session, or from the        program start. Note that currently a session may be run only once. If run is called multiple times, a        RuntimeError will be thrown.
+
+      :param list[claripy.ast.bits] | None args: The arguments to pass to the function. angr will utilize the function's        type signature to figure out the calling convention to use with the arguments.
+      :param bool cache_intermediate_info: If this flag is True, then information about intermediate states will be        cached. This is required for dumping the execution graph which is used in visualization.
+      :param int | None ret_addr: What address to return to if calling as a function
+      :param int | None loop_bound: Sets an upper bound on loop iteration count. Useful for programs with        non-terminating loops.
+      :return: The result of running this session.
+      :rtype: RunResult
+
+
+

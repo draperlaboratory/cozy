@@ -1,0 +1,355 @@
+cozy.__main__
+=============
+
+.. py:module:: cozy.__main__
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.__main__.Results
+   cozy.__main__.Stage
+   cozy.__main__.Wizard
+
+
+Module Contents
+---------------
+
+.. py:class:: Results
+
+   .. py:method:: to_string()
+
+
+.. py:class:: Stage(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Create a collection of name/value pairs.
+
+   Example enumeration:
+
+   >>> class Color(Enum):
+   ...     RED = 1
+   ...     BLUE = 2
+   ...     GREEN = 3
+
+   Access them by:
+
+   - attribute access:
+
+     >>> Color.RED
+     <Color.RED: 1>
+
+   - value lookup:
+
+     >>> Color(1)
+     <Color.RED: 1>
+
+   - name lookup:
+
+     >>> Color['RED']
+     <Color.RED: 1>
+
+   Enumerations can be iterated over, and know how many members they have:
+
+   >>> len(Color)
+   3
+
+   >>> list(Color)
+   [<Color.RED: 1>, <Color.BLUE: 2>, <Color.GREEN: 3>]
+
+   Methods can be added to enumerations, and members can have their own
+   attributes -- see the documentation for details.
+
+
+   .. py:attribute:: confirm_start
+      :value: 1
+
+
+
+   .. py:attribute:: request_script_name
+      :value: 2
+
+
+
+   .. py:attribute:: confirm_script_clobber
+      :value: 3
+
+
+
+   .. py:attribute:: request_prepatched
+      :value: 4
+
+
+
+   .. py:attribute:: request_postpatched
+      :value: 5
+
+
+
+   .. py:attribute:: request_function_name
+      :value: 6
+
+
+
+   .. py:attribute:: request_signature
+      :value: 7
+
+
+
+   .. py:attribute:: request_concolic
+      :value: 8
+
+
+
+   .. py:attribute:: request_concolic_complete
+      :value: 9
+
+
+
+   .. py:attribute:: request_hooks
+      :value: 10
+
+
+
+   .. py:attribute:: request_textual_report
+      :value: 11
+
+
+
+   .. py:attribute:: request_visualization
+      :value: 12
+
+
+
+   .. py:attribute:: request_dump
+      :value: 13
+
+
+
+   .. py:attribute:: request_dump_name
+      :value: 14
+
+
+
+   .. py:attribute:: complete
+      :value: 15
+
+
+
+.. py:class:: Wizard
+
+   Bases: :py:obj:`textual.app.App`
+
+
+   .. py:attribute:: results
+
+
+   .. py:attribute:: CSS
+      :value: Multiline-String
+
+      .. raw:: html
+
+         <details><summary>Show Value</summary>
+
+      .. code-block:: python
+
+         """
+             Screen {
+                 padding:1
+             }
+             """
+
+      .. raw:: html
+
+         </details>
+
+
+
+
+   .. py:method:: compose() -> textual.app.ComposeResult
+
+
+   .. py:method:: ask_yes_no(text)
+      :async:
+
+
+
+   .. py:method:: ask_string(text, placeholder='')
+      :async:
+
+
+
+   .. py:method:: ask_file(text)
+      :async:
+
+
+
+   .. py:method:: set_stage(stage)
+      :async:
+
+
+
+   .. py:method:: set_confirm_start()
+      :async:
+
+
+
+   .. py:method:: handle_confirm_start(message)
+      :async:
+
+
+
+   .. py:method:: set_confirm_script_clobber()
+      :async:
+
+
+
+   .. py:method:: handle_confirm_script_clobber(message)
+      :async:
+
+
+
+   .. py:method:: set_request_script_name()
+      :async:
+
+
+
+   .. py:method:: handle_request_script_name(message)
+      :async:
+
+
+
+   .. py:method:: set_request_prepatched()
+      :async:
+
+
+
+   .. py:method:: handle_request_prepatched(message)
+      :async:
+
+
+
+   .. py:method:: set_request_postpatched()
+      :async:
+
+
+
+   .. py:method:: handle_request_postpatched(message)
+      :async:
+
+
+
+   .. py:method:: set_request_function_name()
+      :async:
+
+
+
+   .. py:method:: handle_request_function_name(message)
+      :async:
+
+
+
+   .. py:method:: set_request_signature()
+      :async:
+
+
+
+   .. py:method:: handle_request_signature(message)
+      :async:
+
+
+
+   .. py:method:: set_request_hooks()
+      :async:
+
+
+
+   .. py:method:: handle_request_hooks(message)
+      :async:
+
+
+
+   .. py:method:: set_request_concolic()
+      :async:
+
+
+
+   .. py:method:: handle_request_concolic(message)
+      :async:
+
+
+
+   .. py:method:: set_request_concolic_complete()
+      :async:
+
+
+
+   .. py:method:: handle_request_concolic_complete(message)
+      :async:
+
+
+
+   .. py:method:: set_request_textual_report()
+      :async:
+
+
+
+   .. py:method:: handle_request_textual_report(message)
+      :async:
+
+
+
+   .. py:method:: set_request_dump()
+      :async:
+
+
+
+   .. py:method:: handle_request_dump(message)
+      :async:
+
+
+
+   .. py:method:: set_request_dump_name()
+      :async:
+
+
+
+   .. py:method:: handle_request_dump_name(message)
+      :async:
+
+
+
+   .. py:method:: set_request_visualization()
+      :async:
+
+
+
+   .. py:method:: handle_request_visualization(message)
+      :async:
+
+
+
+   .. py:method:: complete()
+      :async:
+
+
+
+   .. py:method:: on_input_submitted(message: textual.widgets.Input.Submitted) -> None
+      :async:
+
+
+
+   .. py:method:: on_option_list_option_selected(message: textual.widgets.OptionList.OptionSelected) -> None
+      :async:
+
+
+
+   .. py:method:: on_directory_tree_file_selected(message: textual.widgets.DirectoryTree.FileSelected) -> None
+      :async:
+
+
+

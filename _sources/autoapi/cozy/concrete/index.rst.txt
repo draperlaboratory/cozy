@@ -1,0 +1,92 @@
+cozy.concrete
+=============
+
+.. py:module:: cozy.concrete
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.concrete.CompatiblePairInput
+   cozy.concrete.TerminalStateInput
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   cozy.concrete.concretize
+
+
+Module Contents
+---------------
+
+.. py:function:: concretize(solver: claripy.Solver, symbolic_bundle: claripy.ast.Bits | list | tuple | dict | set | cozy.side_effect.PerformedSideEffect | cozy.nested_dict.NestedDict[claripy.ast.Bits], n: int = 1) -> list
+
+   This function concretizes a bundle of symbolic data by generating up to n models for the symbols    with respect to the constraints given in the passed solver
+
+   :param solver: The solver which contains the constraints over the symbols in the state bundle
+   :param symbolic_bundle: A bundle of symbolic or concrete mixed data, stored in arbitrarily nested Python data structures
+   :param n: The number of examples that we should attempt to generate
+   :return: A list of concretized examples generated for this specific symbolic_bundle. Note that the nesting of the    data structures in the return list will be the same as the input bundle.
+
+
+.. py:class:: CompatiblePairInput(args, mem_diff: dict[range, tuple[claripy.ast.Bits, claripy.ast.Bits]], reg_diff: dict[str, tuple[claripy.ast.Bits, claripy.ast.Bits]], left_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]], right_side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]], left_annotation: cozy.nested_dict.NestedDict[claripy.ast.Base], right_annotation: cozy.nested_dict.NestedDict[claripy.ast.Base], left_ret_annotation: cozy.nested_dict.NestedDict[claripy.ast.Base], right_ret_annotation: cozy.nested_dict.NestedDict[claripy.ast.Base])
+
+   Stores information about the concretization of a compatible state pair.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[range, tuple[claripy.ast.Bits, claripy.ast.Bits]] mem_diff: Concretized version of memory difference. Each key is a memory address range, and each value is a concretized version of the data stored at that location for the prepatched, postpatched runs.
+   :ivar dict[str, tuple[claripy.ast.Bits, claripy.ast.Bits]] reg_diff: Concretized version of register difference. Each key is a register name, and each value is a concretized version of the data stored at that register for the prepatched, postpatched runs.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] left_side_effects: Concretized versions of side effects made by the prepatched state.
+   :ivar dict[str, list[ConcretePerformedSideEffect]] right_side_effects: Concretized versions of side_effects made by the postpatched state.
+   :ivar NestedDict[claripy.ast.Base] left_annotation: Concretized version of the memory annotated with :py:meth:`cozy.session.Session.annotate_memory` for the first program.
+   :ivar NestedDict[claripy.ast.Base] right_annotation: Concretized version of the memory annotated with :py:meth:`cozy.session.Session.annotate_memory` for the second program.
+   :ivar NestedDict[claripy.ast.Base] left_ret_annotation: Concretized version of the annotated return results for the first program. These annotations were created via :py:meth:`cozy.session.RunResult.annotate_return`.
+   :ivar NestedDict[claripy.ast.Base] right_ret_annotation: Concretized version of the annotated return results for the second program. These annotations were created via :py:meth:`cozy.session.RunResult.annotate_return`
+
+
+   .. py:attribute:: args
+
+
+   .. py:attribute:: mem_diff
+
+
+   .. py:attribute:: reg_diff
+
+
+   .. py:attribute:: left_side_effects
+
+
+   .. py:attribute:: right_side_effects
+
+
+   .. py:attribute:: left_annotation
+
+
+   .. py:attribute:: right_annotation
+
+
+   .. py:attribute:: left_ret_annotation
+
+
+   .. py:attribute:: right_ret_annotation
+
+
+.. py:class:: TerminalStateInput(args, side_effects: dict[str, list[cozy.side_effect.ConcretePerformedSideEffect]])
+
+   Stores information about the concretization of a TerminalState.
+
+   :ivar any args: The same Python datastructures as the arguments passed to concrete_examples, except that all claripy symbolic variables are replaced with concrete values.
+   :ivar dict[str, list[PerformedSideEffect]] side_effects: Concretized side effects outputted by the singleton state.
+
+
+   .. py:attribute:: args
+
+
+   .. py:attribute:: side_effects
+
+

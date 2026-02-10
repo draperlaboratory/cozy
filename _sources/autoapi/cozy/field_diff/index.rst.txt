@@ -1,0 +1,137 @@
+cozy.field_diff
+===============
+
+.. py:module:: cozy.field_diff
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.field_diff.FieldDiff
+   cozy.field_diff.EqFieldDiff
+   cozy.field_diff.NotEqLeaf
+   cozy.field_diff.NotEqFieldDiff
+
+
+Module Contents
+---------------
+
+.. py:class:: FieldDiff
+
+   .. py:method:: _rec_diff_str()
+      :abstractmethod:
+
+
+
+   .. py:method:: diff_str() -> str
+
+
+   .. py:method:: _rec_compute_neq(left: bool)
+      :abstractmethod:
+
+
+
+   .. py:method:: _compute_neq(left: bool)
+
+
+   .. py:method:: left_neq() -> cozy.nested_dict.NestedDict
+
+
+   .. py:method:: right_neq() -> cozy.nested_dict.NestedDict
+
+
+   .. py:property:: is_equal
+      :abstractmethod:
+
+
+
+.. py:class:: EqFieldDiff(left_body, right_body)
+
+   Bases: :py:obj:`FieldDiff`
+
+
+   For a field to be equal, all subcomponents of the body must be equal. In this case, left_body and right_body
+   should not hold any further FieldDiffs within themselves. Rather left_body and right_body should be the entire
+   fields for which differencing was checked (and it was determined that all subfields are equal).
+
+
+   .. py:attribute:: left_body
+
+
+   .. py:attribute:: right_body
+
+
+   .. py:method:: _rec_diff_str()
+
+
+   .. py:method:: __str__()
+
+
+   .. py:method:: __repr__()
+
+
+   .. py:method:: _rec_compute_neq(left: bool)
+
+
+   .. py:property:: is_equal
+
+
+.. py:class:: NotEqLeaf(left_leaf, right_leaf)
+
+   Bases: :py:obj:`FieldDiff`
+
+
+   A not equal leaf is a field that cannot be further unpacked/traversed.
+
+
+   .. py:attribute:: left_leaf
+
+
+   .. py:attribute:: right_leaf
+
+
+   .. py:method:: _rec_diff_str()
+
+
+   .. py:method:: __str__()
+
+
+   .. py:method:: __repr__()
+
+
+   .. py:method:: _rec_compute_neq(left: bool)
+
+
+   .. py:property:: is_equal
+
+
+.. py:class:: NotEqFieldDiff(body_diff: list[FieldDiff] | tuple[FieldDiff, Ellipsis] | dict[str | int, FieldDiff])
+
+   Bases: :py:obj:`FieldDiff`
+
+
+   For a field to be not equal, there must be at least one subcomponent of the body that was not equal. In this case,
+   body_diff will hold further FieldDiffs within itself. Equal subfields of the bodies will be
+   represented by EqFieldDiff, whereas unequal subfields will be represented by further nested NotEqFieldDiff.
+
+
+   .. py:attribute:: body_diff
+
+
+   .. py:method:: _rec_diff_str()
+
+
+   .. py:method:: __str__()
+
+
+   .. py:method:: __repr__()
+
+
+   .. py:method:: _rec_compute_neq(left: bool)
+
+
+   .. py:property:: is_equal
+
+

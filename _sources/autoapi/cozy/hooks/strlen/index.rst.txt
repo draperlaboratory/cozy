@@ -1,0 +1,40 @@
+cozy.hooks.strlen
+=================
+
+.. py:module:: cozy.hooks.strlen
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   cozy.hooks.strlen.l
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cozy.hooks.strlen.strlen
+
+
+Module Contents
+---------------
+
+.. py:data:: l
+
+.. py:class:: strlen
+
+   Bases: :py:obj:`angr.SimProcedure`
+
+
+   .. py:attribute:: max_null_index
+      :value: None
+
+
+
+   .. py:method:: run(s, wchar=False, maxlen=None)
+
+
