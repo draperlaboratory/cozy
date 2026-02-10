@@ -1,5 +1,6 @@
+import cozy
 import cozy.analysis as analysis
-import cozy.claripy_ext as claripy_ext
+from cozy.analysis import ComparisonOptions
 from cozy.project import Project
 from cozy.constants import *
 import cozy.primitives as primitives
@@ -144,21 +145,24 @@ weather_3_states = run_weather_3()
 if input("Would you like to view error states for weather-3? (y/n)") == "y":
     print(weather_3_states.report_errored(args, concrete_post_processor=concrete_post_processor, num_examples=2))
 
-mem_reg_diff = False
 if input("When comparing programs would you like to use memory and registers to perform the diffing? (y/n)") == "y":
-    mem_reg_diff = True
+    comparison_options = cozy.analysis.COMPARE_ALL
+else:
+    comparison_options = cozy.analysis.COMPARE_ALL
+    comparison_options &= ~ComparisonOptions.COMPARE_REGISTERS
+    comparison_options &= ~ComparisonOptions.COMPARE_MEMORY
 
 if input("Would you like to compare weather-1 and weather-2? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-1 and WEATHER-2")
-    comparison_results = analysis.Comparison(weather_1_states, weather_2_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff)
+    comparison_results = analysis.Comparison(weather_1_states, weather_2_states, comparisons=comparison_options)
     print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))
 
 if input("Would you like to compare weather-2 and weather-3? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-2 and WEATHER-3")
-    comparison_results = analysis.Comparison(weather_2_states, weather_3_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff)
+    comparison_results = analysis.Comparison(weather_2_states, weather_3_states, comparisons=comparison_options)
     print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))
 
 if input("Would you like to compare weather-1 and weather-3? (y/n)") == "y":
     print("\n\nCOMPARING WEATHER-1 and WEATHER-3")
-    comparison_results = analysis.Comparison(weather_1_states, weather_3_states, compare_std_out=True, compare_memory=mem_reg_diff, compare_registers=mem_reg_diff)
+    comparison_results = analysis.Comparison(weather_1_states, weather_3_states, comparisons=comparison_options)
     print(comparison_results.report(args, concrete_post_processor=concrete_post_processor))

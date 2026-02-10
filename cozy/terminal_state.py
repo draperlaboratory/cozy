@@ -6,9 +6,9 @@ import portion as P
 from angr.sim_manager import ErrorRecord
 
 from . import side_effect
-from .concrete import _concretize, TerminalStateInput
+from .concrete import concretize, TerminalStateInput
 import claripy
-from .directive import Assert, VirtualPrint, Postcondition
+from .directive import Assert, Postcondition
 from .side_effect import PerformedSideEffect
 
 
@@ -111,7 +111,7 @@ class DeadendedState(TerminalState):
         Constructor for DeadendedState
 
         :ivar SimState state: The state that terminated normally.
-        :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
+        :ivar int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.deadended`
         """
         super().__init__(state, state_id, "DEADENDED_STATE")
 
@@ -125,7 +125,7 @@ class SpinningState(TerminalState):
         Constructor for SpinningState
 
         :ivar SimState state: The state that was spinning
-        :ivar int state_id: The identifer of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.spinning`
+        :ivar int state_id: The identifier of the state, determined by its position in the list :py:obj:`cozy.project.RunResult.spinning`
         """
         super().__init__(state, state_id, "SPINNING_STATE")
 

@@ -1,10 +1,9 @@
 import functools
 
-import angr.errors
 import claripy
 import networkx as nx
 import json
-import sys
+from typing import Any
 
 from angr import SimState
 from angr.block import Block
@@ -13,6 +12,7 @@ from collections.abc import Callable
 from angr.state_plugins import SimStateHistory
 
 import cozy.analysis
+from .field_diff import EqFieldDiff, NotEqLeaf, NotEqFieldDiff
 from .functools_ext import fmap
 from .project import Project
 from .session import RunResult
@@ -52,27 +52,38 @@ def _serialize_diff(diff, nice_name_a: Callable[[int], str | None] | None = None
             return str(v)
     return {convert_key(k): (convert_val(v1), convert_val(v2)) for (k, (v1, v2)) in diff.items()}
 
-def _serialized_field_diff(diff : any): 
-    if isinstance(diff, analysis.EqFieldDiff):
+def _serialize_field_diff(diff : Any): 
+    if isinstance(diff, EqFieldDiff):
         return {"tag": "fieldEq", "left": str(diff.left_body), "right": str(diff.right_body)}
-    elif isinstance(diff, analysis.NotEqLeaf):
+    elif isinstance(diff, NotEqLeaf):
         return {"tag": "leafNeq", "left": str(diff.left_leaf), "right": str(diff.right_leaf)}
-    elif isinstance(diff, analysis.NotEqFieldDiff):
-        return fmap(diff.body_diff, _serialized_field_diff)
+    elif isinstance(diff, NotEqFieldDiff):
+        return fmap(diff.body_diff, _serialize_field_diff)
+    elif isinstance(diff, dict) or isinstance(diff, list) or isinstance(diff, tuple):
+        return diff #result of fmapping a body_diff
     else:
-        # fmap into dict labels, so we need this default case too
+        # fmap goes into dict labels, so we need this default case too
         return str(diff)
+
+def _serialize_conc_annotation(diff : Any): 
+    def skip_containers(c):
+        if isinstance(c, dict) or isinstance(c, list) or isinstance(c, tuple):
+            return c 
+        else:
+            return str(c)
+    return fmap(diff, skip_containers)
 
 def dump_comparison(proj_a: Project, proj_b: Project,
                     rslt_a: RunResult, rslt_b: RunResult,
                     comparison_results: analysis.Comparison,
                     file_name_a: str = "prepatch", file_name_b: str = "postpatch",
                     output_file: str = "cozy-result.json",
-                    concrete_post_processor: Callable [[any], any] | None = None,
+                    concrete_post_processor: Callable [[Any], Any] | None = None,
                     include_vex: bool = False, include_simprocs: bool = False,
                     flag_syscalls: bool = False, include_actions: bool = False,
+                    include_annotations: bool = True,
                     include_debug: bool = False, include_side_effects: bool = True,
-                    args: any = [], num_examples: int = 0) -> None:
+                    args: Any = [], num_examples: int = 0) -> None:
     """
     Generates and saves JSON data for Cozy-Viz.
 
@@ -102,6 +113,8 @@ def dump_comparison(proj_a: Project, proj_b: Project,
         SimProcedures called in each basic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
+    :param bool, optional include_annotations: whether to include comparisons
+        of annotated entities. Default False.
     :param bool, optional include_debug: whether to include debugging information
         recovered from DWARF metadata. Default False.
     :param bool, optional include_side_effects: whether to include cozy side effects,
@@ -119,6 +132,7 @@ def dump_comparison(proj_a: Project, proj_b: Project,
                                     include_simprocs=include_simprocs,
                                     include_actions=include_actions,
                                     include_debug=include_debug,
+                                    include_annotations=include_annotations,
                                     include_side_effects=include_side_effects,
                                     flag_syscalls=flag_syscalls,
                                     args=args, num_examples=num_examples)
@@ -138,11 +152,12 @@ def dump_comparison(proj_a: Project, proj_b: Project,
 def visualize_comparison(proj_a: Project, proj_b: Project,
                          rslt_a: RunResult, rslt_b: RunResult,
                          comparison_results: analysis.Comparison,
-                         concrete_post_processor: Callable [[any], any] | None = None,
+                         concrete_post_processor: Callable [[Any], Any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False, include_actions: bool = False,
+                         include_annotations: bool = True,
                          include_debug: bool = False, include_side_effects: bool = True,
-                         args: any = [], num_examples: int = 0,
+                         args: Any = [], num_examples: int = 0,
                          open_browser=False, port=8080
                          ):
     """
@@ -167,6 +182,8 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
         SimProcedures called in each basic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
+    :param bool, optional include_annotations: whether to include comparisons
+        of annotated entities. Default False.
     :param bool, optional include_debug: whether to include debugging information
         recovered from DWARF metadata. Default False.
     :param bool, optional include_side_effects: whether to include cozy side effects,
@@ -185,6 +202,7 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
                                     concrete_post_processor=concrete_post_processor,
                                     include_vex=include_vex,
                                     flag_syscalls=flag_syscalls,
+                                    include_annotations=include_annotations,
                                     include_actions = include_actions,
                                     include_debug = include_debug,
                                     include_side_effects=include_side_effects,
@@ -196,13 +214,14 @@ def visualize_comparison(proj_a: Project, proj_b: Project,
 def _generate_comparison(proj_a: Project, proj_b: Project,
                          rslt_a: RunResult, rslt_b: RunResult,
                          comparison_results: analysis.Comparison,
-                         concrete_post_processor: Callable [[any], any] | None = None,
+                         concrete_post_processor: Callable [[Any], Any] | None = None,
                          include_vex: bool = False, include_simprocs: bool = False,
                          flag_syscalls: bool = False,
                          include_actions: bool = False,
+                         include_annotations: bool = True,
                          include_debug: bool = False,
                          include_side_effects: bool = True,
-                         args: any = [], num_examples: int = 0) -> tuple[nx.DiGraph, nx.DiGraph]:
+                         args: Any = [], num_examples: int = 0) -> tuple[nx.DiGraph, nx.DiGraph]:
     """
     Generates JSON data for Cozy-Viz.
 
@@ -224,6 +243,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
         SimProcedures called in each basic block. Default False.
     :param bool, optional include_actions: whether to include logging of
         read/write operations on memory and registers. Default False.
+    :param bool, optional include_annotations: whether to include comparisons
+        of annotated entities. Default False.
     :param bool, optional include_debug: whether to include debugging information
         recovered from DWARF metadata. Default False.
     :param bool, optional include_side_effects: whether to include cozy side effects,
@@ -284,6 +305,8 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                 concrete_args = fmap(concrete_args, f)
 
                 conc_sediff = []
+                conc_annotation_diff = []
+                conc_ret_annotation_diff = []
 
                 def serialize_conc_effect(effect, graph):
                     try:
@@ -300,13 +323,21 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                             "right": list(map(lambda x: serialize_conc_effect(x, g_b), c.right_side_effects[channel]))
                         }
                     conc_sediff.append(channels)
+                    conc_annotation_diff.append({
+                        "left" : c.left_annotation.data,
+                        "right" : c.right_annotation.data
+                    })
+                    conc_ret_annotation_diff.append({
+                        "left" : c.left_ret_annotation.data,
+                        "right" : c.right_ret_annotation.data
+                    })
 
                 simplified_side_effect_diff = {}
 
                 def serialize_abstract_effect(eff):
                     field1 = eff[0] != None
                     field2 = eff[1] != None
-                    return [field1, field2, _serialized_field_diff(eff[2])]
+                    return [field1, field2, _serialize_field_diff(eff[2])]
 
 
                 for channel in comp.side_effect_diff:
@@ -321,6 +352,11 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
                     "conc_sediff" : conc_sediff,
                     "conc_args": concrete_args
                 }
+                if include_annotations:
+                    info["annotation_diff"] = _serialize_field_diff(comp.annotation_diff)
+                    info["conc_annotation_diff"] = _serialize_conc_annotation(conc_annotation_diff)
+                    info["ret_annotation_diff"] = _serialize_field_diff(comp.ret_annotation_diff)
+                    info["conc_ret_annotation_diff"] = _serialize_conc_annotation(conc_ret_annotation_diff)
                 g_a.nodes[na]["compatibilities"][nb] = info
                 g_b.nodes[nb]["compatibilities"][na] = info
 
@@ -330,7 +366,7 @@ def _generate_comparison(proj_a: Project, proj_b: Project,
             parent = g.nodes[parent_i]["state"]
             if include_actions:
                 edge_attr['actions'] = eg._list_actions(child,parent)
-        for (n, attr) in g.nodes.items():
+        for (_, attr) in g.nodes.items():
             if include_vex: attr['vex'] = attr["contents"].vex._pp_str() or "*"
             # FIXME: inefficient, we'll be running this many times for each basic block. 
             if include_simprocs: attr['simprocs'] = eg._list_simprocs(attr["contents"]) or []
@@ -448,7 +484,7 @@ class ExecutionGraph:
         except:
             return None
 
-    def _list_actions(self, child: angr.SimState | SimStateHistory, parent: angr.SimState):
+    def _list_actions(self, child: SimState | SimStateHistory, parent: SimState):
         # Actions are only recorded in history, not attached to the
         # SimState where they occurred. So we need to look at the history
         # of the child to get the actions occuring on the parent
@@ -457,7 +493,7 @@ class ExecutionGraph:
         # parents took - for example if an action includes narrowing
         # a constraint. So we attach the actions a child associates with
         # their parent to an edge.
-        if isinstance(child, angr.SimState):
+        if isinstance(child, SimState):
             history = child.history
         else:
             history = child
@@ -506,7 +542,7 @@ class ExecutionGraph:
         :return networkx.DiGraph: The resulting graph.
         """
         g = self.reconstruct_bbl_addr_graph()
-        for n,attr in g.nodes.items():
+        for _,attr in g.nodes.items():
             attr['contents'] = self._get_bbl_asm(attr["contents"]) or "*"
             attr['vex'] = attr["contents"].vex._pp_str() or "*"
             attr['constraints'] = list(map(str, attr["constraints"])) or "*"

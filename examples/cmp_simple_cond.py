@@ -1,4 +1,3 @@
-# coding: utf-8
 from cozy.project import Project
 from cozy.analysis import Comparison
 import cozy.execution_graph as execution_graph

@@ -102,7 +102,7 @@ def fmap(val0: any, f: Callable[[any], any]) -> any:
 
 def compose(f: Callable[[B], C], g: Callable[[...], B]) -> Callable[[...], C]:
     """
-    Composes two functions, `f` and `g`, to create a new function h(\*a, \*\*kw) = f(g(\*a, \*\*kw))
+    Composes two functions, `f` and `g`, to create a new function h(\\*a, \\*\\*kw) = f(g(\\*a, \\*\\*kw))
 
     :param Callable[[B], C] f: The first function to compose.
     :param Callable[[...], B] g: The second function to compose.

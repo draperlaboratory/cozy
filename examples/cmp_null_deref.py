@@ -7,7 +7,6 @@ from cozy.directive import Assume, Assert
 from cozy.constants import *
 import cozy.primitives as primitives
 import cozy.execution_graph as execution_graph
-from angr.storage.memory_mixins.address_concretization_mixin import MultiwriteAnnotation
 
 dump_execution_graphs = input("Would you like to dump the execution graphs for visualization? (y/n)") == "y"
 arg0 = primitives.sym_ptr(archinfo.ArchAMD64, 'int_arg')

@@ -1,17 +1,24 @@
+import enum
+import functools
 from collections.abc import Iterator
 
 import claripy
-import z3.z3types
 from angr import SimState
 
 import portion as P
+from angr.state_plugins import SimMemView
+from angr.calling_conventions import PointerWrapper
+from angr.sim_type import SimStructValue
 
 import cozy.log
 from . import claripy_ext, log, side_effect
+from .field_diff import FieldDiff, EqFieldDiff, NotEqLeaf, NotEqFieldDiff
+from .nested_dict import NestedDict
 from .functools_ext import *
 import collections.abc
+
 from .session import RunResult
-from .concrete import _concretize, CompatiblePairInput
+from .concrete import concretize, CompatiblePairInput
 from .side_effect import PerformedSideEffect, ConcretePerformedSideEffect
 from .terminal_state import TerminalState, DeadendedState
 
@@ -93,127 +100,109 @@ def nice_name(state: SimState, malloced_names: P.IntervalDict[tuple[str, P.Inter
 
     return None
 
-class FieldDiff:
-    pass
+def to_plain_python(value):
+    if isinstance(value, PointerWrapper):
+        return to_plain_python(value.value)
+    elif isinstance(value, SimStructValue):
+        return {field_name: value[field_name] for field_name in value.struct.fields}
+    else:
+        return value
 
-class EqFieldDiff(FieldDiff):
-    """
-    For a field to be equal, all subcomponents of the body must be equal. In this case, left_body and right_body
-    should not hold any further FieldDiffs within themselves. Rather left_body and right_body should be the entire
-    fields for which differencing was checked (and it was determined that all subfields are equal).
-    """
-    def __init__(self, left_body, right_body):
-        self.left_body = left_body
-        self.right_body = right_body
-
-class NotEqLeaf(FieldDiff):
-    """
-    A not equal leaf is a field that cannot be further unpacked/traversed.
-    """
-    def __init__(self, left_leaf, right_leaf):
-        self.left_leaf = left_leaf
-        self.right_leaf = right_leaf
-
-class NotEqFieldDiff(FieldDiff):
-    """
-    For a field to be not equal, there must be at least one subcomponent of the body that was not equal. In this case,
-    body_diff will hold further FieldDiffs within itself. Equal subfields of the bodies will be
-    represented by EqFieldDiff, whereas unequal subfields will be represented by further nested NotEqFieldDiff.
-    """
-    def __init__(self, body_diff):
-        # body_diff is a zipped data structure. For example, if body_diff is a list, it will be a list of FieldDiff
-        # objects, one for each zipped element. If body_diff is a dict, it will be a dict with string keys, and values
-        # of FieldDiff objects.
-        self.body_diff = body_diff
-
-def compare_side_effect(joint_solver, left_se, right_se) -> FieldDiff:
-    both_lists = isinstance(left_se, list) and isinstance(right_se, list)
-    both_tuples = isinstance(left_se, tuple) and isinstance(right_se, tuple)
+def compare_structured_values(joint_solver, left, right) -> FieldDiff:
+    both_lists = isinstance(left, list) and isinstance(right, list)
+    both_tuples = isinstance(left, tuple) and isinstance(right, tuple)
     # List, tuple case
     if both_lists or both_tuples:
-        max_len = max(len(left_se), len(right_se))
+        max_len = max(len(left), len(right))
         subfields_equal = True
         diff = []
         # Loop over the zipped lists
         for i in range(max_len):
-            if i < len(left_se):
-                left_val = left_se[i]
+            if i < len(left):
+                left_val = left[i]
             else:
                 left_val = None
-            if i < len(right_se):
-                right_val = right_se[i]
+            if i < len(right):
+                right_val = right[i]
             else:
                 right_val = None
             # Compare each element of the list
-            rec_result = compare_side_effect(joint_solver, left_val, right_val)
+            rec_result = compare_structured_values(joint_solver, left_val, right_val)
             if not isinstance(rec_result, EqFieldDiff):
                 # The element in the list are not equal, so the overall list is not equal
                 subfields_equal = False
             diff.append(rec_result)
         if subfields_equal:
             # All elements in the list are equal, so the overall lists are equal
-            return EqFieldDiff(left_se, right_se)
+            return EqFieldDiff(left, right)
         else:
             # There was at least one element that was not equal, so return the zipped diff
             if both_tuples:
                 diff = tuple(diff)
             return NotEqFieldDiff(diff)
+    # NestedDict case
+    elif isinstance(left, NestedDict) and isinstance(right, NestedDict):
+        return compare_structured_values(joint_solver, left.data, right.data)
     # dict case
-    elif isinstance(left_se, dict) and isinstance(right_se, dict):
-        all_keys = set(left_se.keys())
-        all_keys.update(right_se.keys())
+    elif isinstance(left, dict) and isinstance(right, dict):
+        all_keys = set(left.keys())
+        all_keys.update(right.keys())
         subfields_equal = True
         diff = dict()
         # Compute the diff for all entries in the dictionary
         for key in all_keys:
-            left_val = left_se.get(key, None)
-            right_val = right_se.get(key, None)
+            left_val = left.get(key, None)
+            right_val = right.get(key, None)
             # Compare each value in the dictionary
-            rec_result = compare_side_effect(joint_solver, left_val, right_val)
+            rec_result = compare_structured_values(joint_solver, left_val, right_val)
             if not isinstance(rec_result, EqFieldDiff):
                 # The value in the dictionary was not equal, so the overall dicts are not equal
                 subfields_equal = False
             diff[key] = rec_result
         if subfields_equal:
-            return EqFieldDiff(left_se, right_se)
+            return EqFieldDiff(left, right)
         else:
             return NotEqFieldDiff(diff)
     # claripy ast case
-    elif isinstance(left_se, claripy.ast.Bits) and isinstance(right_se, claripy.ast.Bits):
+    elif isinstance(left, claripy.ast.Bits) and isinstance(right, claripy.ast.Bits):
         def is_sat():
             try:
-                return joint_solver.satisfiable(extra_constraints=[left_se != right_se])
-            except claripy.ClaripyZ3Error as err:
+                return joint_solver.satisfiable(extra_constraints=[left != right])
+            except claripy.errors.ClaripyZ3Error as err:
                 cozy.log.error("Unable to solve SMT formula when comparing side effects. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}", str(err))
                 return True
             except claripy.ClaripySolverInterruptError as err:
                 cozy.log.error("Unable to solve SMT formula when comparing side effects. The SMT solver was interrupted, most likely due to resource exhaustion. We will assume that there is some way to make these side effects not equal.\nThe exception thrown was:\n{}", str(err))
                 return True
 
-        if left_se is not right_se and is_sat():
+        if left is not right and is_sat():
             # Base case: leaf elements are not equal
-            return NotEqLeaf(left_se, right_se)
+            return NotEqLeaf(left, right)
         else:
-            return EqFieldDiff(left_se, right_se)
+            return EqFieldDiff(left, right)
     # int or string case
-    elif (isinstance(left_se, int) and isinstance(right_se, int)) or (
-            isinstance(left_se, str) and isinstance(right_se, str)):
-        if left_se == right_se:
-            return EqFieldDiff(left_se, right_se)
+    elif (isinstance(left, int) and isinstance(right, int)) or (
+            isinstance(left, str) and isinstance(right, str)):
+        if left == right:
+            return EqFieldDiff(left, right)
         else:
-            return NotEqLeaf(left_se, right_se)
+            return NotEqLeaf(left, right)
     # catchall base case. This will be hit if one of the values we were comparing was None, which is what we want
     else:
-        return NotEqLeaf(left_se, right_se)
+        return NotEqLeaf(left, right)
 
 class DiffResult:
     def __init__(self,
                  mem_diff: dict[range, tuple[claripy.ast.bits, claripy.ast.bits]],
                  reg_diff: dict[str, tuple[claripy.ast.bits, claripy.ast.bits]],
-                 side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]]):
+                 side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
+                 annotation_diff: FieldDiff | None,
+                 ret_annotation_diff: FieldDiff | None):
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
+        self.annotation_diff = annotation_diff
+        self.ret_annotation_diff = ret_annotation_diff
 
 class StateDiff:
     """
@@ -230,6 +219,12 @@ class StateDiff:
                    compute_mem_diff=True,
                    compute_reg_diff=True,
                    compute_side_effect_diff=True,
+                   compute_annotated_diff=True,
+                   compute_ret_annotation_diff=False,
+                   annotations_left: NestedDict[SimMemView] | None = None,
+                   annotations_right: NestedDict[SimMemView] | None = None,
+                   ret_annotations_left: NestedDict[claripy.ast.bits] | None = None,
+                   ret_annotations_right: NestedDict[claripy.ast.bits] | None = None,
                    use_unsat_core=True,
                    simplify=False,
                    extra_constraints=[]) -> DiffResult | None:
@@ -249,8 +244,14 @@ class StateDiff:
         first element of the return tuple will be None.
         :param bool compute_reg_diff: If this flag is True, then we will diff the registers. If this is false, then the\
         second element of the return tuple will be None.
+        :param bool compute_annotated_diff: If this flag is True, then we will diff memory that has been annotated\
+        by using the :py:meth:`cozy.session.Session.annotate_memory`
         :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
         comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
+        :param annotations_left: The memory annotations attached to the left state
+        :param annotations_right: The memory annotations attached to the right state
+        :param ret_annotations_left: Return value annotations for the left state
+        :param ret_annotations_right: Return value annotations for the right state
         :return: None if the two states are not compatible, otherwise returns an object containing the memory,\
         register differences, and side effect differences.
         :rtype: DiffResult | None
@@ -277,7 +278,7 @@ class StateDiff:
 
         try:
             is_sat = joint_solver.satisfiable()
-        except claripy.ClaripyZ3Error as err:
+        except claripy.errors.ClaripyZ3Error as err:
             cozy.log.error("Unable to determine if two states are compatible. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these two states compatible in our report. Note that there is unlikely to be any concrete examples generated for this pair.\nThe exception thrown was:\n{}", str(err))
             is_sat = True
         except claripy.ClaripySolverInterruptError as err:
@@ -324,7 +325,7 @@ class StateDiff:
 
                     try:
                         is_sat = joint_solver.satisfiable(extra_constraints=[bytes_left != bytes_right])
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to determine if memory contents at {} .. {} are equal or not. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", hex(addr_range.start), hex(addr_range.start + len(addr_range) - 1), str(err))
                         is_sat = True
                     except claripy.ClaripySolverInterruptError as err:
@@ -357,7 +358,7 @@ class StateDiff:
                 if reg_left is not reg_right:
                     try:
                         is_sat = joint_solver.satisfiable(extra_constraints=[reg_left != reg_right])
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to determine if register {} is equal or not. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to make these bytes not equal in our report.\nThe exception thrown was:\n{}", reg_name, str(err))
                         is_sat = True
                     except claripy.ClaripySolverInterruptError as err:
@@ -375,7 +376,7 @@ class StateDiff:
         if compute_side_effect_diff:
             left_effects = side_effect.get_effects(sl)
             right_effects = side_effect.get_effects(sr)
-            all_channels = set(left_effects.keys())
+            all_channels: set[str] = set(left_effects.keys())
             all_channels.update(right_effects.keys())
             for channel in all_channels:
                 left_channel = left_effects.get(channel, [])
@@ -386,7 +387,7 @@ class StateDiff:
                 diff = []
                 for (left_effect, right_effect) in aligned_channels:
                     if left_effect is not None and right_effect is not None:
-                        comparison_results = compare_side_effect(joint_solver, left_effect.body, right_effect.body)
+                        comparison_results = compare_structured_values(joint_solver, left_effect.body, right_effect.body)
                         diff.append((left_effect, right_effect, comparison_results))
                     else:
                         left_val = left_effect.body if left_effect is not None else None
@@ -395,7 +396,30 @@ class StateDiff:
 
                 ret_side_effect_diff[channel] = diff
 
-        return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff)
+        ret_annotated_diff: FieldDiff | None = None
+        # Compute annotated memory difference
+        if compute_annotated_diff:
+            if annotations_left is None or annotations_right is None:
+                raise ValueError("compute_annotated_diff is True, however no information about the annotations was provided")
+
+            def f(state: SimState, mem_view: SimMemView) -> claripy.ast.Bits:
+                mem_view.set_state(state)
+                return mem_view.resolved
+            # At this point annotations_left and annotations_right are a NestedDict containing MemViews at the leaves
+            # We must now resolve these MemViews to claripy AST bitvectors by setting the state and resolving the data
+            resolved_annotation_left: NestedDict[claripy.ast.Bits] = annotations_left.map(functools.partial(f, sl))
+            resolved_annotation_right: NestedDict[claripy.ast.Bits] = annotations_right.map(functools.partial(f, sr))
+
+            mem_diff: FieldDiff = compare_structured_values(joint_solver, resolved_annotation_left, resolved_annotation_right)
+            ret_annotated_diff = mem_diff
+
+        # Compute return value difference
+        ret_return_diff: FieldDiff | None = None
+        if compute_ret_annotation_diff:
+            if ret_annotations_left is not None and ret_annotations_right is not None:
+                ret_return_diff = compare_structured_values(joint_solver, ret_annotations_left, ret_annotations_right)
+
+        return DiffResult(ret_mem_diff, ret_reg_diff, ret_side_effect_diff, ret_annotated_diff, ret_return_diff)
 
 def hexify(val0):
     """
@@ -428,10 +452,15 @@ class CompatiblePair:
     :ivar dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]] side_effect_diff: \
     Maps side effect channels to a list of 3 element tuples, where the first element is the performed side effect\
     from the left binary, the second element is the performed side effect from the right binary, and the third element\
-    is the diff between the body of the side effects.
-    :ivar dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory addresses\
-    to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases the\
-    frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
+    is the diff between the body of the side effects. Note that the performed side effect may be None in the case\
+    where there was no corresponding side effect in the other state as determined by the alignment algorithm.
+    :ivar FieldDiff annotation_diff: An object containing diff information about memory annotated with\
+    :py:meth:`cozy.session.Session.annotate_memory`.
+    :ivar FieldDiff ret_annnotation_diff: An object containing diff information about memory annotated with\
+    :py:meth:`cozy.session.RunResult.annotate_return`.
+    :ivar dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]] mem_diff_ip: Maps memory\
+    addresses to a set of instruction pointers that the program was at when it wrote that byte in memory. In most cases\
+    the frozensets will have a single element, but this may not be the case in the scenario where a symbolic value\
     determined the write address.
     :ivar bool compare_std_out: If True then we should consider stdout when checking if the two input states are equal.
     :ivar bool compare_std_err: If True then we should consider stderr when checking if the two input states are equal.
@@ -444,7 +473,9 @@ class CompatiblePair:
                  # TODO: Expose the subregister structure somewhere
                  reg_diff: dict[str, tuple[claripy.ast.Base, claripy.ast.Base]],
                  side_effect_diff: dict[str, list[tuple[PerformedSideEffect | None, PerformedSideEffect | None, FieldDiff]]],
-                 mem_diff_ip: dict[int, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
+                 annotation_diff: FieldDiff | None,
+                 ret_annotation_diff: FieldDiff | None,
+                 mem_diff_ip: dict[range, tuple[frozenset[claripy.ast.Base]], frozenset[claripy.ast.Base]],
                  compare_std_out: bool,
                  compare_std_err: bool):
         self.state_left = state_left
@@ -452,6 +483,8 @@ class CompatiblePair:
         self.mem_diff = mem_diff
         self.reg_diff = reg_diff
         self.side_effect_diff = side_effect_diff
+        self.ret_annotation_diff = ret_annotation_diff
+        self.annotation_diff = annotation_diff
         self.mem_diff_ip = mem_diff_ip
         self.compare_std_out = compare_std_out
         self.compare_std_err = compare_std_err
@@ -462,6 +495,12 @@ class CompatiblePair:
                 if not isinstance(field_diff, EqFieldDiff):
                     return False
         return True
+
+    def equal_annotations(self) -> bool:
+        return self.annotation_diff is None or self.annotation_diff.is_equal
+
+    def equal_ret_annotations(self) -> bool:
+        return self.ret_annotation_diff is None or self.ret_annotation_diff.is_equal
 
     def equal(self) -> bool:
         """
@@ -474,6 +513,7 @@ class CompatiblePair:
 
         if isinstance(self.state_left, DeadendedState) and isinstance(self.state_right, DeadendedState):
             return (len(self.mem_diff) == 0 and len(self.reg_diff) == 0 and
+                    self.equal_annotations() and self.equal_ret_annotations() and
                     ((not self.compare_std_out) or (self.state_left.std_out == self.state_right.std_out)) and
                     ((not self.compare_std_err) or (self.state_left.std_err == self.state_right.std_err)) and
                     self.equal_side_effects())
@@ -498,16 +538,80 @@ class CompatiblePair:
         joint_solver.add(sr.solver.constraints)
 
         rangeless_mem_diff = {(rng.start, rng.stop): val for (rng, val) in self.mem_diff.items()}
-        state_bundle = (args, rangeless_mem_diff, self.reg_diff, self.state_left.side_effects, self.state_right.side_effects)
-        concrete_results = _concretize(joint_solver, state_bundle, n=num_examples)
+
+        state_bundle = (args, rangeless_mem_diff, self.reg_diff,
+                        self.state_left.side_effects, self.state_right.side_effects,
+                        self.annotation_diff.left_neq() if self.annotation_diff is not None else NestedDict.empty(),
+                        self.annotation_diff.right_neq() if self.annotation_diff is not None else NestedDict.empty(),
+                        self.ret_annotation_diff.left_neq() if self.ret_annotation_diff is not None else NestedDict.empty(),
+                        self.ret_annotation_diff.right_neq() if self.ret_annotation_diff is not None else NestedDict.empty())
+
+        concrete_results = concretize(joint_solver, state_bundle, n=num_examples)
 
         ret = []
-        for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right) in concrete_results:
+        for (conc_args, conc_mem_diff, conc_reg_diff, conc_side_effects_left, conc_side_effects_right, annotation_left, annotation_right, ret_annotation_left, ret_annotation_right) in concrete_results:
+
             range_conc_mem_diff = {range(start, stop): val for ((start, stop), val) in conc_mem_diff.items()}
             ret.append(CompatiblePairInput(conc_args, range_conc_mem_diff, conc_reg_diff,
-                                           conc_side_effects_left, conc_side_effects_right))
+                                           conc_side_effects_left, conc_side_effects_right,
+                                           annotation_left, annotation_right, ret_annotation_left, ret_annotation_right))
 
         return ret
+
+class ComparisonOptions(enum.Flag):
+    """
+    This enum is used to determine what sort of comparisons we will make when constructing a
+    :py:class:`cozy.analysis.Comparison` class. Since this is a flag enum, multiple values of this enum can be combined.
+    """
+
+    COMPARE_MEMORY = enum.auto()
+    """
+    Compare locations in program memory
+    """
+
+    COMPARE_REGISTERS = enum.auto()
+    """
+    Compare registers used by the program
+    """
+
+    COMPARE_SIDE_EFFECTS = enum.auto()
+    """
+    Compare side effects outputted by the program
+    """
+
+    COMPARE_STD_OUT = enum.auto()
+    """
+    Compare stdout written by the program and save in the results. Note that angr currently concretizes values written\
+    to stdout, so these values will be saved as binary strings.
+    """
+
+    COMPARE_STD_ERR = enum.auto()
+    """
+    Compare stderr written by the program and save in the results. Note that angr currently concretizes values written\
+    to stdout, so these values will be saved as binary strings.
+    """
+
+    COMPARE_ANNOTATED_MEMORY = enum.auto()
+    """
+    Memory that was explicitly annotated with :py:meth:`cozy.session.annotate_memory` will be compared and reported\
+    on separately from COMPARE_MEMORY. This is usually used to check if the program mutated some part of the input\
+    arguments or global variables.
+    """
+
+    COMPARE_ANNOTATED_RETURN = enum.auto()
+    """
+    Bitvector values that were explicitly annotated with :py:meth:`cozy.session.RunResult.annotate_return` will be\
+    compared and reported on. This is usually used to make a human readable comparison of the return value of the\
+    function under analysis.
+    """
+
+COMPARE_ALL  = (ComparisonOptions.COMPARE_MEMORY | ComparisonOptions.COMPARE_REGISTERS |
+                ComparisonOptions.COMPARE_SIDE_EFFECTS | ComparisonOptions.COMPARE_STD_OUT |
+                ComparisonOptions.COMPARE_STD_ERR | ComparisonOptions.COMPARE_ANNOTATED_MEMORY |
+                ComparisonOptions.COMPARE_ANNOTATED_RETURN)
+"""
+Perform all the comparison cozy makes available
+"""
 
 class Comparison:
     """
@@ -523,8 +627,8 @@ class Comparison:
     """
 
     def __init__(self, pre_patched: RunResult, post_patched: RunResult, ignore_addrs: list[range] | None = None,
-                 ignore_invalid_stack=True, compare_memory=True, compare_registers=True, compare_side_effects=True,
-                 compare_std_out=False, compare_std_err=False, use_unsat_core=True, simplify=False):
+                 ignore_invalid_stack=True, comparisons: ComparisonOptions=COMPARE_ALL, use_unsat_core=True,
+                 simplify=False):
         """
         Compares a bundle of pre-patched states with a bundle of post-patched states.
 
@@ -533,19 +637,23 @@ class Comparison:
         :param list[range] | None ignore_addrs: A list of addresses ranges to ignore when comparing memory.
         :param bool ignore_invalid_stack: If this flag is True, then memory differences in locations previously\
         occupied by the stack are ignored.
-        :param bool compare_memory: If True, then the analysis will compare locations in the program memory.
-        :param bool compare_registers: If True, then the analysis will compare registers used by the program.
-        :param bool compare_side_effects: If True, then the analysis will compare side effects outputted by the program.
-        :param bool compare_std_out: If True, then the analysis will save stdout written by the program in the results.\
-        Note that angr currently concretizes values written to stdout, so these values will be binary strings.
-        :param bool compare_std_err: If True, then the analysis will save stderr written by the program in the results.
-        :param bool use_unsat_core: If this flag is True, then we will use unsat core optimization to speed up\
-        comparison of pairs of states. This option may cause errors in Z3, so disable if this occurs.
+        :param ComparisonOptions comparisons: What comparisons we should make. By default we do all the possible\
+        comparisons.
+        :param bool use_unsat_core: If this flag is True, then the unsat core optimization will be used to quickly\
+        discard incompatible states. You probably want to leave this on unless you know what you're doing.
         :param bool simplify: If this flag is True, then symbolic memory and register differences will be simplified\
         as much as possible. This flag is typically only necessary if you want to do some deep inspection of symbolic\
-        contents. simplify can speed things down a lot, and symbolic expressions are usually very complex to the point\
+        contents. simplify can slow things down a lot, and symbolic expressions are usually very complex to the point\
         where they are not easily understandable. This is why in most scenarios the flag should be left as False.
         """
+
+        self.compare_memory = ComparisonOptions.COMPARE_MEMORY in comparisons
+        self.compare_registers = ComparisonOptions.COMPARE_REGISTERS in comparisons
+        self.compare_side_effects = ComparisonOptions.COMPARE_SIDE_EFFECTS in comparisons
+        self.compare_std_out = ComparisonOptions.COMPARE_STD_OUT in comparisons
+        self.compare_std_err = ComparisonOptions.COMPARE_STD_ERR in comparisons
+        self.compare_annotated_memory = ComparisonOptions.COMPARE_ANNOTATED_MEMORY in comparisons
+        self.compare_return_annotation = ComparisonOptions.COMPARE_ANNOTATED_RETURN in comparisons
 
         if ignore_addrs is None:
             ignore_addrs = []
@@ -580,6 +688,24 @@ class Comparison:
 
         extra_constraints = []
 
+        if self.compare_annotated_memory:
+            pre_ann_paths = pre_patched.annotations.paths()
+            post_ann_paths = post_patched.annotations.paths()
+
+            ann_diff = pre_ann_paths - post_ann_paths
+            if len(ann_diff) > 0:
+                cozy.log.warning(f"The following memory annotation paths were found in the first run result but not the second: {ann_diff}. These paths will not be compared.")
+            ann_diff = post_ann_paths - pre_ann_paths
+            if len(ann_diff) > 0:
+                cozy.log.warning(f"The following memory annotation paths were found in the second run result but not the first: {ann_diff}. These paths will not be compared.")
+
+            ann_intersection = pre_ann_paths & post_ann_paths
+            pre_ann = pre_patched.annotations.filter(ann_intersection)
+            post_ann = post_patched.annotations.filter(ann_intersection)
+        else:
+            pre_ann = NestedDict.empty()
+            post_ann = NestedDict.empty()
+
         for (i, state_pre) in enumerate(states_pre_patched):
             for (j, state_post) in enumerate(states_post_patched):
                 count += 1
@@ -594,12 +720,25 @@ class Comparison:
 
                 is_deadended_comparison = isinstance(state_pre, DeadendedState) and isinstance(state_post, DeadendedState)
 
+                if is_deadended_comparison:
+                    ret_annotations_pre = pre_patched.get_return_annotation(state_pre)
+                    ret_annotations_post = post_patched.get_return_annotation(state_post)
+                else:
+                    ret_annotations_pre = NestedDict.empty()
+                    ret_annotations_post = NestedDict.empty()
+
                 diff = memoized_diff.difference(
                     state_pre.state, state_post.state,
                     pair_ignore_addrs,
-                    compute_mem_diff=compare_memory if is_deadended_comparison else False,
-                    compute_reg_diff=compare_registers if is_deadended_comparison else False,
-                    compute_side_effect_diff=compare_side_effects if is_deadended_comparison else False,
+                    compute_mem_diff=self.compare_memory if is_deadended_comparison else False,
+                    compute_reg_diff=self.compare_registers if is_deadended_comparison else False,
+                    compute_side_effect_diff=self.compare_side_effects if is_deadended_comparison else False,
+                    compute_annotated_diff=self.compare_annotated_memory if is_deadended_comparison else False,
+                    compute_ret_annotation_diff=self.compare_return_annotation if is_deadended_comparison else False,
+                    annotations_left=pre_ann,
+                    annotations_right=post_ann,
+                    ret_annotations_left=ret_annotations_pre,
+                    ret_annotations_right=ret_annotations_post,
                     use_unsat_core=use_unsat_core,
                     simplify=simplify,
                     extra_constraints=extra_constraints
@@ -613,6 +752,8 @@ class Comparison:
                     mem_diff = diff.mem_diff
                     reg_diff = diff.reg_diff
                     side_effect_diff = diff.side_effect_diff
+                    annotation_diff = diff.annotation_diff
+                    ret_annotation_diff = diff.ret_annotation_diff
 
                     def get_ip_set(interval_dict, r: range):
                         # Query the interval dictionary for all entries in the desired range, then union
@@ -626,7 +767,8 @@ class Comparison:
                     }
 
                     comparison = CompatiblePair(state_pre, state_post, mem_diff, reg_diff, side_effect_diff,
-                                                mem_diff_ip, compare_std_out, compare_std_err)
+                                                annotation_diff, ret_annotation_diff, mem_diff_ip,
+                                                self.compare_std_out, self.compare_std_err)
                     self.pairs[(state_pre.state, state_post.state)] = comparison
 
     def get_pair(self, state_left: SimState, state_right: SimState) -> CompatiblePair:
@@ -690,7 +832,7 @@ class Comparison:
 
                 try:
                     is_sat = joint_solver.satisfiable(extra_constraints=(~assertion,))
-                except claripy.ClaripyZ3Error as err:
+                except claripy.errors.ClaripyZ3Error as err:
                     cozy.log.error("Unable to solve SMT formula when checking verification condition. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that there is some way to falsify the verification condition.\nThe exception thrown was:\n{}", str(err))
                     is_sat = True
                 except claripy.ClaripySolverInterruptError as err:
@@ -717,32 +859,62 @@ class Comparison:
         """
 
         output = ""
+        all_equal = True
         for p in self.pairs.values():
             i = p.state_left.state_id
             j = p.state_right.state_id
             # Check if the registers, memory, stdio are the same for these two states
             is_observationally_equal = p.equal()
             if not is_observationally_equal:
-                output += "STATE PAIR ({}, {}), ({}, {}) are different\n".format(i, p.state_left.state_type_str, j, p.state_right.state_type_str)
+                all_equal = False
+                output += f"STATE PAIR ({i}, {p.state_left.state_type_str}), ({j}, {p.state_right.state_type_str}) are different\n"
 
                 if type(p.state_left) is type(p.state_right):
-                    # Memory diff
-                    if len(p.mem_diff) == 0:
-                        output += "The memory was equal for this state pair\n"
+                    if self.compare_memory:
+                        # Memory diff
+                        if len(p.mem_diff) == 0:
+                            output += "The memory was equal for this state pair\n"
+                        else:
+                            output += "Memory difference detected for {},{}:\n".format(i, j)
+                            output += str(hexify(p.mem_diff))
+                            output += "\nInstruction pointers for these memory writes:\n"
+                            output += str(hexify(p.mem_diff_ip))
+                            output += "\n"
                     else:
-                        output += "Memory difference detected for {},{}:\n".format(i, j)
-                        output += str(hexify(p.mem_diff))
-                        output += "\nInstruction pointers for these memory writes:\n"
-                        output += str(hexify(p.mem_diff_ip))
-                        output += "\n"
+                        output += "Memory comparison skipped as this option was disabled in the configuration\n"
 
                     # Reg diff
-                    if len(p.reg_diff) == 0:
-                        output += "The registers were equal for this state pair\n"
+                    if self.compare_registers:
+                        if len(p.reg_diff) == 0:
+                            output += "The registers were equal for this state pair\n"
+                        else:
+                            output += f"Register difference detected for {i},{j}:\n"
+                            output += str(p.reg_diff)
+                            output += "\n"
                     else:
-                        output += "Register difference detected for {},{}:\n".format(i, j)
-                        output += str(p.reg_diff)
-                        output += "\n"
+                        output += "Register comparison skipped as this option was disabled in the configuration\n"
+
+                    output += "\n"
+
+                    if self.compare_annotated_memory:
+                        # Annotated memory diff
+                        if p.annotation_diff is None or p.annotation_diff.is_equal:
+                            output += "The annotated memory was equal for this state pair\n\n"
+                        else:
+                            output += f"Annotated memory difference detected for {i},{j}:\n"
+                            output += str(p.annotation_diff)
+                            output += "\n\n"
+                    else:
+                        output += "Annotated memory comparison skipped as this option was disabled in the configuration\n"
+
+                    if self.compare_return_annotation:
+                        # Annotated return diff
+                        if p.ret_annotation_diff is None or p.ret_annotation_diff.is_equal:
+                            output += "The annotated return value was equal for this state pair\n\n"
+                        else:
+                            output += f"Annotated return value detected for {i},{j}:\n"
+                            output += str(p.ret_annotation_diff)
+                            output += "\n\n"
                 else:
                     output += "Skipped memory and register differencing since the type of these two states are different.\n"
 
@@ -790,6 +962,9 @@ class Comparison:
                             print_side_effects(concrete_input.right_side_effects)
 
                 output += "\n"
+
+        if all_equal:
+            output += "All states under comparison were determined to be observationally equivalent.\n\n"
 
         def report_orphan_state(orphan: TerminalState):
             nonlocal output

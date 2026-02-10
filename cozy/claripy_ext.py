@@ -2,9 +2,6 @@ import typing
 import cozy
 import claripy
 
-from . import primitives
-
-
 # Functions that should be included in claripy, but aren't
 
 def simplify_kb(expr: claripy.ast.bits, kb: claripy.ast.Bool) -> claripy.ast.bits:
@@ -58,7 +55,7 @@ def model(constraints,
     while len(generated_models) < n:
         try:
             is_sat = solver.satisfiable(**kwargs)
-        except claripy.ClaripyZ3Error as err:
+        except claripy.errors.ClaripyZ3Error as err:
             cozy.log.error("Unable to generate model for SMT formula. The SMT solver returned unknown instead of SAT or UNSAT.\nThe exception thrown was:\n{}", str(err))
             return generated_models
         except claripy.ClaripySolverInterruptError as err:

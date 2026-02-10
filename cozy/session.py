@@ -1,18 +1,39 @@
+import functools
+import itertools
 import sys
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 import portion as P
 
 import angr, claripy
-from angr import SimStateError, SimState
+from angr import SimStateError, SimState, PointerWrapper
+from angr.calling_conventions import SimFunctionArgument
 from angr.sim_manager import ErrorRecord, SimulationManager
+from angr.sim_type import SimStruct, SimStructValue, SimTypePointer, SimType, SimUnionValue
+from angr.state_plugins import SimMemView
 
 from . import log, side_effect, claripy_ext
+from .nested_dict import NestedDict
 from .underconstrained import SimConcretizationStrategyUnderconstrained
 from .directive import Directive, Assume, Assert, VirtualPrint, ErrorDirective, AssertType, Breakpoint, Postcondition
 from .terminal_state import AssertFailedState, ErrorState, DeadendedState, PostconditionFailedState, SpinningState
 import cozy
+
+def follow_pointers(state: SimState, value, ty: SimType):
+    if isinstance(ty, SimTypePointer):
+        addr = state.solver.eval(value)
+        return PointerWrapper(ty.pts_to.extract(state, addr))
+    elif isinstance(ty, SimStruct):
+        assert(isinstance(value, SimStructValue))
+        ret_val = value.copy()
+        for (field_name, field_type) in value.struct.fields.items():
+            field_val = ret_val[field_name]
+            ret_val[field_name] = follow_pointers(state, field_val, field_type)
+        return ret_val
+    else:
+        return value
 
 # This size is used to malloc nonaliasing memory contents in underconstrained symbolic execution
 UNDERCONSTRAINED_CHUNK_SIZE = 20 * 1_000_000 # 20 megabytes
@@ -54,12 +75,20 @@ class RunResult:
     :ivar list[SpinningState] spinning: States that were stashed due to a loop bound being breached.
     :ivar UnderconstrainedMachineState | None underconstrained_machine_state: The inferred memory layout of the input\
     machine state. This field is not None only if underconstrained_execution is enabled for the session.
+    :ivar dict annotations: A list of paths to memory locations containing\
+    the input arguments. cozy will use this information to help provide a human readable dump of how the\
+    program being executed mutated its input arguments. This allows for comparison of the input arguments memory\
+    in situations where the memory location or memory layout of the input argument differs between the programs.
+    :ivar dict[DeadendedState, NestedDict[claripy.ast.bits]] return_annotations: If the\
+    :py:meth:`RunResult.annotate_return` was called, then this dictionary will be populated with the annotated\
+    return information of the run. If the method was not called, this dictionary will remain empty.
     """
-    def __init__(self, deadended: list[DeadendedState], errored: list[ErrorState],
+    def __init__(self, sess: 'Session', deadended: list[DeadendedState], errored: list[ErrorState],
                  asserts_failed: list[AssertFailedState], assume_warnings: list[tuple[Assume, SimState]],
                  postconditions_failed: list[PostconditionFailedState],
                  spinning: list[SpinningState],
                  underconstrained_machine_state: UnderconstrainedMachineState | None):
+        self.session = sess
         self.deadended = deadended
         self.errored = errored
         self.asserts_failed = asserts_failed
@@ -67,6 +96,36 @@ class RunResult:
         self.postconditions_failed = postconditions_failed
         self.spinning = spinning
         self.underconstrained_machine_state = underconstrained_machine_state
+        self.annotations: NestedDict[SimMemView] = sess.annotations
+        self._return_annotations: dict[DeadendedState, NestedDict[claripy.ast.Bits]] = dict()
+
+    def annotate_return(self,
+                        annotator: Callable[[SimState, claripy.ast.Bits | SimStructValue | SimUnionValue, SimType],
+                        NestedDict[claripy.ast.Bits] | dict[str | int, claripy.ast.Bits | dict]]):
+        """
+        Adds a return result annotation to every deadended state in this return result. This is accomplished\
+        by providing an annotator callback. This annotator will be passed three values: the angr\
+        :py:class:`~angr.sim_state.SimState`, the return value of the function and the type of the return result.\
+        The Python type of the return value will depend on the return type of the function under analysis.\
+        It may be a claripy AST bitvector if the return value is an integer for instance, or it may be\
+        something like an angr SimStructValue if the return result is a struct. Note that if the return result\
+        is a pointer, the address of the pointer is passed to the annotator, not the contents of the memory that\
+        is being pointed to.
+        """
+        for dstate in self.deadended:
+            state = dstate.state
+            ret_val = self.session.get_return_value(state)
+            typ = self.session.return_type
+            ann = annotator(state, ret_val, typ)
+            if isinstance(ann, dict):
+                ann = NestedDict(ann)
+            self._return_annotations[dstate] = ann
+
+    def get_return_annotation(self, state: DeadendedState) -> NestedDict[claripy.ast.Bits]:
+        if state in self._return_annotations:
+            return self._return_annotations[state]
+        else:
+            return NestedDict.empty()
 
     @property
     def assertion_triggered(self) -> bool:
@@ -387,7 +446,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                     try:
                         is_sat = false_branch.satisfiable()
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                         is_sat = True
                     except claripy.ClaripySolverInterruptError as err:
@@ -412,7 +471,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                     try:
                         is_sat = true_branch.satisfiable()
-                    except claripy.ClaripyZ3Error as err:
+                    except claripy.errors.ClaripyZ3Error as err:
                         cozy.log.error("Unable to solve SMT formula when checking postcondition assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the postcondition to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                         is_sat = False
                     except claripy.ClaripySolverInterruptError as err:
@@ -470,7 +529,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                             try:
                                 is_sat = found_state.satisfiable()
-                            except claripy.ClaripyZ3Error as err:
+                            except claripy.errors.ClaripyZ3Error as err:
                                 cozy.log.error("Unable to solve SMT state constraints after attaching assume. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the Assume condition to be satisfiable.\nThe information string attached to the Assume is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                                 is_sat = True
                             except claripy.ClaripySolverInterruptError as err:
@@ -500,7 +559,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                                 try:
                                     is_sat = false_branch.satisfiable()
-                                except claripy.ClaripyZ3Error as err:
+                                except claripy.errors.ClaripyZ3Error as err:
                                     cozy.log.error("Unable to solve SMT formula when checking assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the assertion to fail.\nThe information string attached to the assertion is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                                     is_sat = True
                                 except claripy.ClaripySolverInterruptError as err:
@@ -525,7 +584,7 @@ class _SessionDirectiveExploration(_SessionExploration):
 
                                 try:
                                     is_sat = true_branch.satisfiable()
-                                except claripy.ClaripyZ3Error as err:
+                                except claripy.errors.ClaripyZ3Error as err:
                                     cozy.log.error("Unable to solve SMT formula when checking existential assertion. The SMT solver returned unknown instead of SAT or UNSAT. We will assume that it is possible for the assertion to fail.\nThe information string attached to the postcondition is: {}\nThe exception thrown was:\n{}", directive.info_str, str(err))
                                     is_sat = False
                                 except claripy.ClaripySolverInterruptError as err:
@@ -668,6 +727,15 @@ class Session:
         self.directives = []
         self.has_run = False
 
+        self.prototype = None
+
+        self._internal_return_val: SimFunctionArgument | None = None
+        self._constructed_return_val = False
+
+        self.annotations: NestedDict[SimMemView] = NestedDict.empty()
+
+        self.case_splits: list[list[claripy.ast.Bool]] = []
+
     def _initialize_regs(self, state: angr.SimState):
         # Make sure any unconstrained registers are initialized by poking them with a getattr request
         top_level_regs = set(state.arch.register_names.values())
@@ -749,17 +817,69 @@ class Session:
         :return: None
         :rtype: None
         """
+
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add preconditions before the run.")
+
         self.directives.extend(directives)
 
     def add_constraints(self, *constraints: claripy.ast.bool) -> None:
         """
-        Adds multiple constraints to the session's state.
+        Adds multiple constraints to the session's starting state. This can be used as a precondition.
 
         :param claripy.ast.bool constraints: The constraints to add
         :return: None
         :rtype: None
         """
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add constraints before the run.")
+
         self.state.add_constraints(*constraints)
+
+    def precondition(self, *conditions: claripy.ast.bool):
+        """
+        Adds a precondition to the session. This is an alias for the :py:meth:`~cozy.session.Session.add_constraints`\
+        method.
+
+        :param claripy.ast.bool conditions: The preconditions to add to the session's starting state.
+        """
+
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add preconditions before the run.")
+
+        self.add_constraints(*conditions)
+
+    def postcondition(self, *condition_funs: Callable[[SimState], claripy.ast.bool], info_str: str | None=None):
+        """
+        Adds postconditions to the session by creating :py:class:`cozy.directive.Postcondition` objects and attaching\
+        them to the session.
+
+        :param Callable[[SimState], claripy.ast.bool] condition_funs: When the program reaches a terminal state, the\
+        SimState will be passed to this function, and an assertion condition should be returned. This is then used\
+        internally by the SAT solver, along with the state's accumulated constraints.
+        :param str | None info_str: Human readable label for this postcondition assertion, printed to the user if the\
+        assert is triggered.
+        """
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add postconditions before the run.")
+
+        self.add_directives(*[Postcondition(f, info_str=info_str) for f in condition_funs])
+
+    def cases(self, *conditions: claripy.ast.Bool):
+        """
+        This method adds a case split along a single dimension to the simulation state before the session is run.\
+        When the session is run, the starting state is immediately split, and constraints from the n-ary\
+        Cartesian product are added (where n is the number of times cases has been called). This method is useful\
+        in situations in lieu of adding a precondition that contains a disjunction. The motivation here is that\
+        splitting the state may be more palatable for the SMT solver than using a :py:class:`claripy.Or` as a \
+        precondition.
+
+        :param conditions: The conditions upon which we will split the starting state.
+        """
+        if self.has_run:
+            raise RuntimeError("This session has already been run. You need to add case splits before the run.")
+
+        self.case_splits.append(list(conditions))
 
     @property
     def start_fun_addr(self):
@@ -784,20 +904,32 @@ class Session:
 
         if fun_addr is not None:
             if self.start_fun in self.proj.fun_prototypes:
-                fun_prototype = self.proj.fun_prototypes[self.start_fun]
+                fun_proto_str: str | None = self.proj.fun_prototypes[self.start_fun]
             elif fun_addr in self.proj.fun_prototypes:
-                fun_prototype = self.proj.fun_prototypes[fun_addr]
+                fun_proto_str = self.proj.fun_prototypes[fun_addr]
             else:
-                fun_prototype = None
+                fun_proto_str = None
 
             kwargs = dict() if ret_addr is None else {"ret_addr": ret_addr}
 
             if args is None:
                 args = []
-                fun_prototype = None
+                fun_proto_str = None
+
+            fun_kb = self.proj.angr_proj.kb.functions
+            if fun_addr in fun_kb:
+                self.prototype = self.proj.angr_proj.kb.functions[fun_addr].prototype
+                # No need to pass the prototype to the call_state function. angr already
+                # has the prototype stored internally in the kb and will use it
+                fun_proto_str = None
+            else:
+                rich_proto = angr.calling_conventions.SimCC.guess_prototype(args, fun_proto_str).with_arch(
+                    self.proj.arch
+                )
+                self.prototype = rich_proto
 
             state: SimState = self.proj.angr_proj.factory.call_state(
-                fun_addr, *args, base_state=self.state, prototype=fun_prototype, **kwargs
+                fun_addr, *args, base_state=self.state, prototype=fun_proto_str, **kwargs
             )
         else:
             state: SimState = self.state
@@ -812,6 +944,33 @@ class Session:
             return _SessionDirectiveExploration(self, cache_intermediate_info=cache_intermediate_info)
         else:
             return _SessionBasicExploration(self, cache_intermediate_info=cache_intermediate_info)
+
+    @property
+    def return_type(self):
+        return self.prototype.returnty
+
+    @property
+    def _return_val(self) -> SimFunctionArgument | None:
+        # This method is used to cache the return value accessor so we don't have to reconstruct
+        # the calling convention and so forth every time we call _get_return_value
+        if not self._constructed_return_val:
+            self._constructed_return_val = True
+            return_ty = self.return_type
+            if isinstance(return_ty, angr.sim_type.SimTypeBottom):
+                self._internal_return_val = None
+            else:
+                cc_class = angr.calling_conventions.default_cc(self.proj.arch.name, self.proj.angr_proj.simos.name)
+                cc = cc_class(self.proj.arch)
+                self._internal_return_val = cc.return_val(return_ty)
+        return self._internal_return_val
+
+    def get_return_value(self, state):
+        # This method will give the return value of the function after it has been completely executed
+        if self.prototype is not None:
+            ret_val = self._return_val
+            if ret_val is not None:
+                return ret_val.get_value(state)
+        return None
 
     def _run_result(self, simgr: SimulationManager, sess_exploration: _SessionExploration) -> RunResult:
         deadended = [DeadendedState(state, i) for (i, state) in enumerate(simgr.deadended)]
@@ -836,8 +995,54 @@ class Session:
         else:
             underconstrained_machine_state = None
 
-        return RunResult(deadended, errored, asserts_failed, sess_exploration.assume_warnings, postconditions_failed,
-                         spinning, underconstrained_machine_state)
+        return RunResult(self, deadended, errored, asserts_failed, sess_exploration.assume_warnings,
+                         postconditions_failed, spinning, underconstrained_machine_state)
+
+    def annotate_memory(self, path: tuple[str | int, ...], mem: SimMemView):
+        """
+        Annotates some memory location(s) with a unique path to be used for comparison purposes. You may use this\
+        method to annotate input arguments, even if the memory locations and memory layout differ between the two\
+        programs under comparison. For example, suppose that function A is passed two arguments: an array of integers\
+        and an integer giving the array size. Function B is passed a single argument: a pointer to a struct which\
+        contains two fields: a pointer to an array and a size. We can go and annotate the first element of the array\
+        as the path ["array", 0] for both sessions, allowing for an apples-to-apples comparison, even if the underlying\
+        memory location for the first element is different. This also improves readability of the report since we have\
+        information that is richer than a simple memory location. This feature was primarily designed for C vs Rust\
+        comparisons where input argument memory layout differences are more common. It may be useful in the micropatch\
+        use case as well.
+
+        :param tuple[str | int, ...] path: The root annotation path of the input memory view.\
+        Note that if the memory view is a struct, we will recurse through its fields, performing a separate annotation\
+        for each member of the struct. You can use any combination of strings/integers you'd like, however in general\
+        it's best to try to use strings as field names and integers for array indices or argument numbers.
+        :param SimMemView mem: A memory view of the data to annotate. Once the session run is completed, we will use\
+        the view's :py:meth:`angr.state_plugins.view.SimMemView.set_state` method to determine how the program mutated\
+        its input arguments. Note that if this memview's type is a composite data structure, we will recursively\
+        walk through the members. If the memview is a pointer, we will dereference the pointer, and so forth.
+        """
+        typ = mem._type
+        if isinstance(typ, SimStruct):
+            for field_name in typ.fields.keys():
+                refined_path = path + (field_name,)
+                self.annotate_memory(refined_path, getattr(mem, field_name))
+        elif isinstance(typ, SimTypePointer):
+            self.annotate_memory(path, mem.deref)
+        elif isinstance(mem.resolved, claripy.ast.bv.BV):
+            self.annotations[path] = mem
+        else:
+            raise NotImplementedError("Annotation for this particular type is not implemented")
+
+    def _split_cases(self, simgr: angr.SimulationManager):
+        if len(self.case_splits) > 0:
+            starting_state = simgr.active[0]
+            children = []
+            for constraints in itertools.product(*self.case_splits):
+                child_state: SimState = starting_state.copy()
+                child_state.add_constraints(*constraints)
+                children.append(child_state)
+            simgr.active.clear()
+            for c in children:
+                simgr.active.append(c)
 
     def run(self, args: list[claripy.ast.bits] | None=None, cache_intermediate_info: bool=True, ret_addr: int | None=None,
             loop_bound: int | None=None) -> RunResult:
@@ -861,6 +1066,8 @@ class Session:
             raise ValueError("The args passed to run can only be None if underconstrained_execution has been enabled.")
 
         simgr = self._call(args, cache_intermediate_info=cache_intermediate_info, ret_addr=ret_addr)
+
+        self._split_cases(simgr)
 
         if isinstance(loop_bound, int):
             simgr.use_technique(angr.exploration_techniques.LocalLoopSeer(bound=loop_bound))
